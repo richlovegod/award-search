@@ -1,0 +1,12 @@
+name = "award-relay"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+preview_urls = false
+
+[vars]
+ALLOWED_ORIGINS = "https://richlovegod.github.io"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "efb441e0d06e469ca43501919ed80851"
