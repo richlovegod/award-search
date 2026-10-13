@@ -6,7 +6,37 @@ preview_urls = false
 
 [vars]
 ALLOWED_ORIGINS = "https://richlovegod.github.io"
+SITE_URL = "https://richlovegod.github.io/award-search/"
 
+# lockout and rate-limit counters (short-lived, so KV is enough)
 [[kv_namespaces]]
 binding = "KV"
 id = "efb441e0d06e469ca43501919ed80851"
+
+# accounts, sessions, invite codes, reset links (see migrations/)
+[[d1_databases]]
+binding = "DB"
+database_name = "award-auth"
+database_id = "05de104f-fa4f-4930-b6ca-a8d062f6b23d"
+migrations_dir = "migrations"
+
+# Staging: the same code on Cloudflare with its own database and KV, for testing before production.
+#   npx wrangler deploy --env staging   ->   https://award-relay-staging.richlovegod.workers.dev
+[env.staging]
+name = "award-relay-staging"
+workers_dev = true
+preview_urls = false
+
+[env.staging.vars]
+ALLOWED_ORIGINS = "http://127.0.0.1:8766"
+SITE_URL = "http://127.0.0.1:8766/index.html"
+
+[[env.staging.kv_namespaces]]
+binding = "KV"
+id = "3434ec7fd9ea4c31aaa11d2f082e31d9"
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "award-auth-staging"
+database_id = "42c34f9a-2817-441b-84a5-b1cf2e265c96"
+migrations_dir = "migrations"

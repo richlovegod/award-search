@@ -60,12 +60,79 @@ svg{display:block}
 .lcard .pic svg{width:150px;height:auto;margin:0 auto}
 .lcard h1{font-size:27px;margin:0 0 2px}
 .lcard p{margin:0 0 14px;font-size:14px}
-.lform{display:flex;gap:8px;border:var(--line);border-radius:var(--r);padding:14px;background:var(--yellow-t)}
-.lform input{flex:1;min-width:0;font-size:20px;letter-spacing:4px;text-align:center;border:var(--line);border-radius:14px;padding:7px 10px;background:var(--paper)}
-.lform input:focus{outline:3px solid var(--water);outline-offset:2px}
-.lform button{border:var(--line);border-radius:999px;background:var(--coral);font-size:17px;padding:0 18px;transition:transform .12s ease-out}
-.lform button:active{transform:scale(.95)}
 .lcard .err{min-height:22px;margin:10px 0 0;font-size:14px;color:#A33A2A}
+
+/* sign in / sign up */
+.atabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 10px}
+.atabs button{border:var(--line);border-radius:999px;background:var(--paper);font-size:17px;padding:2px 0;transition:transform .12s ease-out}
+.atabs button[aria-selected=true]{background:var(--coral)}
+.atabs button:active{transform:scale(.96)}
+.aform{border:var(--line);border-radius:var(--r);padding:14px;background:var(--yellow-t);text-align:left;display:grid;gap:10px}
+.aform p{margin:0}
+.aform .err{margin:0;min-height:0;text-align:center}
+.aform .err:empty{display:none}
+.pwf{padding-right:70px}
+.eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:2px solid var(--ink);border-radius:999px;background:var(--paper);font-size:13px;line-height:24px;padding:0 10px}
+.hint{font-size:13px;color:var(--ink2)}
+.check{display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;user-select:none;-webkit-user-select:none}
+.check input{position:absolute;opacity:0;width:1px;height:1px}
+.check .box{width:24px;height:24px;flex:0 0 24px;border:var(--line);border-radius:8px;background:var(--paper);display:grid;place-content:center}
+.check input:checked+.box{background:var(--green)}
+.check input:checked+.box::after{content:"";width:10px;height:5px;border-left:3px solid var(--ink);border-bottom:3px solid var(--ink);transform:translateY(-2px) rotate(-45deg)}
+.check input:focus-visible+.box{outline:3px solid var(--water);outline-offset:2px}
+.abtn{border:var(--line);border-radius:999px;background:var(--coral);font-size:18px;padding:6px 0;transition:transform .12s ease-out}
+.abtn:active{transform:scale(.97)}
+.abtn[disabled]{opacity:.6}
+.linkish{justify-self:center;border:0;background:none;padding:0;font-size:14px;text-decoration:underline;text-underline-offset:3px}
+.rf-t{font-size:15px;text-align:center;word-break:break-all}
+.sr{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:50;max-width:calc(100% - 32px);border:var(--line);border-radius:999px;background:var(--green);padding:5px 18px;font-size:15px;text-align:center;animation:pop .35s var(--pop)}
+
+/* my account and admin pages */
+.vhead{display:flex;align-items:center;gap:10px;margin:16px 0 4px}
+.vhead h2{flex:1;font-size:23px;margin:0}
+.back{border:var(--line);border-radius:999px;background:var(--paper);padding:1px 12px;font-size:15px;text-decoration:none;white-space:nowrap;transition:transform .12s ease-out}
+.back:active{transform:scale(.95)}
+.acard{border:var(--line);border-radius:var(--r);padding:12px 14px 14px;margin:12px 0;background:var(--paper)}
+.acard.y{background:var(--yellow-t)}
+.acard.w{background:var(--water-t)}
+.acard.c{background:var(--coral-t)}
+.acard h3{font-size:19px;margin:0 0 8px}
+.acard form{display:grid;gap:10px}
+.acard .btn{justify-self:start}
+.note0{font-size:13px;color:var(--ink2);margin:0 0 8px}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:2px dashed var(--ink);font-size:15px}
+.kv span{color:var(--ink2);white-space:nowrap}
+.kv b{text-align:right;word-break:break-all}
+.acard .kv:last-of-type{margin-bottom:10px}
+.rowi{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:2px dashed var(--ink)}
+.rowi:last-of-type{border-bottom:0}
+.rowi .main{flex:1;min-width:0}
+.rowi .main b{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;font-size:15px;word-break:break-all}
+.rowi .main small{display:flex;flex-wrap:wrap;gap:0 12px;font-size:12px;color:var(--ink2)}
+.rowi .acts{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.rowi .btn{font-size:13px;padding:1px 10px}
+.rowi.col{flex-wrap:wrap}
+.rowi.col .acts{flex-basis:100%;justify-content:flex-start}
+.rowi .out{flex-basis:100%}
+.rowi .out:empty{display:none}
+.btn.ghost{background:var(--paper)}
+.btn.warn{background:var(--coral)}
+.tag.me,.tag.own{background:var(--yellow)}
+.tag.off{background:var(--coral-t)}
+.msg{font-size:14px;margin:0}
+.msg:empty{display:none}
+.msg.ok{color:#2F6B2F}
+.msg.bad{color:#A33A2A}
+.invnew{display:flex!important;align-items:flex-end;gap:8px}
+.invnew .field{flex:1}
+.codebox{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;border:3px dashed var(--ink);border-radius:18px;padding:10px 12px;background:var(--paper);margin:10px 0}
+.codebox .code{font-size:26px;letter-spacing:3px;font-variant-numeric:tabular-nums}
+.codebox input{flex:1;min-width:0;font-size:16px;border:2px solid var(--ink);border-radius:10px;padding:3px 8px;background:var(--paper)}
+.codebox small{flex-basis:100%;font-size:12px;color:var(--ink2)}
+details.danger summary{cursor:pointer;list-style:none;font-size:17px}
+details.danger summary::-webkit-details-marker{display:none}
+details.danger[open] summary{margin-bottom:8px}
 
 /* top bar */
 .top{position:sticky;top:0;z-index:20;background:var(--paper);border-top:7px solid var(--water);border-bottom:var(--line)}
@@ -282,12 +349,30 @@ footer{text-align:center;font-size:12px;color:var(--ink2);margin-top:24px}
   <div class="lcard">
     <div class="pic" aria-hidden="true"><svg viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"><path d="M0 66q30-10 60 0t60 0v14H0z" fill="#B9DAA5"/><g class="float"><path d="M46 12v6"/><circle cx="46" cy="11" r="1.6" fill="#3E3A39"/><rect x="32" y="18" width="28" height="24" rx="9" fill="#F2A497"/><circle cx="40.5" cy="28" r="4.2" fill="#F6D27A"/><circle cx="51.5" cy="28" r="4.2" fill="#F6D27A"/><path d="M42.5 36q3.5 3 7 0"/><path d="M37 50l3-5M55 50l-3-5"/></g><g class="sway"><rect x="68" y="34" width="22" height="18" rx="4" fill="#F6D27A"/><path d="M72 34v-6a7 7 0 0 1 14 0v6"/><circle cx="79" cy="42" r="2.4" fill="#3E3A39"/><path d="M79 44v4"/></g></g></svg></div>
     <h1>里程機位搜尋</h1>
-    <p>這是 Gino 自己用的查詢頁，請輸入密碼。</p>
-    <form id="lf" class="lform">
-      <input id="pw" type="password" autocomplete="current-password" enterkeyhint="go" aria-label="密碼">
-      <button id="lgo" type="submit">進入</button>
+    <p id="lsub">用 Email 登入。新帳號要有邀請碼。</p>
+    <div class="atabs" id="atabs" role="tablist" aria-label="登入或註冊">
+      <button type="button" role="tab" id="tab-in" aria-selected="true">登入</button>
+      <button type="button" role="tab" id="tab-up" aria-selected="false">註冊</button>
+    </div>
+    <form id="af" class="aform" novalidate>
+      <div class="field"><label for="em">Email</label><input id="em" type="email" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="next"></div>
+      <div class="field pwf"><label for="pw">密碼</label><input id="pw" type="password" autocomplete="current-password" enterkeyhint="go"><button type="button" class="eye" data-for="pw" aria-pressed="false">顯示</button></div>
+      <p class="hint" id="pw-hint" hidden>至少 10 個字。可以直接用 iPhone 建議的強密碼。</p>
+      <div class="field" id="inv-f" hidden><label for="inv">邀請碼</label><input id="inv" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="go" placeholder="例：ABCDE-FGHJK"></div>
+      <label class="check"><input type="checkbox" id="rem" checked><span class="box"></span><span>記住我（30 天內不用再登入）</span></label>
+      <button class="abtn" id="ago" type="submit">登入</button>
+      <p class="err" id="lerr" role="alert"></p>
+      <button type="button" class="linkish" id="forgot">忘記密碼？</button>
+      <p class="hint" id="forgot-t" hidden>請管理員到「管理」頁幫你產生重設連結，連結 30 分鐘內有效。</p>
     </form>
-    <p id="lerr" class="err" role="alert"></p>
+    <form id="rf" class="aform" hidden novalidate>
+      <p class="rf-t">幫這個帳號設定新密碼：<br><b id="rf-email"></b></p>
+      <input type="email" id="rf-user" class="sr" autocomplete="username" tabindex="-1" aria-hidden="true">
+      <div class="field pwf"><label for="rpw">新密碼（至少 10 個字）</label><input id="rpw" type="password" autocomplete="new-password" enterkeyhint="go"><button type="button" class="eye" data-for="rpw" aria-pressed="false">顯示</button></div>
+      <button class="abtn" id="rgo" type="submit">設定新密碼並登入</button>
+      <p class="err" id="rerr" role="alert"></p>
+      <button type="button" class="linkish" id="rback">回到登入</button>
+    </form>
   </div>
 </section>
 
@@ -298,10 +383,11 @@ footer{text-align:center;font-size:12px;color:var(--ink2);margin-top:24px}
       <span>里程機位搜尋</span>
     </div>
     <span id="quota" class="quota" hidden></span>
-    <button id="lock" class="icon-btn" type="button" aria-label="登出" title="登出"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#3E3A39" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="3" fill="#F6D27A"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 15v2"/></g></svg></button>
+    <button id="acct-btn" class="icon-btn" type="button" aria-label="我的帳號" title="我的帳號"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#3E3A39" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M4.5 21c1-4.2 4.1-6.5 7.5-6.5s6.5 2.3 7.5 6.5z" fill="#A8D3E6"/><circle cx="12" cy="8.5" r="4.2" fill="#F6D27A"/></g></svg></button>
   </div></header>
 
   <main class="wrap">
+    <div id="view-search">
     <form id="sf" class="card" autocomplete="off" novalidate>
       <div class="hero" aria-hidden="true"><svg viewBox="0 0 320 96" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"><circle cx="284" cy="24" r="11" fill="#F6D27A"/><g class="drift"><path d="M92 36h26a8 8 0 0 0-3-15 10 10 0 0 0-19-2 7 7 0 0 0-4 17z" fill="#FFFCF6"/></g><g class="drift d2"><path d="M222 45h20a6 6 0 0 0-2-11 8 8 0 0 0-15-2 6 6 0 0 0-3 13z" fill="#FFFCF6"/></g><path class="flow" d="M60 66Q150 -8 262 74" stroke-width="2.5"/><path d="M0 84q40-14 80-4t80 2 80-6 80 4v16H0z" fill="#B9DAA5"/><g transform="translate(250 56)"><path d="M12 26V4"/><g class="sway"><path d="M12 4h12l-3 5 3 5H12z" fill="#F2A497"/></g></g><g transform="translate(130 2)"><g class="float"><path d="M24 30l38-12c4-1 6 3 2 5L32 38z" fill="#FFFCF6"/><path d="M40 24l-6-12h7l11 9" fill="#F2A497"/><path d="M42 32l-2 12h7l7-14" fill="#F2A497"/><path d="M26 31l-4-7"/></g></g><g transform="translate(22 40)"><g class="float"><path d="M20 3v6"/><circle cx="20" cy="3" r="1.5" fill="#3E3A39"/><rect x="6" y="9" width="28" height="24" rx="9" fill="#F2A497"/><circle cx="14.5" cy="19" r="4.2" fill="#F6D27A"/><circle cx="25.5" cy="19" r="4.2" fill="#F6D27A"/><path d="M16.5 27q3.5 3 7 0"/><path d="M11 38l3-5M29 38l-3-5"/></g></g></g></svg></div>
       <div class="route" id="route">
@@ -358,17 +444,31 @@ footer{text-align:center;font-size:12px;color:var(--ink2);margin-top:24px}
       <div id="list"></div>
       <p class="note">這是 seats.aero 的快取資料，可能已經過時。轉點數或訂位前，一定要先到航空公司網站確認還有位子。</p>
     </section>
+    </div>
+
+    <section id="view-account" class="page" hidden>
+      <div class="vhead"><a class="back" href="#/">← 回搜尋</a><h2>我的帳號</h2></div>
+      <div id="acct-body"></div>
+    </section>
+
+    <section id="view-admin" class="page" hidden>
+      <div class="vhead"><a class="back" href="#/account">← 我的帳號</a><h2>管理</h2></div>
+      <div id="admin-body"></div>
+    </section>
 
     <footer>資料來源：<a href="https://seats.aero" target="_blank" rel="noopener">seats.aero</a>　僅供個人使用</footer>
   </main>
 </div>
+<div id="toast" class="toast" role="status" hidden></div>
 
 <script>
 'use strict';
 const MASCOT = '<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g fill="none" stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"><path d="M20 3v6"/><circle cx="20" cy="3" r="1.5" fill="#3E3A39"/><rect x="6" y="9" width="28" height="24" rx="9" fill="#F2A497"/><circle cx="14.5" cy="19" r="4.2" fill="#F6D27A"/><circle cx="25.5" cy="19" r="4.2" fill="#F6D27A"/><path d="M16.5 27q3.5 3 7 0"/><path d="M11 38l3-5M29 38l-3-5"/></g></svg>';
 const PLANE = '<svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g fill="#FFFCF6" stroke="#3E3A39" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"><path d="M3 16l23-8c2-.6 3 1.4 1.2 2.4L9 19z"/><path d="M12 13l-3-7h4l6 5"/><path d="M13 17l-1 7h4l4-8"/></g></svg>';
-const RELAY = 'https://award-relay.richlovegod.workers.dev';
-const PW_NUMERIC = true;    // the site password is all digits, so show the number pad
+// On this computer (python -m http.server) talk to the local Worker, or to the one named in
+// localStorage 'award-relay-dev' (e.g. the staging Worker); everywhere else, the real one.
+const LOCAL = /^(127\.0\.0\.1|localhost)$/.test(location.hostname);
+const RELAY = LOCAL ? (localStorage.getItem('award-relay-dev') || 'http://127.0.0.1:8787') : 'https://award-relay.richlovegod.workers.dev';
 const CACHE_MIN = 15;       // re-running the same search within 15 minutes uses no API call
 const MAX_PAGES = 5;        // at most 5 API calls (5,000 rows) per search
 const MAX_DAYS = 92;
@@ -532,49 +632,350 @@ function resetText() {
   return '會在你這邊的 ' + r.toLocaleTimeString('zh-TW', { hour: 'numeric', minute: '2-digit' }) + '（UTC 0 點）';
 }
 
-/* ---------- login ---------- */
+/* ---------- accounts: sign in, sign up, reset ---------- */
+// The Worker answers with short error codes; the words people see live here.
+const ERR = {
+  login: 'Email 或密碼不對。',
+  locked: '這個帳號錯太多次了，先鎖 15 分鐘。',
+  ip_locked: '這個網路錯太多次了，請 15 分鐘後再試。',
+  disabled: '這個帳號已經停用，請聯絡管理員。',
+  email_bad: 'Email 的格式不對。',
+  email_taken: '這個 Email 已經註冊過了，請直接登入。',
+  invite: '邀請碼不對、已經用過，或過期了。',
+  pw_short: '密碼至少要 10 個字。',
+  pw_long: '密碼最多 128 個字。',
+  pw_email: '密碼不能跟 Email 一樣。',
+  pw_breached: '這組密碼出現在外洩的密碼名單裡（Have I Been Pwned），請換一組。',
+  pw_wrong: '目前的密碼不對。',
+  reset_invalid: '這個重設連結已經用過、過期或不存在，請管理員重新產生。',
+  rate: '太頻繁了，請過一陣子再試。',
+  last_owner: '你是唯一的管理員，不能刪除自己的帳號。',
+  self: '不能對自己的帳號做這件事。',
+  forbidden: '只有管理員可以做這件事。',
+  auth: '請重新登入。',
+  server: '伺服器出了問題，請稍後再試。',
+};
+const TOKEN_KEY = 'award-session';
+let ME = null;        // { email, role } of the signed-in account
+let MODE = 'in';      // 'in' = 登入, 'up' = 註冊
+let RESET_TOKEN = '';
+// "記住我" keeps the session token in localStorage (survives closing Safari); otherwise sessionStorage.
+const getToken = () => localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY) || '';
+function setToken(t, remember) {
+  clearToken();
+  (remember ? localStorage : sessionStorage).setItem(TOKEN_KEY, t);
+}
+function clearToken() {
+  localStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem('award-token');   // the old single-password token
+}
+// A JSON request to the Worker. Throws ApiError carrying the Chinese message for its error code.
+async function call(method, path, body) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (getToken()) headers.Authorization = 'Bearer ' + getToken();
+  let r;
+  try {
+    r = await fetch(RELAY + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  } catch {
+    throw new ApiError('network', '連不上伺服器，請檢查網路。');
+  }
+  const b = await r.json().catch(() => ({}));
+  if (r.ok) return b;
+  let msg = ERR[b.error] || '出了點問題（HTTP ' + r.status + '）。';
+  if (b.error === 'login' && b.left > 0 && b.left < 5) msg += '再錯 ' + b.left + ' 次，這個帳號會鎖 15 分鐘。';
+  if (b.error === 'auth' && !path.startsWith('/auth/')) logout(ERR.auth, false);
+  throw new ApiError(b.error || 'http', msg);
+}
+function shakeIt(el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
+let toastTimer = 0;
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
+}
+
+function setMode(mode) {
+  MODE = mode;
+  $('#tab-in').setAttribute('aria-selected', String(mode === 'in'));
+  $('#tab-up').setAttribute('aria-selected', String(mode === 'up'));
+  $('#inv-f').hidden = mode !== 'up';
+  $('#pw-hint').hidden = mode !== 'up';
+  $('#forgot').hidden = mode !== 'in';
+  $('#forgot-t').hidden = true;
+  $('#pw').setAttribute('autocomplete', mode === 'up' ? 'new-password' : 'current-password');
+  $('#ago').textContent = mode === 'up' ? '建立帳號' : '登入';
+  $('#lerr').textContent = '';
+}
+$('#tab-in').addEventListener('click', () => setMode('in'));
+$('#tab-up').addEventListener('click', () => setMode('up'));
+$('#forgot').addEventListener('click', () => { $('#forgot-t').hidden = !$('#forgot-t').hidden; });
+$('#af').addEventListener('input', () => { $('#lerr').textContent = ''; });   // an old error goes away once you start fixing it
+$('#rf').addEventListener('input', () => { $('#rerr').textContent = ''; });
+document.addEventListener('click', e => {   // 顯示 / 隱藏 on any password field
+  const b = e.target.closest('.eye');
+  if (!b) return;
+  const input = $('#' + b.dataset.for);
+  const show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  b.textContent = show ? '隱藏' : '顯示';
+  b.setAttribute('aria-pressed', String(show));
+});
 function showLogin(msg) {
   $('#app').hidden = true;
   $('#login').hidden = false;
+  $('#af').hidden = false;
+  $('#rf').hidden = true;
+  $('#atabs').hidden = false;
+  $('#lsub').hidden = false;
   $('#lerr').textContent = msg || '';
-  const pw = $('#pw');
-  pw.value = '';
-  if (PW_NUMERIC) pw.setAttribute('inputmode', 'numeric');
-  setTimeout(() => pw.focus(), 50);
+  $('#pw').value = '';
+  setTimeout(() => ($('#em').value ? $('#pw') : $('#em')).focus(), 50);
 }
-function logout(msg) {
-  localStorage.removeItem('award-token');
+function logout(msg, remote = true) {
+  if (remote && getToken()) call('POST', '/auth/logout').catch(() => {});   // the header is read before the token is cleared
+  clearToken();
+  ME = null;
   showLogin(msg);
 }
-$('#lf').addEventListener('submit', async e => {
+$('#af').addEventListener('submit', async e => {
   e.preventDefault();
-  const pw = $('#pw').value;
-  if (!pw) return;
-  $('#lgo').disabled = true;
+  const email = $('#em').value.trim(), password = $('#pw').value, remember = $('#rem').checked;
+  const mode = MODE;
   $('#lerr').textContent = '';
-  let msg = null;
+  if (!email || !password) { $('#lerr').textContent = '請輸入 Email 和密碼。'; return; }
+  if (mode === 'up' && password.length < 10) { $('#lerr').textContent = ERR.pw_short; return; }
+  if (mode === 'up' && !$('#inv').value.trim()) { $('#lerr').textContent = '請輸入邀請碼。'; return; }
+  $('#ago').disabled = true;
   try {
-    const r = await fetch(RELAY + '/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }) });
-    const b = await r.json().catch(() => ({}));
-    if (r.ok && b.token) localStorage.setItem('award-token', b.token);
-    else if (r.status === 429) msg = '錯太多次了，請 15 分鐘後再試。';
-    else if (b.error === 'password') msg = b.left > 0 ? '密碼不對，還可以再試 ' + b.left + ' 次。' : '密碼不對，請 15 分鐘後再試。';
-    else msg = '登入失敗（HTTP ' + r.status + '）。';
-  } catch {
-    msg = '連不上中繼站，請檢查網路。';
+    const body = { email, password, remember };
+    if (mode === 'up') body.invite = $('#inv').value;
+    const r = await call('POST', mode === 'up' ? '/auth/register' : '/auth/login', body);
+    setToken(r.token, remember);
+    ME = r.user;
+    $('#pw').value = '';
+    $('#inv').value = '';
+    showApp();
+    toast(mode === 'up' ? '帳號建立好了，歡迎！' : '歡迎回來');
+  } catch (err) {
+    $('#lerr').textContent = err.message;
+    shakeIt($('#af'));
+  } finally {
+    $('#ago').disabled = false;
   }
-  $('#lgo').disabled = false;
-  if (msg) { $('#lerr').textContent = msg; $('#pw').select(); return; }
-  showApp();
 });
-$('#lock').addEventListener('click', () => logout('已登出。'));
+
+// A reset link opens the page at #reset=<token>.
+async function startReset(token) {
+  RESET_TOKEN = token;
+  $('#app').hidden = true;
+  $('#login').hidden = false;
+  $('#af').hidden = true;
+  $('#atabs').hidden = true;
+  $('#lsub').hidden = true;
+  $('#rf').hidden = false;
+  $('#rerr').textContent = '';
+  $('#rf-email').textContent = '讀取中…';
+  $('#rgo').disabled = true;
+  try {
+    const r = await call('GET', '/auth/reset?token=' + encodeURIComponent(token));
+    $('#rf-email').textContent = r.email;
+    $('#rf-user').value = r.email;
+    $('#rgo').disabled = false;
+    setTimeout(() => $('#rpw').focus(), 50);
+  } catch (err) {
+    $('#rf-email').textContent = '';
+    $('#rerr').textContent = err.message;
+  }
+}
+const clearHash = () => history.replaceState(null, '', location.pathname + location.search);
+$('#rf').addEventListener('submit', async e => {
+  e.preventDefault();
+  const password = $('#rpw').value;
+  if (password.length < 10) { $('#rerr').textContent = ERR.pw_short; return; }
+  $('#rgo').disabled = true;
+  try {
+    const r = await call('POST', '/auth/reset', { token: RESET_TOKEN, password });
+    setToken(r.token, true);
+    ME = r.user;
+    $('#rpw').value = '';
+    clearHash();
+    showApp();
+    toast('新密碼設定好了，其他裝置都已登出');
+  } catch (err) {
+    $('#rerr').textContent = err.message;
+    $('#rgo').disabled = false;
+  }
+});
+$('#rback').addEventListener('click', () => { clearHash(); if (getToken()) showApp(); else showLogin(''); });
+
+/* ---------- pages: search, my account, admin ---------- */
+function route() {
+  const h = location.hash;
+  const page = h === '#/account' ? 'account' : h === '#/admin' && ME && ME.role === 'owner' ? 'admin' : 'search';
+  $('#view-search').hidden = page !== 'search';
+  $('#view-account').hidden = page !== 'account';
+  $('#view-admin').hidden = page !== 'admin';
+  if (page === 'account') loadAccount();
+  if (page === 'admin') loadAdmin();
+  if (page !== 'search') scrollTo(0, 0);
+}
+addEventListener('hashchange', () => {
+  // a reset link opened in a tab that already has the site loaded only changes the hash, so catch it here too
+  const reset = /^#reset=([A-Za-z0-9_-]{40,64})$/.exec(location.hash);
+  if (reset) startReset(reset[1]);
+  else if (!$('#app').hidden) route();
+});
+$('#acct-btn').addEventListener('click', () => { location.hash = '#/account'; });
+
+const COUNTRY = { TW: '台灣', US: '美國', CA: '加拿大', JP: '日本', KR: '韓國', HK: '香港', SG: '新加坡', GB: '英國', DK: '丹麥', NO: '挪威', SE: '瑞典' };
+const fmtDay = sec => { const d = new Date(sec * 1000); return d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate(); };
+function since(sec) {
+  if (!sec) return '還沒有';
+  const m = Math.max(0, (Date.now() / 1000 - sec) / 60);
+  if (m < 2) return '剛剛';
+  if (m < 60) return Math.round(m) + ' 分鐘前';
+  if (m < 2880) return Math.round(m / 60) + ' 小時前';
+  return Math.round(m / 1440) + ' 天前';
+}
+const pwField = (id, label, ac) => '<div class="field pwf"><label for="' + id + '">' + label + '</label><input id="' + id + '" type="password" autocomplete="' + ac + '"><button type="button" class="eye" data-for="' + id + '" aria-pressed="false">顯示</button></div>';
+function setMsg(id, text, ok) { const el = $('#' + id); el.className = 'msg ' + (ok ? 'ok' : 'bad'); el.textContent = text; }
+
+async function loadAccount() {
+  const box = $('#acct-body');
+  box.innerHTML = '<div class="skel"></div>';
+  let m;
+  try { m = await call('GET', '/me'); } catch (err) { box.innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; return; }
+  ME = { email: m.email, role: m.role };
+  const devices = m.sessions.map(x => '<div class="rowi"><div class="main"><b>' + esc(x.device || '不明的裝置') + '</b><small>' +
+      (x.country ? '<span>' + esc(COUNTRY[x.country] || x.country) + '</span>' : '') + '<span>最後使用：' + since(x.last_seen_at) + '</span><span>登入：' + fmtDay(x.created_at) + '</span></small></div>' +
+      '<div class="acts">' + (x.id === m.current ? '<span class="tag me">這台</span>' : '<button type="button" class="btn ghost" data-sess="' + esc(x.id) + '">登出</button>') + '</div></div>').join('');
+  box.innerHTML =
+    '<div class="acard y"><h3>帳號</h3>' +
+      '<div class="kv"><span>Email</span><b>' + esc(m.email) + '</b></div>' +
+      '<div class="kv"><span>身分</span><b>' + (m.role === 'owner' ? '管理員' : '一般帳號') + '</b></div>' +
+      '<div class="kv"><span>註冊日期</span><b>' + fmtDay(m.created_at) + '</b></div>' +
+      (m.role === 'owner' ? '<a class="btn pri" href="#/admin">到管理頁</a>' : '') + '</div>' +
+    '<form class="acard" id="pwform" novalidate><h3>改密碼</h3>' +
+      '<input type="email" class="sr" autocomplete="username" value="' + esc(m.email) + '" tabindex="-1" aria-hidden="true">' +
+      pwField('pw-cur', '目前的密碼', 'current-password') + pwField('pw-new', '新密碼（至少 10 個字）', 'new-password') +
+      '<button class="btn pri" type="submit">更新密碼</button><p class="msg" id="pw-msg" role="status"></p></form>' +
+    '<div class="acard w"><h3>登入中的裝置</h3>' + devices +
+      (m.sessions.length > 1 ? '<button type="button" class="btn" id="out-others">登出其他所有裝置</button>' : '') + '</div>' +
+    '<div class="acard"><h3>登出</h3><p class="note0">登出後，這台裝置要重新輸入 Email 和密碼。</p><button type="button" class="btn pri" id="out-me">登出這台裝置</button></div>' +
+    '<details class="acard c danger"><summary>刪除帳號</summary><form id="delform" novalidate>' +
+      '<p class="note0">帳號和所有登入中的裝置都會刪掉，不能復原。</p>' + pwField('del-pw', '輸入密碼確認', 'current-password') +
+      '<button class="btn warn" type="submit">永久刪除我的帳號</button><p class="msg" id="del-msg" role="status"></p></form></details>';
+}
+$('#acct-body').addEventListener('click', async e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  try {
+    if (b.dataset.sess) { b.disabled = true; await call('DELETE', '/me/sessions/' + b.dataset.sess); toast('那台裝置已登出'); loadAccount(); }
+    else if (b.id === 'out-others') { await call('DELETE', '/me/sessions/others'); toast('其他裝置都已登出'); loadAccount(); }
+    else if (b.id === 'out-me') logout('已登出。');
+  } catch (err) {
+    b.disabled = false;
+    toast(err.message);
+  }
+});
+$('#acct-body').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (e.target.id === 'pwform') {
+    const cur = $('#pw-cur').value, next = $('#pw-new').value;
+    if (!cur || !next) return setMsg('pw-msg', '兩個欄位都要填。');
+    if (next.length < 10) return setMsg('pw-msg', ERR.pw_short);
+    try {
+      await call('POST', '/me/password', { current: cur, next });
+      $('#pw-cur').value = $('#pw-new').value = '';
+      setMsg('pw-msg', '密碼更新好了，其他裝置都已登出。', true);
+    } catch (err) { setMsg('pw-msg', err.message); }
+  }
+  if (e.target.id === 'delform') {
+    const password = $('#del-pw').value;
+    if (!password) return setMsg('del-msg', '請輸入密碼。');
+    if (!confirm('確定要永久刪除這個帳號嗎？')) return;
+    try {
+      await call('DELETE', '/me', { password });
+      clearToken();
+      ME = null;
+      location.hash = '';
+      showLogin('帳號已刪除。');
+    } catch (err) { setMsg('del-msg', err.message); }
+  }
+});
+
+function codeBox(text, note, isUrl) {
+  return '<div class="codebox">' + (isUrl ? '<input readonly value="' + esc(text) + '" aria-label="重設連結">' : '<span class="code">' + esc(text) + '</span>') +
+    '<button type="button" class="btn" data-copy="' + esc(text) + '">複製</button><small>' + esc(note) + '</small></div>';
+}
+async function loadAdmin() {
+  const box = $('#admin-body');
+  box.innerHTML = '<div class="skel"></div>';
+  let u, inv;
+  try { [u, inv] = await Promise.all([call('GET', '/admin/users'), call('GET', '/admin/invites')]); }
+  catch (err) { box.innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; return; }
+  const t = Date.now() / 1000;
+  const invites = inv.invites.map(i => {
+    const open = !i.used_at && i.expires_at >= t;
+    const state = i.used_at ? '已使用：' + esc(i.used_by || '已刪除的帳號') : i.expires_at < t ? '已過期' : '還沒用，' + fmtDay(i.expires_at) + ' 前有效';
+    return '<div class="rowi"><div class="main"><b>' + esc(i.label || '（沒有備註）') + '</b><small><span>' + state + '</span><span>建立：' + fmtDay(i.created_at) + '</span></small></div>' +
+      (open ? '<div class="acts"><button type="button" class="btn ghost" data-revoke="' + esc(i.id) + '">撤銷</button></div>' : '') + '</div>';
+  }).join('') || '<p class="note0">還沒有邀請碼。</p>';
+  const users = u.users.map(x => {
+    const self = x.id === u.me;
+    const tags = (x.role === 'owner' ? '<span class="tag own">管理員</span>' : '') + (x.status !== 'active' ? '<span class="tag off">已停用</span>' : '') + (self ? '<span class="tag me">你</span>' : '');
+    const acts = '<button type="button" class="btn ghost" data-reset="' + x.id + '">產生重設連結</button>' + (self ? '' :
+      '<button type="button" class="btn ghost" data-status="' + x.id + '" data-to="' + (x.status === 'active' ? 'disabled' : 'active') + '">' + (x.status === 'active' ? '停用' : '啟用') + '</button>' +
+      '<button type="button" class="btn warn" data-del="' + x.id + '" data-email="' + esc(x.email) + '">刪除</button>');
+    return '<div class="rowi col"><div class="main"><b>' + esc(x.email) + tags + '</b><small><span>註冊：' + fmtDay(x.created_at) + '</span><span>最近登入：' + since(x.last_login_at) + '</span><span>裝置：' + x.devices + ' 台</span></small></div>' +
+      '<div class="acts">' + acts + '</div><div class="out" id="reset-out-' + x.id + '"></div></div>';
+  }).join('');
+  box.innerHTML =
+    '<div class="acard y"><h3>邀請碼</h3><p class="note0">新帳號要有邀請碼才能註冊。每個碼只能用一次，7 天後失效。</p>' +
+      '<form id="invform" class="invnew" novalidate><div class="field"><label for="inv-label">備註（選填）</label><input id="inv-label" maxlength="40" placeholder="例：測試帳號 1"></div><button class="btn pri" type="submit">產生邀請碼</button></form>' +
+      '<div id="inv-out"></div>' + invites + '</div>' +
+    '<div class="acard w"><h3>所有帳號</h3>' + users + '</div>';
+}
+$('#admin-body').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (e.target.id !== 'invform') return;
+  try {
+    const r = await call('POST', '/admin/invites', { label: $('#inv-label').value });
+    await loadAdmin();
+    $('#inv-out').innerHTML = codeBox(r.code, '把這個碼給要註冊的人。離開這頁之後就看不到了，' + fmtDay(r.expires_at) + ' 前有效。');
+  } catch (err) { toast(err.message); }
+});
+$('#admin-body').addEventListener('click', async e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  try {
+    if (b.dataset.copy) { await navigator.clipboard.writeText(b.dataset.copy); toast('已複製'); }
+    else if (b.dataset.revoke) { await call('DELETE', '/admin/invites/' + b.dataset.revoke); toast('邀請碼已撤銷'); loadAdmin(); }
+    else if (b.dataset.reset) {
+      const r = await call('POST', '/admin/users/' + b.dataset.reset + '/reset-link');
+      $('#reset-out-' + b.dataset.reset).innerHTML = codeBox(r.url, '把這個連結傳給他。30 分鐘內有效，只能用一次。', true);
+    } else if (b.dataset.status) {
+      await call('POST', '/admin/users/' + b.dataset.status + '/status', { status: b.dataset.to });
+      toast(b.dataset.to === 'disabled' ? '帳號已停用，它的裝置都已登出' : '帳號已重新啟用');
+      loadAdmin();
+    } else if (b.dataset.del) {
+      if (!confirm('確定要刪除 ' + b.dataset.email + ' 嗎？不能復原。')) return;
+      await call('DELETE', '/admin/users/' + b.dataset.del);
+      toast('帳號已刪除');
+      loadAdmin();
+    }
+  } catch (err) { toast(err.message); }
+});
 
 /* ---------- API ---------- */
 class ApiError extends Error { constructor(kind, msg) { super(msg); this.kind = kind; } }
 async function api(path) {
   let r;
   try {
-    r = await fetch(RELAY + path, { headers: { Authorization: 'Bearer ' + (localStorage.getItem('award-token') || '') } });
+    r = await fetch(RELAY + path, { headers: { Authorization: 'Bearer ' + getToken() } });
   } catch {
     throw new ApiError('network', '連不上中繼站，請檢查網路後再試一次。');
   }
@@ -587,7 +988,7 @@ async function api(path) {
     if (!body) throw new ApiError('bad', 'seats.aero 回傳的資料看不懂，等一下再試。');
     return body;
   }
-  if (body && body.error === 'auth') { logout('請重新輸入密碼。'); throw new ApiError('auth', '請重新輸入密碼。'); }
+  if (body && body.error === 'auth') { logout(ERR.auth, false); throw new ApiError('auth', ERR.auth); }
   if (body && body.error === 'param') throw new ApiError('param', '搜尋條件的格式不對。');
   const t = text.toLowerCase();
   if (t.includes('subscription_expired')) throw new ApiError('expired', 'seats.aero 的 Pro 訂閱已經過期，續訂之後才查得到。');
@@ -1223,6 +1624,7 @@ function showApp() {
   addEventListener('resize', hh);
   const q = load('award-quota', null);
   if (q && q.day === new Date().toISOString().slice(0, 10)) showQuota(q.n);
+  route();
   if (location.hash === '#demo' && S.params) runSearch(S.params, true);
 }
 function init() {
@@ -1248,8 +1650,15 @@ function init() {
     S.params = readForm();
   }
   showNames($('#from')); showNames($('#to'));
-  if (localStorage.getItem('award-token')) showApp();
-  else showLogin('');
+  localStorage.removeItem('award-token');   // the old single-password token no longer works
+  const reset = /^#reset=([A-Za-z0-9_-]{40,64})$/.exec(location.hash);
+  if (reset) startReset(reset[1]);
+  else if (getToken()) {
+    // check the saved session is still valid before showing the app
+    call('GET', '/me')
+      .then(m => { ME = { email: m.email, role: m.role }; showApp(); })
+      .catch(err => { if (err.kind === 'network') showApp(); else if (err.kind !== 'auth') showLogin(err.message); });
+  } else showLogin('');
 }
 init();
 </script>
