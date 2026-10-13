@@ -1,0 +1,1237 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#FFFCF6">
+<meta name="color-scheme" content="light">
+<title>里程機位搜尋</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cg stroke='%233E3A39' stroke-width='3'%3E%3Crect x='6' y='9' width='28' height='24' rx='9' fill='%23F2A497'/%3E%3Ccircle cx='14.5' cy='19' r='4' fill='%23F6D27A'/%3E%3Ccircle cx='25.5' cy='19' r='4' fill='%23F6D27A'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Huninn&display=swap" rel="stylesheet">
+<style>
+/* Picture-book style, shared with the Nordic trip site: Huninn, warm paper, 3px ink outlines,
+   coral / yellow / water / green fills. Huninn has a single weight, so hierarchy comes from size and fill, not bold. */
+:root{
+  --paper:#FFFCF6; --ink:#3E3A39; --ink2:#6B6461;
+  --coral:#F2A497; --yellow:#F6D27A; --water:#A8D3E6; --green:#B9DAA5;
+  --coral-t:#FCE6E0; --yellow-t:#FCF1D3; --water-t:#E6F2F8; --green-t:#EBF4E5;
+  --line:3px solid var(--ink); --r:22px;
+  --star:var(--yellow); --oneworld:var(--coral); --skyteam:var(--water); --none:var(--green);
+  --font:'Huninn','jf-openhuninn','PingFang TC','Microsoft JhengHei',sans-serif;
+  --pop:cubic-bezier(.34,1.56,.64,1);
+  --hh:64px;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;background:var(--paper)}
+body{margin:0;font:16px/1.55 var(--font);color:var(--ink);background:var(--paper)}
+b,strong,h1,h2,h3{font-weight:400}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+button,a,summary,.switch{touch-action:manipulation}
+button,summary,.switch{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+:focus-visible{outline:3px solid var(--water);outline-offset:2px}
+a{color:var(--ink)}
+svg{display:block}
+.num{font-variant-numeric:tabular-nums}
+.wrap{max-width:720px;margin:0 auto;padding:0 max(14px,env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
+
+/* motion: one hop when results arrive, a floating mascot and plane; all off for reduced motion */
+.float{animation:float 3.4s ease-in-out infinite}
+@keyframes float{50%{transform:translateY(-5px)}}
+.drift{animation:drift 9s ease-in-out infinite alternate}
+.drift.d2{animation-duration:12s;animation-delay:-4s}
+@keyframes drift{from{transform:translateX(-10px)}to{transform:translateX(10px)}}
+.flow{stroke-dasharray:6 9;animation:flow 1.4s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-15}}
+.sway{animation:sway 3.6s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}
+@keyframes sway{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+@keyframes pop{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes shake{20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+.shake{animation:shake .45s}
+
+/* login */
+.login{min-height:100vh;min-height:100svh;display:flex;align-items:center;justify-content:center;padding:24px 18px}
+.lcard{width:100%;max-width:360px;text-align:center}
+.lcard .pic{border:var(--line);border-radius:26px;background:var(--water-t);padding:18px 0 8px;margin-bottom:16px;overflow:hidden}
+.lcard .pic svg{width:150px;height:auto;margin:0 auto}
+.lcard h1{font-size:27px;margin:0 0 2px}
+.lcard p{margin:0 0 14px;font-size:14px}
+.lform{display:flex;gap:8px;border:var(--line);border-radius:var(--r);padding:14px;background:var(--yellow-t)}
+.lform input{flex:1;min-width:0;font-size:20px;letter-spacing:4px;text-align:center;border:var(--line);border-radius:14px;padding:7px 10px;background:var(--paper)}
+.lform input:focus{outline:3px solid var(--water);outline-offset:2px}
+.lform button{border:var(--line);border-radius:999px;background:var(--coral);font-size:17px;padding:0 18px;transition:transform .12s ease-out}
+.lform button:active{transform:scale(.95)}
+.lcard .err{min-height:22px;margin:10px 0 0;font-size:14px;color:#A33A2A}
+
+/* top bar */
+.top{position:sticky;top:0;z-index:20;background:var(--paper);border-top:7px solid var(--water);border-bottom:var(--line)}
+.top .in{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:8px;padding:calc(6px + env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) 6px max(12px,env(safe-area-inset-left))}
+.brand{flex:1;display:flex;align-items:center;gap:8px;font-size:19px;min-width:0;white-space:nowrap}
+.brand .logo{width:38px;height:38px;flex:0 0 38px}
+.quota{font-size:13px;border:2px solid var(--ink);border-radius:999px;padding:0 10px;background:var(--yellow-t);white-space:nowrap}
+.icon-btn{border:var(--line);background:var(--paper);width:38px;height:38px;border-radius:50%;display:grid;place-items:center;padding:0;transition:transform .12s ease-out}
+.icon-btn:active{transform:scale(.92)}
+.icon-btn svg{width:18px;height:18px}
+
+/* search card */
+.card{background:var(--paper);border:var(--line);border-radius:var(--r);padding:12px 12px 36px;margin:14px 0 36px;position:relative}
+.hero{border:var(--line);border-radius:16px;background:var(--water-t);overflow:hidden;margin-bottom:10px}
+.hero svg{width:100%;height:auto}
+.route{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:6px;align-items:start}
+.field{position:relative;border:var(--line);border-radius:16px;padding:4px 12px 5px;min-width:0;background:var(--paper)}
+.field:focus-within{background:var(--water-t)}
+.field label{display:block;font-size:12px;color:var(--ink2);line-height:1.35}
+.field input{display:block;border:0;outline:0;width:100%;min-width:0;padding:0;background:transparent;font-size:17px;-webkit-appearance:none;appearance:none;border-radius:0}
+.ap input{font-size:24px;line-height:1.25;text-transform:uppercase;letter-spacing:1px}
+.ap input::placeholder{font-size:16px;letter-spacing:0;text-transform:none;color:#A39C98}
+.names{font-size:12px;color:var(--ink2);height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.swap{margin-top:16px;width:40px;height:40px;border-radius:50%;border:var(--line);background:var(--yellow);display:grid;place-items:center;padding:0;transition:transform .2s var(--pop)}
+.swap:active{transform:rotate(180deg) scale(.92)}
+.sugg{position:absolute;left:0;right:0;top:calc(100% + 6px);background:var(--paper);border:var(--line);border-radius:18px;z-index:15;max-height:300px;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;animation:pop .3s var(--pop)}
+.sugg button{display:flex;width:100%;gap:10px;align-items:baseline;text-align:left;border:0;background:none;padding:9px 14px;border-bottom:2px dashed var(--ink)}
+.sugg button:last-child{border-bottom:0}
+.sugg button:active{background:var(--yellow-t)}
+.sugg b{flex:0 0 auto;min-width:76px;font-size:15px;letter-spacing:.5px}
+.sugg span{color:var(--ink2);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dates{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:8px}
+input[type=date]{min-height:26px;text-align:left}
+input[type=date]::-webkit-date-and-time-value{text-align:left}
+.months{display:flex;gap:6px;overflow-x:auto;overscroll-behavior-x:contain;margin:10px -12px 0;padding:2px 12px 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.months::-webkit-scrollbar{display:none}
+.mchip{flex:0 0 auto;border:var(--line);border-radius:999px;background:var(--paper);padding:1px 12px;font-size:15px;white-space:nowrap;transition:transform .12s ease-out}
+.mchip:active{transform:scale(.95)}
+.mchip small{font-size:11px;margin-right:3px;color:var(--ink2)}
+.mchip.on{background:var(--yellow)}
+.ferr{color:#A33A2A;font-size:14px;margin:8px 0 0}
+.ferr:empty{display:none}
+.go{position:absolute;left:50%;bottom:-23px;transform:translateX(-50%);display:flex;align-items:center;gap:6px;border:var(--line);border-radius:999px;background:var(--coral);font-size:19px;padding:6px 26px 6px 20px;white-space:nowrap;transition:transform .12s ease-out}
+.go:active{transform:translateX(-50%) scale(.95)}
+.go[disabled]{background:var(--coral-t)}
+.go svg{width:22px;height:22px}
+
+/* recent searches */
+.recent{display:flex;gap:6px;overflow-x:auto;overscroll-behavior-x:contain;margin:-8px -14px 8px;padding:0 14px 4px;scrollbar-width:none}
+.recent::-webkit-scrollbar{display:none}
+.recent button{flex:0 0 auto;border:2px dashed var(--ink);border-radius:999px;background:var(--paper);font-size:13px;padding:2px 12px;white-space:nowrap}
+.recent button:active{background:var(--yellow-t)}
+
+/* results */
+#results{scroll-margin-top:calc(var(--hh) + 6px);animation:pop .5s var(--pop)}
+#banner.sticky{position:sticky;top:var(--hh);z-index:6;background:var(--paper);padding-top:4px}
+.banner{border:var(--line);border-radius:18px;padding:10px 14px;margin:10px 0;background:var(--yellow-t);font-size:14px}
+.banner.bad{background:var(--coral-t)}
+.banner.demo{display:flex;align-items:center;gap:8px;margin:4px 0 6px;padding:6px 10px;background:var(--yellow)}
+.banner.demo .acts{margin:0 0 0 auto;flex:0 0 auto}
+.banner.demo .btn{margin:0;padding:1px 12px}
+.demo-on .dh{top:calc(var(--hh) + var(--bh,0px))}
+.banner b{display:block;font-size:17px;margin-bottom:2px}
+.banner.demo b{display:inline;font-size:15px;margin:0 6px 0 0}
+.banner .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.btn{display:inline-block;border:var(--line);border-radius:999px;background:var(--water);padding:3px 14px;font-size:15px;text-decoration:none;transition:transform .12s ease-out}
+.btn:active{transform:scale(.95)}
+.btn.pri{background:var(--coral)}
+.route-h{font-size:30px;letter-spacing:1px;line-height:1.2;margin:8px 0 2px;overflow-wrap:anywhere}
+.route-h .ar{display:inline-block;width:34px;height:22px;margin:0 6px;vertical-align:-1px}
+.sum{font-size:15px}
+.fresh{font-size:12px;color:var(--ink2);margin:2px 0 0}
+.fresh:empty{display:none}
+
+/* filters: they work on rows already downloaded, so changing them costs no API call */
+.filters{border:var(--line);border-radius:var(--r);padding:12px;margin:12px 0 16px;background:var(--green-t)}
+.seg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.seg button{border:var(--line);border-radius:16px;background:var(--paper);padding:4px 0 3px;line-height:1.3;font-size:16px;transition:transform .12s ease-out}
+.seg button:active{transform:scale(.95)}
+.seg button[aria-checked=true]{background:var(--coral)}
+.seg .n{display:block;font-size:12px;min-height:16px;font-variant-numeric:tabular-nums}
+.lbl{font-size:13px;margin:12px 0 5px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:var(--line);border-radius:999px;background:var(--paper);padding:1px 11px;font-size:15px;transition:transform .12s ease-out}
+.chip:active{transform:scale(.95)}
+.chip .dot{width:12px;height:12px;border:2px solid var(--ink);border-radius:50%;background:var(--c)}
+.chip[aria-pressed=true]{background:var(--yellow)}
+.al4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.al4 .chip{justify-content:center;padding:2px 4px;white-space:nowrap;opacity:.55}
+.al4 .chip[aria-pressed=true]{background:var(--c);opacity:1}
+.al4 .chip[aria-pressed=true] .dot{background:var(--paper)}
+.al4 .chip[aria-pressed=false] .dot{background:var(--c)}
+.al4 .chip.part{opacity:1;border-style:dashed;background:var(--paper)}
+.frow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}
+.switch{display:flex;align-items:center;gap:8px;font-size:15px;cursor:pointer}
+.switch input{position:absolute;opacity:0;width:1px;height:1px}
+.switch .tr{width:46px;height:26px;border:var(--line);border-radius:999px;background:var(--paper);position:relative;flex:0 0 46px;transition:background .2s}
+.switch .tr::after{content:"";position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:50%;background:var(--ink);transition:transform .25s var(--pop)}
+.switch input:checked+.tr{background:var(--green)}
+.switch input:checked+.tr::after{transform:translateX(20px)}
+.switch input:focus-visible+.tr{outline:3px solid var(--water);outline-offset:2px}
+details.progs{margin-top:12px;border:var(--line);border-radius:18px;background:var(--paper)}
+details.progs summary{list-style:none;display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:15px;cursor:pointer}
+details.progs summary::-webkit-details-marker{display:none}
+details.progs summary::after{content:"＋";margin-left:4px}
+details.progs[open] summary::after{content:"－"}
+details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13px;text-align:right}
+.pl{padding:0 12px 12px}
+.pl .field{margin:2px 0 4px}
+.pgh{display:flex;align-items:center;gap:6px;font-size:13px;margin:12px 0 4px}
+.pgh .dot{width:12px;height:12px;border:2px solid var(--ink);border-radius:50%;background:var(--c)}
+.pgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 10px}
+.pi{display:flex;align-items:center;gap:6px;font-size:14px;padding:4px 0;min-width:0}
+.pi input{appearance:none;-webkit-appearance:none;width:22px;height:22px;flex:0 0 22px;border:var(--line);border-radius:7px;margin:0;display:grid;place-content:center;background:var(--paper);cursor:pointer}
+.pi input:checked{background:var(--green)}
+.pi input:checked::after{content:"";width:9px;height:5px;border-left:3px solid var(--ink);border-bottom:3px solid var(--ink);transform:translateY(-2px) rotate(-45deg)}
+.pi span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pi small{color:var(--ink2);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.pi em{font-style:normal;font-size:12px;border:2px solid var(--ink);border-radius:999px;padding:0 6px;background:var(--green);line-height:1.3}
+.pi em:empty{display:none}
+
+/* calendar: the one bold element of the page */
+.cal{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px 18px;margin:4px 0 6px}
+.mh{font-size:18px;margin:0 0 6px}
+.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.wd{font-size:12px;text-align:center;padding-bottom:2px}
+.day{border:2px solid var(--ink);border-radius:12px;min-height:48px;padding:3px 0 2px;background:var(--paper);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:0;position:relative;line-height:1.2;min-width:0;transition:transform .12s ease-out}
+.day:active{transform:scale(.92)}
+.day .dn{font-size:12px;font-variant-numeric:tabular-nums}
+.day .dm{font-size:13px;white-space:nowrap;letter-spacing:-.4px;font-variant-numeric:tabular-nums}
+.day.none{border:2px dashed #CFC8C3;color:#A39C98}
+.day.good{background:var(--green-t)}
+.day.best{background:var(--green);border-width:3px}
+.day.dir::after{content:"";position:absolute;top:4px;right:4px;width:6px;height:6px;border-radius:50%;background:var(--ink)}
+.day.sel{background:var(--coral);border-width:3px;animation:pop .35s var(--pop)}
+.day.out{visibility:hidden}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;margin:6px 0 12px}
+.legend i{display:inline-block;width:14px;height:14px;border:2px solid var(--ink);border-radius:4px;vertical-align:-3px;margin-right:4px}
+.sortbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:8px 0 4px;font-size:14px}
+.sortbar .chip{padding:0 10px;font-size:14px}
+.sortbar .chip[aria-pressed=true]{background:var(--water)}
+.dayf{background:var(--coral)!important}
+
+/* list of offers */
+.dh{position:sticky;top:var(--hh);z-index:4;background:var(--paper);margin:0;padding:12px 2px 4px;font-size:18px;display:flex;align-items:center;gap:8px}
+.dh::before{content:"";width:14px;height:14px;flex:0 0 14px;border:3px solid var(--ink);border-radius:50%;background:var(--water)}
+.offer{border:var(--line);border-radius:18px;margin:8px 0;background:var(--paper);overflow:hidden}
+.ohead{display:block;width:100%;text-align:left;border:0;background:none;padding:10px 12px 9px}
+.ohead:active{background:var(--yellow-t)}
+.o1,.o2,.o3{display:flex;align-items:baseline;gap:6px;min-width:0}
+.o1 .pn{font-size:17px;white-space:nowrap}
+.o1 .pz{font-size:13px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.al{flex:0 0 auto;font-size:12px;border:2px solid var(--ink);background:var(--c);border-radius:999px;padding:0 7px;line-height:1.35;align-self:center}
+.mi{margin-left:auto;font-size:23px;white-space:nowrap;letter-spacing:-.2px;font-variant-numeric:tabular-nums;background:linear-gradient(transparent 62%,var(--yellow) 62%);padding:0 2px}
+.mi small{font-size:13px;margin-left:2px}
+.o2{font-size:14px;margin-top:3px;flex-wrap:wrap;row-gap:3px}
+.o2 .rt{letter-spacing:.5px}
+.tag{border:2px solid var(--ink);border-radius:999px;padding:0 8px;background:var(--paper);font-size:12px;line-height:20px}
+.tag.d{background:var(--green)}
+.tx{margin-left:auto;white-space:nowrap;font-size:13px;font-variant-numeric:tabular-nums}
+.o3{font-size:12px;color:var(--ink2);margin-top:4px}
+.o3 .ca{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.o3 .age{white-space:nowrap}
+.o3 .chev{width:18px;height:18px;flex:0 0 18px;transition:transform .25s var(--pop);align-self:center;color:var(--ink)}
+.ohead[aria-expanded=true] .chev{transform:rotate(180deg)}
+.trips{border-top:var(--line);background:var(--water-t);padding:4px 12px 12px;font-size:14px;animation:pop .35s var(--pop)}
+.trip{padding:10px 0;border-bottom:2px dashed var(--ink)}
+.t1{display:flex;align-items:baseline;gap:5px;flex-wrap:wrap;font-size:15px}
+.t1 b{font-size:20px;font-variant-numeric:tabular-nums}
+.t1 .ap3{font-size:14px;letter-spacing:.5px}
+.t1 sup{font-size:11px;color:#A33A2A}
+.t1 .t-mi{flex-basis:100%;white-space:nowrap;font-variant-numeric:tabular-nums;font-size:15px}
+.t2{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:13px;margin-top:3px}
+.t2 .fn{letter-spacing:.5px}
+.segs{margin:8px 0 0 6px;border-left:3px dotted var(--ink);padding-left:12px}
+.sg{margin:4px 0}
+.sg1{font-size:14px;font-variant-numeric:tabular-nums}
+.sg1 b{margin-right:8px}
+.sg2{display:flex;flex-wrap:wrap;gap:0 10px;font-size:12px;color:var(--ink2)}
+.lay{display:inline-block;font-size:12px;border:2px solid var(--ink);border-radius:999px;padding:0 8px;background:var(--coral-t);margin:6px 0}
+.book{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.tload,.tnone,.terr,.tmore{padding:10px 0}
+.terr{color:#A33A2A}
+.empty{border:3px dashed var(--ink);border-radius:var(--r);padding:14px 16px 16px;text-align:center;background:var(--green-t);margin:8px 0}
+.empty svg{width:54px;height:54px;margin:0 auto 6px}
+.empty .chips{justify-content:center;margin-top:10px}
+.more-btn{display:block;margin:14px auto;border:var(--line);border-radius:999px;background:var(--water);padding:3px 18px;font-size:15px;transition:transform .12s ease-out}
+.more-btn:active{transform:scale(.95)}
+.skel{height:78px;border:3px dashed #CFC8C3;border-radius:18px;margin:8px 0;background:linear-gradient(90deg,var(--paper) 25%,var(--yellow-t) 37%,var(--paper) 63%);background-size:400% 100%;animation:sk 1.3s ease infinite}
+@keyframes sk{0%{background-position:100% 50%}100%{background-position:0 50%}}
+.note{font-size:12px;color:var(--ink2);margin:16px 0 0}
+footer{text-align:center;font-size:12px;color:var(--ink2);margin-top:24px}
+@media (hover:hover) and (pointer:fine){
+  .sugg button:hover,.ohead:hover{background:var(--yellow-t)}
+  .chip:hover,.mchip:hover,.recent button:hover{background:var(--yellow-t)}
+  .btn:hover,.more-btn:hover,.go:hover{filter:brightness(1.04)}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+.route-h .ar svg{width:100%;height:100%}
+</style>
+</head>
+<body>
+
+<section id="login" class="login" hidden>
+  <div class="lcard">
+    <div class="pic" aria-hidden="true"><svg viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"><path d="M0 66q30-10 60 0t60 0v14H0z" fill="#B9DAA5"/><g class="float"><path d="M46 12v6"/><circle cx="46" cy="11" r="1.6" fill="#3E3A39"/><rect x="32" y="18" width="28" height="24" rx="9" fill="#F2A497"/><circle cx="40.5" cy="28" r="4.2" fill="#F6D27A"/><circle cx="51.5" cy="28" r="4.2" fill="#F6D27A"/><path d="M42.5 36q3.5 3 7 0"/><path d="M37 50l3-5M55 50l-3-5"/></g><g class="sway"><rect x="68" y="34" width="22" height="18" rx="4" fill="#F6D27A"/><path d="M72 34v-6a7 7 0 0 1 14 0v6"/><circle cx="79" cy="42" r="2.4" fill="#3E3A39"/><path d="M79 44v4"/></g></g></svg></div>
+    <h1>里程機位搜尋</h1>
+    <p>這是 Gino 自己用的查詢頁，請輸入密碼。</p>
+    <form id="lf" class="lform">
+      <input id="pw" type="password" autocomplete="current-password" enterkeyhint="go" aria-label="密碼">
+      <button id="lgo" type="submit">進入</button>
+    </form>
+    <p id="lerr" class="err" role="alert"></p>
+  </div>
+</section>
+
+<div id="app" hidden>
+  <header class="top"><div class="in">
+    <div class="brand">
+      <svg class="logo float" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g fill="none" stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"><path d="M20 3v6"/><circle cx="20" cy="3" r="1.5" fill="#3E3A39"/><rect x="6" y="9" width="28" height="24" rx="9" fill="#F2A497"/><circle cx="14.5" cy="19" r="4.2" fill="#F6D27A"/><circle cx="25.5" cy="19" r="4.2" fill="#F6D27A"/><path d="M16.5 27q3.5 3 7 0"/><path d="M11 38l3-5M29 38l-3-5"/></g></svg>
+      <span>里程機位搜尋</span>
+    </div>
+    <span id="quota" class="quota" hidden></span>
+    <button id="lock" class="icon-btn" type="button" aria-label="登出" title="登出"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#3E3A39" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="3" fill="#F6D27A"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 15v2"/></g></svg></button>
+  </div></header>
+
+  <main class="wrap">
+    <form id="sf" class="card" autocomplete="off" novalidate>
+      <div class="hero" aria-hidden="true"><svg viewBox="0 0 320 96" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"><circle cx="284" cy="24" r="11" fill="#F6D27A"/><g class="drift"><path d="M92 36h26a8 8 0 0 0-3-15 10 10 0 0 0-19-2 7 7 0 0 0-4 17z" fill="#FFFCF6"/></g><g class="drift d2"><path d="M222 45h20a6 6 0 0 0-2-11 8 8 0 0 0-15-2 6 6 0 0 0-3 13z" fill="#FFFCF6"/></g><path class="flow" d="M60 66Q150 -8 262 74" stroke-width="2.5"/><path d="M0 84q40-14 80-4t80 2 80-6 80 4v16H0z" fill="#B9DAA5"/><g transform="translate(250 56)"><path d="M12 26V4"/><g class="sway"><path d="M12 4h12l-3 5 3 5H12z" fill="#F2A497"/></g></g><g transform="translate(130 2)"><g class="float"><path d="M24 30l38-12c4-1 6 3 2 5L32 38z" fill="#FFFCF6"/><path d="M40 24l-6-12h7l11 9" fill="#F2A497"/><path d="M42 32l-2 12h7l7-14" fill="#F2A497"/><path d="M26 31l-4-7"/></g></g><g transform="translate(22 40)"><g class="float"><path d="M20 3v6"/><circle cx="20" cy="3" r="1.5" fill="#3E3A39"/><rect x="6" y="9" width="28" height="24" rx="9" fill="#F2A497"/><circle cx="14.5" cy="19" r="4.2" fill="#F6D27A"/><circle cx="25.5" cy="19" r="4.2" fill="#F6D27A"/><path d="M16.5 27q3.5 3 7 0"/><path d="M11 38l3-5M29 38l-3-5"/></g></g></g></svg></div>
+      <div class="route" id="route">
+        <div class="field ap">
+          <label for="from">出發</label>
+          <input id="from" placeholder="例：TPE" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="next">
+          <div class="names" id="from-names"></div>
+        </div>
+        <button type="button" class="swap" id="swap" aria-label="交換出發和抵達"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg></button>
+        <div class="field ap">
+          <label for="to">抵達</label>
+          <input id="to" placeholder="例：SEA" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="done">
+          <div class="names" id="to-names"></div>
+        </div>
+        <div class="sugg" id="sugg" hidden></div>
+      </div>
+      <div class="dates">
+        <div class="field"><label for="d1">最早出發</label><input type="date" id="d1"></div>
+        <div class="field"><label for="d2">最晚出發</label><input type="date" id="d2"></div>
+      </div>
+      <div class="months" id="months"></div>
+      <p class="ferr" id="ferr" role="alert"></p>
+      <button class="go" id="go" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#3E3A39" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6" fill="#FFFCF6"/><path d="M15 15l5 5"/></g></svg><span id="go-t">搜尋</span></button>
+    </form>
+
+    <div class="recent" id="recent"></div>
+
+    <section id="results" hidden>
+      <div id="banner"></div>
+      <div class="route-h" id="route-h"></div>
+      <div class="sum" id="sum" aria-live="polite"></div>
+      <div class="fresh" id="fresh"></div>
+
+      <div class="filters" id="filters" hidden>
+        <div class="seg" id="cabins" role="radiogroup" aria-label="艙等"></div>
+        <div class="lbl">用哪個聯盟的里程</div>
+        <div class="chips al4" id="alliances"></div>
+        <div class="frow">
+          <label class="switch"><input type="checkbox" id="direct"><span class="tr"></span><span>只看直飛</span></label>
+        </div>
+        <details class="progs" id="progs">
+          <summary><span>更多篩選</span><span id="prog-sum"></span></summary>
+          <div class="pl">
+            <div class="field"><label for="carriers">實際搭乘的航空公司（代碼）</label><input id="carriers" placeholder="不限，例：BR,DL" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="done"></div>
+            <div id="prog-list"></div>
+          </div>
+        </details>
+      </div>
+
+      <div class="cal" id="cal"></div>
+      <div class="legend" id="legend" hidden><span><i style="background:var(--green)"></i>最便宜</span><span><i style="background:var(--green-t)"></i>便宜</span><span><i style="background:var(--paper)"></i>有位</span><span>右上小點代表有直飛</span></div>
+      <div class="sortbar" id="sortbar"></div>
+      <div id="list"></div>
+      <p class="note">這是 seats.aero 的快取資料，可能已經過時。轉點數或訂位前，一定要先到航空公司網站確認還有位子。</p>
+    </section>
+
+    <footer>資料來源：<a href="https://seats.aero" target="_blank" rel="noopener">seats.aero</a>　僅供個人使用</footer>
+  </main>
+</div>
+
+<script>
+'use strict';
+const MASCOT = '<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g fill="none" stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"><path d="M20 3v6"/><circle cx="20" cy="3" r="1.5" fill="#3E3A39"/><rect x="6" y="9" width="28" height="24" rx="9" fill="#F2A497"/><circle cx="14.5" cy="19" r="4.2" fill="#F6D27A"/><circle cx="25.5" cy="19" r="4.2" fill="#F6D27A"/><path d="M16.5 27q3.5 3 7 0"/><path d="M11 38l3-5M29 38l-3-5"/></g></svg>';
+const PLANE = '<svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g fill="#FFFCF6" stroke="#3E3A39" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"><path d="M3 16l23-8c2-.6 3 1.4 1.2 2.4L9 19z"/><path d="M12 13l-3-7h4l6 5"/><path d="M13 17l-1 7h4l4-8"/></g></svg>';
+const RELAY = 'https://award-relay.richlovegod.workers.dev';
+const PW_NUMERIC = true;    // the site password is all digits, so show the number pad
+const CACHE_MIN = 15;       // re-running the same search within 15 minutes uses no API call
+const MAX_PAGES = 5;        // at most 5 API calls (5,000 rows) per search
+const MAX_DAYS = 92;
+
+const CABINS = [
+  { k: 'Y', name: '經濟', api: 'economy' },
+  { k: 'W', name: '豪經', api: 'premium' },
+  { k: 'J', name: '商務', api: 'business' },
+  { k: 'F', name: '頭等', api: 'first' },
+];
+const CABIN_BY = Object.fromEntries(CABINS.map(c => [c.k, c]));
+const CABIN_ZH = Object.fromEntries(CABINS.map(c => [c.api, c.name]));
+const ALLIANCES = [
+  { k: 'star', name: '星空聯盟', short: '星空' },
+  { k: 'oneworld', name: '寰宇一家', short: '寰宇' },
+  { k: 'skyteam', name: '天合聯盟', short: '天合' },
+  { k: 'none', name: '非聯盟', short: '非聯盟' },
+];
+const ALLIANCE_BY = Object.fromEntries(ALLIANCES.map(a => [a.k, a]));
+
+// seats.aero source: [name, airline in Chinese, alliance of the program, homepage]
+const PROGRAMS = {
+  united: ['United', '聯合航空', 'star', 'https://www.united.com'],
+  aeroplan: ['Aeroplan', '加拿大航空', 'star', 'https://www.aircanada.com/aeroplan'],
+  turkish: ['Turkish', '土耳其航空', 'star', 'https://www.turkishairlines.com'],
+  singapore: ['KrisFlyer', '新加坡航空', 'star', 'https://www.singaporeair.com'],
+  lufthansa: ['Miles & More', '漢莎航空', 'star', 'https://www.miles-and-more.com'],
+  connectmiles: ['ConnectMiles', '巴拿馬航空', 'star', 'https://www.copaair.com'],
+  ethiopian: ['ShebaMiles', '衣索比亞航空', 'star', 'https://www.ethiopianairlines.com'],
+  american: ['American', '美國航空', 'oneworld', 'https://www.aa.com'],
+  alaska: ['Alaska', '阿拉斯加航空', 'oneworld', 'https://www.alaskaair.com'],
+  qantas: ['Qantas', '澳洲航空', 'oneworld', 'https://www.qantas.com'],
+  qatar: ['Qatar', '卡達航空', 'oneworld', 'https://www.qatarairways.com'],
+  finnair: ['Finnair', '芬蘭航空', 'oneworld', 'https://www.finnair.com'],
+  british: ['British Airways', '英國航空', 'oneworld', 'https://www.britishairways.com'],
+  iberia: ['Iberia', '伊比利亞航空', 'oneworld', 'https://www.iberia.com'],
+  delta: ['Delta', '達美航空', 'skyteam', 'https://www.delta.com'],
+  flyingblue: ['Flying Blue', '法航荷航', 'skyteam', 'https://www.flyingblue.com'],
+  virginatlantic: ['Virgin Atlantic', '維珍航空', 'skyteam', 'https://www.virginatlantic.com'],
+  aeromexico: ['Aeromexico', '墨西哥國際航空', 'skyteam', 'https://www.aeromexico.com'],
+  eurobonus: ['EuroBonus', '北歐航空', 'skyteam', 'https://www.flysas.com'],
+  saudia: ['Saudia', '沙烏地阿拉伯航空', 'skyteam', 'https://www.saudia.com'],
+  emirates: ['Emirates', '阿聯酋航空', 'none', 'https://www.emirates.com'],
+  etihad: ['Etihad', '阿提哈德航空', 'none', 'https://www.etihad.com'],
+  velocity: ['Velocity', '維珍澳洲航空', 'none', 'https://www.velocityfrequentflyer.com'],
+  jetblue: ['JetBlue', '捷藍航空', 'none', 'https://www.jetblue.com'],
+  azul: ['Azul', '巴西藍色航空', 'none', 'https://www.voeazul.com.br'],
+  smiles: ['Smiles', 'GOL 航空', 'none', 'https://www.smiles.com.br'],
+  frontier: ['Frontier', '邊疆航空', 'none', 'https://www.flyfrontier.com'],
+  spirit: ['Spirit', '精神航空', 'none', 'https://www.spirit.com'],
+};
+const NO_TAX = new Set(['qatar', 'turkish', 'singapore']);   // seats.aero has no tax data for these
+
+const CARRIERS = {
+  BR: '長榮', CI: '華航', JX: '星宇', AE: '華信', B7: '立榮', IT: '台灣虎航',
+  UA: '聯合', AA: '美航', DL: '達美', AS: '阿拉斯加', HA: '夏威夷', B6: '捷藍', WN: '西南', F9: '邊疆', NK: '精神',
+  AC: '加航', WS: '西捷', AM: '墨航', CM: 'Copa', AV: 'Avianca', LA: 'LATAM', G3: 'GOL', AD: 'Azul',
+  NH: '全日空', JL: '日航', MM: '樂桃', KE: '大韓', OZ: '韓亞', CX: '國泰', HX: '香港航空', UO: '香港快運', NX: '澳門航空',
+  CA: '國航', MU: '東航', CZ: '南航', MF: '廈航', HU: '海航', '3U': '川航', ZH: '深航',
+  SQ: '新航', TR: '酷航', TG: '泰航', MH: '馬航', VN: '越航', PR: '菲航', '5J': '宿霧太平洋', GA: '印尼鷹航', AI: '印航', UL: '斯里蘭卡',
+  EK: '阿聯酋', EY: '阿提哈德', QR: '卡達', SV: '沙烏地', TK: '土航', ET: '衣索比亞', MS: '埃及', SA: '南非', RJ: '約旦', GF: '海灣',
+  LH: '漢莎', LX: '瑞航', OS: '奧航', SN: '布魯塞爾', LO: '波蘭', A3: '愛琴海', TP: '葡航', SK: '北歐', AY: '芬航', FI: '冰島',
+  BA: '英航', IB: '伊比利亞', EI: '愛爾蘭', VS: '維珍', AF: '法航', KL: '荷航', AZ: 'ITA', UX: '歐羅巴',
+  QF: '澳航', VA: '維珍澳洲', NZ: '紐航', FJ: '斐濟',
+};
+
+// [airport codes, Chinese name, English name, show before typing]
+const PLACES = [
+  ['TPE,TSA', '台北（桃園＋松山）', 'Taipei', 1], ['TPE', '台北桃園', 'Taipei Taoyuan', 1], ['TSA', '台北松山', 'Taipei Songshan'],
+  ['KHH', '高雄', 'Kaohsiung'], ['RMQ', '台中', 'Taichung'],
+  ['SEA', '西雅圖', 'Seattle', 1], ['SFO', '舊金山', 'San Francisco', 1], ['SJC', '聖荷西', 'San Jose'], ['OAK', '奧克蘭（加州）', 'Oakland'],
+  ['SFO,SJC,OAK', '舊金山灣區（全部）', 'Bay Area'], ['LAX', '洛杉磯', 'Los Angeles', 1], ['ONT', '安大略（加州）', 'Ontario'],
+  ['SAN', '聖地牙哥', 'San Diego'], ['PDX', '波特蘭', 'Portland'], ['LAS', '拉斯維加斯', 'Las Vegas'], ['PHX', '鳳凰城', 'Phoenix'],
+  ['DEN', '丹佛', 'Denver'], ['SLC', '鹽湖城', 'Salt Lake City'], ['DFW', '達拉斯', 'Dallas'], ['IAH', '休士頓', 'Houston'],
+  ['ORD', '芝加哥', 'Chicago'], ['MSP', '明尼亞波利斯', 'Minneapolis'], ['DTW', '底特律', 'Detroit'], ['ATL', '亞特蘭大', 'Atlanta'],
+  ['MIA', '邁阿密', 'Miami'], ['MCO', '奧蘭多', 'Orlando'], ['BOS', '波士頓', 'Boston'],
+  ['JFK,EWR,LGA', '紐約（全部）', 'New York', 1], ['JFK', '紐約甘迺迪', 'New York JFK'], ['EWR', '紐華克', 'Newark'], ['LGA', '紐約拉瓜地亞', 'LaGuardia'],
+  ['IAD,DCA', '華盛頓（全部）', 'Washington'], ['IAD', '華盛頓杜勒斯', 'Washington Dulles'], ['DCA', '華盛頓雷根', 'Washington National'],
+  ['HNL', '檀香山', 'Honolulu'], ['ANC', '安克拉治', 'Anchorage'], ['YVR', '溫哥華', 'Vancouver', 1], ['YYZ', '多倫多', 'Toronto'],
+  ['YUL', '蒙特婁', 'Montreal'], ['YYC', '卡加利', 'Calgary'], ['MEX', '墨西哥城', 'Mexico City'],
+  ['NRT,HND', '東京（成田＋羽田）', 'Tokyo', 1], ['NRT', '東京成田', 'Tokyo Narita'], ['HND', '東京羽田', 'Tokyo Haneda'],
+  ['KIX', '大阪關西', 'Osaka Kansai', 1], ['NGO', '名古屋', 'Nagoya'], ['FUK', '福岡', 'Fukuoka'], ['CTS', '札幌', 'Sapporo'], ['OKA', '沖繩', 'Okinawa'],
+  ['ICN', '首爾仁川', 'Seoul Incheon', 1], ['GMP', '首爾金浦', 'Seoul Gimpo'], ['PUS', '釜山', 'Busan'],
+  ['HKG', '香港', 'Hong Kong', 1], ['MFM', '澳門', 'Macau'], ['PVG', '上海浦東', 'Shanghai Pudong'], ['PEK', '北京首都', 'Beijing Capital'],
+  ['PKX', '北京大興', 'Beijing Daxing'], ['CAN', '廣州', 'Guangzhou'], ['XMN', '廈門', 'Xiamen'],
+  ['SIN', '新加坡', 'Singapore', 1], ['BKK', '曼谷', 'Bangkok', 1], ['KUL', '吉隆坡', 'Kuala Lumpur'], ['MNL', '馬尼拉', 'Manila'],
+  ['SGN', '胡志明市', 'Ho Chi Minh City'], ['HAN', '河內', 'Hanoi'], ['DPS', '峇里島', 'Bali'], ['DEL', '德里', 'Delhi'],
+  ['DXB', '杜拜', 'Dubai'], ['DOH', '杜哈', 'Doha'], ['AUH', '阿布達比', 'Abu Dhabi'], ['IST', '伊斯坦堡', 'Istanbul'],
+  ['LHR', '倫敦希斯洛', 'London Heathrow', 1], ['LGW', '倫敦蓋威克', 'London Gatwick'], ['CDG', '巴黎', 'Paris', 1],
+  ['AMS', '阿姆斯特丹', 'Amsterdam'], ['FRA', '法蘭克福', 'Frankfurt'], ['MUC', '慕尼黑', 'Munich'], ['ZRH', '蘇黎世', 'Zurich'],
+  ['VIE', '維也納', 'Vienna'], ['FCO', '羅馬', 'Rome'], ['MXP', '米蘭', 'Milan'], ['MAD', '馬德里', 'Madrid'], ['BCN', '巴塞隆納', 'Barcelona'],
+  ['LIS', '里斯本', 'Lisbon'], ['DUB', '都柏林', 'Dublin'], ['CPH', '哥本哈根', 'Copenhagen', 1], ['ARN', '斯德哥爾摩', 'Stockholm'],
+  ['OSL', '奧斯陸', 'Oslo'], ['HEL', '赫爾辛基', 'Helsinki'], ['ATH', '雅典', 'Athens'], ['PRG', '布拉格', 'Prague'],
+  ['SYD', '雪梨', 'Sydney'], ['MEL', '墨爾本', 'Melbourne'], ['BNE', '布里斯本', 'Brisbane'], ['AKL', '奧克蘭（紐西蘭）', 'Auckland'],
+].map(([codes, zh, en, pop]) => ({ codes: codes.split(','), zh, en, pop: !!pop }));
+const AIRPORT_ZH = Object.fromEntries(PLACES.filter(p => p.codes.length === 1).map(p => [p.codes[0], p.zh]));
+
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const num = v => (typeof v === 'number' ? v : parseInt(String(v == null ? '' : v).replace(/[^\d]/g, ''), 10)) || 0;
+const n = s => '<span class="num">' + s + '</span>';
+function load(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch { return d; } }
+function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+
+const S = {
+  prefs: Object.assign({ cabin: 'J', off: [], direct: false, carriers: '', sort: 'date' }, load('award-prefs', {})),
+  params: null, rows: null, truncated: false, fetchedAt: 0, demo: false, day: null, shown: 60,
+  trips: new Map(),
+};
+const savePrefs = () => save('award-prefs', S.prefs);
+const prog = src => {
+  const p = PROGRAMS[src];
+  return p ? { name: p[0], zh: p[1], al: p[2], url: p[3] } : { name: src || '?', zh: '', al: 'none', url: '' };
+};
+
+/* ---------- dates and formats ---------- */
+const pad = x => String(x).padStart(2, '0');
+const isoDate = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const parseDate = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const WD = '日一二三四五六';
+const md = s => { const d = parseDate(s); return (d.getMonth() + 1) + '/' + d.getDate(); };
+const mdw = s => n(md(s)) + '（' + WD[parseDate(s).getDay()] + '）';
+const daysBetween = (a, b) => Math.round((parseDate(b) - parseDate(a)) / 864e5);
+const fmtMiles = m => m.toLocaleString('en-US');
+function fmtMan(m) {
+  if (m < 10000) return fmtMiles(m);
+  const v = m / 10000;
+  return (v >= 100 ? Math.round(v) : Math.round(v * 10) / 10) + '萬';
+}
+function money(v, cur) {
+  if (cur) {
+    const d = v >= 100 ? 0 : 2;
+    try { return new Intl.NumberFormat('zh-TW', { style: 'currency', currency: cur, minimumFractionDigits: d, maximumFractionDigits: d }).format(v); } catch {}
+    return cur + ' ' + v.toFixed(d);
+  }
+  return '稅 ' + v.toFixed(2);
+}
+function ago(ts) {
+  const t = Date.parse(ts);
+  if (!t) return '';
+  const m = Math.max(0, (Date.now() - t) / 60000);
+  if (m < 60) return Math.max(1, Math.round(m)) + ' 分鐘前更新';
+  if (m < 2880) return Math.round(m / 60) + ' 小時前更新';
+  return Math.round(m / 1440) + ' 天前更新';
+}
+function dur(min) {
+  min = Math.round(min || 0);
+  if (min <= 0) return '';
+  const h = Math.floor(min / 60), m = min % 60;
+  return (h ? h + ' 小時' : '') + (h && m ? ' ' : '') + (m ? m + ' 分' : '');
+}
+// seats.aero trip times are each airport's local clock with a trailing Z, so read them as text.
+const hm = ts => (ts || '').slice(11, 16);
+const dayDiff = (a, b) => (a && b) ? daysBetween(a.slice(0, 10), b.slice(0, 10)) : 0;
+const minsBetween = (a, b) => (Date.parse(b) - Date.parse(a)) / 60000;
+const carrierName = c => ((CARRIERS[c] || '') + ' ' + c).trim();
+function resetText() {
+  const d = new Date();
+  const r = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1));
+  return '會在你這邊的 ' + r.toLocaleTimeString('zh-TW', { hour: 'numeric', minute: '2-digit' }) + '（UTC 0 點）';
+}
+
+/* ---------- login ---------- */
+function showLogin(msg) {
+  $('#app').hidden = true;
+  $('#login').hidden = false;
+  $('#lerr').textContent = msg || '';
+  const pw = $('#pw');
+  pw.value = '';
+  if (PW_NUMERIC) pw.setAttribute('inputmode', 'numeric');
+  setTimeout(() => pw.focus(), 50);
+}
+function logout(msg) {
+  localStorage.removeItem('award-token');
+  showLogin(msg);
+}
+$('#lf').addEventListener('submit', async e => {
+  e.preventDefault();
+  const pw = $('#pw').value;
+  if (!pw) return;
+  $('#lgo').disabled = true;
+  $('#lerr').textContent = '';
+  let msg = null;
+  try {
+    const r = await fetch(RELAY + '/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }) });
+    const b = await r.json().catch(() => ({}));
+    if (r.ok && b.token) localStorage.setItem('award-token', b.token);
+    else if (r.status === 429) msg = '錯太多次了，請 15 分鐘後再試。';
+    else if (b.error === 'password') msg = b.left > 0 ? '密碼不對，還可以再試 ' + b.left + ' 次。' : '密碼不對，請 15 分鐘後再試。';
+    else msg = '登入失敗（HTTP ' + r.status + '）。';
+  } catch {
+    msg = '連不上中繼站，請檢查網路。';
+  }
+  $('#lgo').disabled = false;
+  if (msg) { $('#lerr').textContent = msg; $('#pw').select(); return; }
+  showApp();
+});
+$('#lock').addEventListener('click', () => logout('已登出。'));
+
+/* ---------- API ---------- */
+class ApiError extends Error { constructor(kind, msg) { super(msg); this.kind = kind; } }
+async function api(path) {
+  let r;
+  try {
+    r = await fetch(RELAY + path, { headers: { Authorization: 'Bearer ' + (localStorage.getItem('award-token') || '') } });
+  } catch {
+    throw new ApiError('network', '連不上中繼站，請檢查網路後再試一次。');
+  }
+  const q = r.headers.get('X-RateLimit-Remaining');
+  if (q !== null && q !== '' && !isNaN(q)) setQuota(Number(q));
+  const text = await r.text();
+  let body = null;
+  try { body = JSON.parse(text); } catch {}
+  if (r.ok) {
+    if (!body) throw new ApiError('bad', 'seats.aero 回傳的資料看不懂，等一下再試。');
+    return body;
+  }
+  if (body && body.error === 'auth') { logout('請重新輸入密碼。'); throw new ApiError('auth', '請重新輸入密碼。'); }
+  if (body && body.error === 'param') throw new ApiError('param', '搜尋條件的格式不對。');
+  const t = text.toLowerCase();
+  if (t.includes('subscription_expired')) throw new ApiError('expired', 'seats.aero 的 Pro 訂閱已經過期，續訂之後才查得到。');
+  if (r.status === 429) throw new ApiError('quota', '今天的 1,000 次查詢額度用完了，' + resetText() + '重置。');
+  if (t.includes('partner_key') || r.status === 401 || r.status === 403) throw new ApiError('key', 'seats.aero 不接受這把 API key（' + text.slice(0, 40) + '），需要重新產生一把。');
+  throw new ApiError('upstream', 'seats.aero 暫時有問題（HTTP ' + r.status + '），等一下再試。');
+}
+function setQuota(x) {
+  save('award-quota', { n: x, day: new Date().toISOString().slice(0, 10) });
+  showQuota(x);
+}
+function showQuota(x) {
+  const el = $('#quota');
+  el.innerHTML = '今日剩 ' + n(x.toLocaleString('en-US')) + ' 次';
+  el.title = '每天' + resetText().replace('會在你這邊的 ', '') + '重置';
+  el.hidden = false;
+}
+
+/* ---------- cache ---------- */
+const MEM = new Map();
+function cacheGet(k) {
+  let v = MEM.get(k);
+  if (!v) { try { v = JSON.parse(sessionStorage.getItem(k)); } catch {} }
+  if (v && Date.now() - v.t < CACHE_MIN * 60000) { MEM.set(k, v); return v; }
+  return null;
+}
+function cacheSet(k, v) {
+  MEM.set(k, v);
+  try { sessionStorage.setItem(k, JSON.stringify(v)); } catch { /* too big for sessionStorage; memory still has it */ }
+}
+
+/* ---------- airports ---------- */
+function resolve(text) {
+  const tokens = text.toUpperCase().split(/[\s,，、/]+/).filter(Boolean);
+  const codes = [];
+  for (const t of tokens) {
+    if (/^[A-Z]{3}$/.test(t)) { codes.push(t); continue; }
+    const bare = s => s.replace(/（.*?）/g, '');
+    const hit = PLACES.find(p => p.zh === t || bare(p.zh) === t || p.en.toUpperCase() === t);
+    if (hit) { codes.push(...hit.codes); continue; }
+    return { codes: [], err: '看不懂「' + t + '」，請輸入三碼機場代號，例如 TPE。' };
+  }
+  return { codes: [...new Set(codes)].slice(0, 10) };
+}
+function showNames(input) {
+  const r = resolve(input.value);
+  $('#' + input.id + '-names').textContent = r.err ? '' : r.codes.map(c => AIRPORT_ZH[c] || c).join('、');
+}
+let suggFor = null;
+function suggest(input) {
+  suggFor = input;
+  const parts = input.value.split(/[,，、]/);
+  const q = parts[parts.length - 1].trim().toLowerCase();
+  let items = q
+    ? PLACES.filter(p => p.codes.some(c => c.toLowerCase().startsWith(q)) || p.zh.includes(q) || p.en.toLowerCase().includes(q))
+    : PLACES.filter(p => p.pop);
+  items = items.slice(0, q ? 8 : 12);
+  const box = $('#sugg');
+  if (!items.length) { box.hidden = true; return; }
+  box.innerHTML = items.map(p => '<button type="button" data-codes="' + p.codes.join(',') + '"><b>' + p.codes.join(',') + '</b><span>' + esc(p.zh) + '　' + esc(p.en) + '</span></button>').join('');
+  box.hidden = false;
+}
+function pick(codes) {
+  const input = suggFor;
+  if (!input) return;
+  const parts = input.value.split(/[,，、]/);
+  parts[parts.length - 1] = codes;
+  input.value = parts.map(s => s.trim()).filter(Boolean).join(',');
+  showNames(input);
+  $('#sugg').hidden = true;
+  if (input.id === 'from' && !$('#to').value) $('#to').focus();
+  else input.blur();
+}
+for (const id of ['from', 'to']) {
+  const input = $('#' + id);
+  input.addEventListener('focus', () => suggest(input));
+  input.addEventListener('input', () => { suggest(input); showNames(input); });
+  input.addEventListener('blur', () => setTimeout(() => { if (suggFor === input && document.activeElement !== input) $('#sugg').hidden = true; }, 150));
+  input.addEventListener('keydown', e => { if (e.key === 'Escape') $('#sugg').hidden = true; });
+}
+$('#sugg').addEventListener('pointerdown', e => {
+  const b = e.target.closest('button[data-codes]');
+  if (!b) return;
+  e.preventDefault();
+  pick(b.dataset.codes);
+});
+$('#swap').addEventListener('click', () => {
+  const a = $('#from'), b = $('#to');
+  [a.value, b.value] = [b.value, a.value];
+  showNames(a); showNames(b);
+});
+
+/* ---------- dates ---------- */
+function setRange(s, e) {
+  $('#d1').value = s;
+  $('#d2').value = e;
+  markMonths();
+}
+function renderMonths() {
+  const now = new Date();
+  let h = '';
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    const y = d.getFullYear(), m = d.getMonth() + 1;
+    h += '<button type="button" class="mchip" data-y="' + y + '" data-m="' + m + '">' + (i === 0 || m === 1 ? '<small>' + y + '</small>' : '') + m + ' 月</button>';
+  }
+  $('#months').innerHTML = h;
+}
+function monthRange(y, m) {
+  const today = isoDate(new Date());
+  const s = isoDate(new Date(y, m - 1, 1));
+  return [s < today ? today : s, isoDate(new Date(y, m, 0))];
+}
+function markMonths() {
+  for (const b of $$('.mchip')) {
+    const [s, e] = monthRange(+b.dataset.y, +b.dataset.m);
+    b.classList.toggle('on', $('#d1').value === s && $('#d2').value === e);
+  }
+}
+$('#months').addEventListener('click', e => {
+  const b = e.target.closest('.mchip');
+  if (b) setRange(...monthRange(+b.dataset.y, +b.dataset.m));
+});
+$('#d1').addEventListener('change', () => { if ($('#d2').value && $('#d2').value < $('#d1').value) $('#d2').value = $('#d1').value; markMonths(); });
+$('#d2').addEventListener('change', markMonths);
+
+/* ---------- filters ---------- */
+function renderCabins(counts) {
+  $('#cabins').innerHTML = CABINS.map(c => '<button type="button" role="radio" data-k="' + c.k + '" aria-checked="' + (S.prefs.cabin === c.k) + '">' + c.name +
+    '<span class="n">' + (counts ? counts[c.k] + ' 筆' : '') + '</span></button>').join('');
+}
+$('#cabins').addEventListener('click', e => {
+  const b = e.target.closest('button[data-k]');
+  if (!b) return;
+  S.prefs.cabin = b.dataset.k;
+  savePrefs();
+  render();
+});
+function allianceState(al) {
+  const srcs = Object.keys(PROGRAMS).filter(s => PROGRAMS[s][2] === al);
+  const off = srcs.filter(s => S.prefs.off.includes(s)).length;
+  return off === 0 ? 'on' : off === srcs.length ? 'off' : 'part';
+}
+function renderAlliances() {
+  $('#alliances').innerHTML = ALLIANCES.map(a => {
+    const st = allianceState(a.k);
+    return '<button type="button" class="chip' + (st === 'part' ? ' part' : '') + '" data-al="' + a.k + '" aria-pressed="' + (st !== 'off') + '" aria-label="' + a.name + '" style="--c:var(--' + a.k + ')"><span class="dot"></span>' + a.short + '</button>';
+  }).join('');
+  const total = Object.keys(PROGRAMS).length, on = total - S.prefs.off.filter(s => PROGRAMS[s]).length;
+  const cs = (S.prefs.carriers.toUpperCase().match(/[A-Z0-9]{2}/g) || []);
+  $('#prog-sum').textContent = (on === total ? '全部 ' + total + ' 個計畫' : '計畫 ' + on + ' / ' + total) + (cs.length ? '，只看 ' + cs.join(',') : '');
+  for (const cb of $$('#prog-list input')) cb.checked = !S.prefs.off.includes(cb.dataset.src);
+}
+function renderProgramList() {
+  $('#prog-list').innerHTML = ALLIANCES.map(a => '<div class="pgh" style="--c:var(--' + a.k + ')"><span class="dot"></span>' + a.name + '</div><div class="pgrid">' +
+    Object.entries(PROGRAMS).filter(([, p]) => p[2] === a.k).map(([src, p]) =>
+      '<label class="pi"><input type="checkbox" data-src="' + src + '"><span>' + esc(p[0]) + '</span><small>' + esc(p[1]) + '</small><em data-c="' + src + '"></em></label>').join('') +
+    '</div>').join('');
+}
+$('#alliances').addEventListener('click', e => {
+  const b = e.target.closest('.chip[data-al]');
+  if (!b) return;
+  const srcs = Object.keys(PROGRAMS).filter(s => PROGRAMS[s][2] === b.dataset.al);
+  const turnOff = allianceState(b.dataset.al) === 'on';
+  S.prefs.off = S.prefs.off.filter(s => !srcs.includes(s)).concat(turnOff ? srcs : []);
+  savePrefs();
+  renderAlliances();
+  render();
+});
+$('#prog-list').addEventListener('change', e => {
+  const src = e.target.dataset.src;
+  if (!src) return;
+  S.prefs.off = S.prefs.off.filter(s => s !== src).concat(e.target.checked ? [] : [src]);
+  savePrefs();
+  renderAlliances();
+  render();
+});
+$('#direct').addEventListener('change', e => { S.prefs.direct = e.target.checked; savePrefs(); render(); });
+let carrierTimer = 0;
+$('#carriers').addEventListener('input', e => {
+  S.prefs.carriers = e.target.value;
+  savePrefs();
+  clearTimeout(carrierTimer);
+  carrierTimer = setTimeout(() => { renderAlliances(); render(); }, 250);
+});
+function filt() {
+  return {
+    off: new Set(S.prefs.off),
+    direct: S.prefs.direct,
+    carriers: new Set((S.prefs.carriers.toUpperCase().match(/[A-Z0-9]{2}/g) || [])),
+  };
+}
+
+/* ---------- search ---------- */
+function formErr(msg) { $('#ferr').textContent = msg || ''; }
+function readForm() {
+  const o = resolve($('#from').value), d = resolve($('#to').value);
+  if (o.err || d.err) return formErr(o.err || d.err);
+  if (!o.codes.length || !d.codes.length) return formErr('請輸入出發和抵達的機場。');
+  let s = $('#d1').value, e = $('#d2').value;
+  if (!s || !e) return formErr('請選出發日期的範圍。');
+  if (e < s) [s, e] = [e, s];
+  const today = isoDate(new Date());
+  if (e < today) return formErr('這些日期已經過了。');
+  if (s < today) s = today;
+  if (daysBetween(s, e) > MAX_DAYS) return formErr('日期範圍最多 3 個月，請縮短一點。');
+  formErr('');
+  return { o: o.codes.join(','), d: d.codes.join(','), s, e };
+}
+function setBusy(on) {
+  $('#go').disabled = on;
+  $('#go-t').textContent = on ? '搜尋中…' : '搜尋';
+}
+const cacheKey = p => 'award-c:' + [p.o, p.d, p.s, p.e].join('|');
+const toResults = () => $('#results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+async function runSearch(p, demo, scroll) {
+  const done = () => { if (scroll && S.params === p) toResults(); };
+  S.params = p; S.day = null; S.shown = 60; S.demo = !!demo; S.rows = null; S.truncated = false;
+  save('award-last', p);
+  addRecent(p);
+  $('#results').hidden = false;
+  setBanner('');
+  renderRoute(p);
+  $('#sum').textContent = '搜尋中…';
+  $('#fresh').textContent = '';
+  $('#filters').hidden = true;
+  $('#cal').innerHTML = '';
+  $('#legend').hidden = true;
+  $('#sortbar').innerHTML = '';
+  $('#list').innerHTML = '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
+  if (demo) {
+    S.rows = demoRows(p);
+    S.fetchedAt = Date.now();
+    render();
+    return done();
+  }
+  const hit = cacheGet(cacheKey(p));
+  if (hit) {
+    S.rows = hit.rows; S.truncated = hit.truncated; S.fetchedAt = hit.t;
+    render();
+    return done();
+  }
+  setBusy(true);
+  try {
+    const rows = [];
+    let cursor = null, more = false, pages = 0;
+    do {
+      const q = new URLSearchParams({ origin_airport: p.o, destination_airport: p.d, start_date: p.s, end_date: p.e, take: '1000' });
+      if (cursor != null) { q.set('cursor', cursor); q.set('skip', rows.length); }
+      const res = await api('/search?' + q);
+      rows.push(...(res.data || []));
+      more = !!res.hasMore && res.cursor != null;
+      cursor = res.cursor;
+      pages++;
+    } while (more && pages < MAX_PAGES);
+    if (S.params !== p) return;
+    S.rows = rows; S.truncated = more; S.fetchedAt = Date.now();
+    cacheSet(cacheKey(p), { t: S.fetchedAt, rows, truncated: more });
+    render();
+    done();
+  } catch (err) {
+    if (S.params === p) { showError(err); done(); }
+  } finally {
+    setBusy(false);
+  }
+}
+$('#sf').addEventListener('submit', e => {
+  e.preventDefault();
+  $('#sugg').hidden = true;
+  document.activeElement && document.activeElement.blur();
+  const p = readForm();
+  if (p) runSearch(p, false, true);
+});
+function setBanner(html, cls) {
+  const box = $('#banner');
+  box.className = cls === 'demo' ? 'sticky' : '';
+  box.innerHTML = html ? '<div class="banner ' + (cls || '') + '">' + html + '</div>' : '';
+  $('#results').classList.toggle('demo-on', cls === 'demo');
+  $('#results').style.setProperty('--bh', box.offsetHeight + 'px');
+}
+function showError(err) {
+  $('#sum').textContent = '';
+  $('#list').innerHTML = '';
+  if (err.kind === 'auth') return;
+  let acts = '<button type="button" class="btn" data-act="retry">再試一次</button>';
+  if (err.kind === 'expired') acts = '<a class="btn pri" href="https://seats.aero/settings" target="_blank" rel="noopener">去 seats.aero 續訂</a><button type="button" class="btn" data-act="demo">先看示範資料</button>';
+  setBanner('<b>查不到</b>' + esc(err.message) + '<div class="acts">' + acts + '</div>', 'bad');
+}
+$('#banner').addEventListener('click', e => {
+  const b = e.target.closest('[data-act]');
+  if (!b || !S.params) return;
+  if (b.dataset.act === 'retry') runSearch(S.params, false, true);
+  if (b.dataset.act === 'demo') runSearch(S.params, true, true);
+  if (b.dataset.act === 'exit-demo') { S.demo = false; S.rows = null; $('#results').hidden = true; }
+});
+
+/* ---------- recent searches ---------- */
+function addRecent(p) {
+  const k = cacheKey(p);
+  const list = load('award-recent', []).filter(x => cacheKey(x) !== k);
+  list.unshift(p);
+  save('award-recent', list.slice(0, 6));
+  renderRecent();
+}
+function renderRecent() {
+  const list = load('award-recent', []);
+  $('#recent').innerHTML = list.map((p, i) => '<button type="button" data-i="' + i + '">' + n(esc(p.o) + ' → ' + esc(p.d)) + '　' + md(p.s) + ' 到 ' + md(p.e) + '</button>').join('');
+}
+$('#recent').addEventListener('click', e => {
+  const b = e.target.closest('button[data-i]');
+  if (!b) return;
+  const p = load('award-recent', [])[+b.dataset.i];
+  if (!p) return;
+  $('#from').value = p.o; $('#to').value = p.d;
+  showNames($('#from')); showNames($('#to'));
+  setRange(p.s, p.e);
+  const q = readForm();
+  if (q) runSearch(q, false, true);
+});
+
+/* ---------- results ---------- */
+function offersOf(rows, cab, f) {
+  const out = [];
+  for (const r of rows) {
+    if (!r[cab + 'Available']) continue;
+    const src = r.Source || (r.Route && r.Route.Source);
+    if (f.off.has(src)) continue;
+    const direct = !!r[cab + 'Direct'];
+    if (f.direct && !direct) continue;
+    const dmiles = num(r[cab + 'DirectMileageCost']);
+    const useD = f.direct && dmiles > 0;
+    const miles = useD ? dmiles : num(r[cab + 'MileageCost']);
+    if (!miles) continue;
+    const pickD = k => (useD && r[cab + 'Direct' + k] != null ? r[cab + 'Direct' + k] : r[cab + k]);
+    const airlines = String(pickD('Airlines') || '').split(/[\s,]+/).filter(Boolean);
+    if (f.carriers.size && !airlines.some(a => f.carriers.has(a))) continue;
+    out.push({
+      id: r.ID, src, date: r.Date, from: r.Route ? r.Route.OriginAirport : '', to: r.Route ? r.Route.DestinationAirport : '',
+      miles, dmiles, direct, taxes: num(pickD('TotalTaxes')), cur: r.TaxesCurrency || '', seats: num(pickD('RemainingSeats')),
+      airlines, updated: r.UpdatedAt,
+    });
+  }
+  return out;
+}
+function render() {
+  renderCabins(null);
+  if (!S.rows || !S.params) return;
+  $('#filters').hidden = false;
+  const f = filt(), cab = S.prefs.cabin;
+  const counts = {};
+  for (const c of CABINS) counts[c.k] = offersOf(S.rows, c.k, f).length;
+  renderCabins(counts);
+  const offers = offersOf(S.rows, cab, f);
+  const all = offersOf(S.rows, cab, Object.assign({}, f, { off: new Set() }));
+  const per = {};
+  for (const o of all) per[o.src] = (per[o.src] || 0) + 1;
+  for (const em of $$('#prog-list em')) em.textContent = per[em.dataset.c] ? per[em.dataset.c] : '';
+  if (S.demo) setBanner('<span><b>示範資料</b>數字都是假的</span><div class="acts"><button type="button" class="btn" data-act="exit-demo">結束示範</button></div>', 'demo');
+  renderSummary(offers);
+  renderCalendar(offers);
+  renderSortbar();
+  renderList(offers, counts);
+}
+function renderRoute(p) {
+  $('#route-h').innerHTML = esc(p.o) + '<span class="ar">' + PLANE + '</span>' + esc(p.d);
+}
+function renderSummary(offers) {
+  const p = S.params, cab = CABIN_BY[S.prefs.cabin].name;
+  const days = new Set(offers.map(o => o.date)).size;
+  renderRoute(p);
+  $('#sum').innerHTML = n(md(p.s)) + ' 到 ' + n(md(p.e)) + '　' + cab + ' <b>' + offers.length + '</b> 筆，<b>' + days + '</b> 天有位';
+  const ts = offers.map(o => Date.parse(o.updated)).filter(Boolean);
+  let fresh = '';
+  if (ts.length) {
+    const newest = new Date(Math.max(...ts)).toISOString(), oldest = new Date(Math.min(...ts)).toISOString();
+    fresh = '資料更新：最新 ' + ago(newest).replace('更新', '') + '，最舊 ' + ago(oldest).replace('更新', '');
+  }
+  if (S.truncated) fresh += (fresh ? '。' : '') + '結果太多，只拿到前 5,000 筆，請縮短日期。';
+  $('#fresh').textContent = fresh;
+}
+function renderCalendar(offers) {
+  const p = S.params;
+  const best = new Map(), dir = new Set();
+  for (const o of offers) {
+    if (!best.has(o.date) || o.miles < best.get(o.date)) best.set(o.date, o.miles);
+    if (o.direct) dir.add(o.date);
+  }
+  const vals = [...best.values()].sort((a, b) => a - b);
+  const min = vals[0] || 0, third = vals[Math.floor((vals.length - 1) / 3)] || 0;
+  const level = m => (m <= min * 1.05 ? 'best' : m <= third ? 'good' : 'ok');
+  const start = parseDate(p.s), end = parseDate(p.e);
+  let h = '';
+  for (let y = start.getFullYear(), m = start.getMonth(); y < end.getFullYear() || (y === end.getFullYear() && m <= end.getMonth()); m === 11 ? (y++, m = 0) : m++) {
+    h += '<div class="month"><div class="mh">' + y + ' 年 ' + (m + 1) + ' 月</div><div class="grid">' + [...WD].map(w => '<div class="wd">' + w + '</div>').join('');
+    const first = new Date(y, m, 1).getDay(), last = new Date(y, m + 1, 0).getDate();
+    for (let i = 0; i < first; i++) h += '<span class="day out"></span>';
+    for (let d = 1; d <= last; d++) {
+      const iso = y + '-' + pad(m + 1) + '-' + pad(d);
+      if (iso < p.s || iso > p.e) { h += '<span class="day out">' + d + '</span>'; continue; }
+      const b = best.get(iso);
+      const cls = (b ? level(b) : 'none') + (dir.has(iso) ? ' dir' : '') + (S.day === iso ? ' sel' : '');
+      h += '<button type="button" class="day ' + cls + '" data-d="' + iso + '" aria-label="' + md(iso) + (b ? ' 最低 ' + fmtMiles(b) + ' 哩' : ' 沒有位子') + '"><span class="dn">' + d + '</span><span class="dm">' + (b ? fmtMan(b) : '·') + '</span></button>';
+    }
+    h += '</div></div>';
+  }
+  $('#cal').innerHTML = h;
+  $('#legend').hidden = !offers.length;
+}
+$('#cal').addEventListener('click', e => {
+  const b = e.target.closest('.day[data-d]');
+  if (!b) return;
+  S.day = S.day === b.dataset.d ? null : b.dataset.d;
+  S.shown = 60;
+  render();
+  if (S.day) {
+    const bar = $('#sortbar').getBoundingClientRect();
+    if (bar.top > innerHeight * 0.7) $('#sortbar').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+});
+function renderSortbar() {
+  const opts = [['date', '依日期'], ['miles', '最少里程'], ['seats', '最多座位']];
+  $('#sortbar').innerHTML = '排序' + opts.map(([k, x]) => '<button type="button" class="chip" data-sort="' + k + '" aria-pressed="' + (S.prefs.sort === k) + '">' + x + '</button>').join('') +
+    (S.day ? '<button type="button" class="chip dayf" data-clear="1">只看 ' + md(S.day) + '　✕</button>' : '');
+}
+$('#sortbar').addEventListener('click', e => {
+  const b = e.target.closest('.chip');
+  if (!b) return;
+  if (b.dataset.clear) S.day = null;
+  else { S.prefs.sort = b.dataset.sort; savePrefs(); }
+  S.shown = 60;
+  render();
+});
+function cardHtml(o, showDate) {
+  const p = prog(o.src), al = ALLIANCE_BY[p.al] || ALLIANCE_BY.none;
+  const tag = o.direct
+    ? (o.dmiles && o.dmiles !== o.miles ? '<span class="tag">直飛另價 ' + n(fmtMiles(o.dmiles)) + '</span>' : '<span class="tag d">直飛</span>')
+    : '<span class="tag">轉機</span>';
+  const tax = o.taxes ? '+ ' + money(o.taxes / 100, o.cur) : NO_TAX.has(o.src) ? '稅金未提供' : '';
+  return '<article class="offer" data-id="' + esc(o.id) + '" data-src="' + esc(o.src) + '">' +
+    '<button type="button" class="ohead" aria-expanded="false">' +
+      '<span class="o1"><span class="pn">' + esc(p.name) + '</span><span class="pz">' + esc(p.zh) + '</span><span class="al" style="--c:var(--' + p.al + ')">' + al.short + '</span><span class="mi">' + fmtMiles(o.miles) + '<small>哩</small></span></span>' +
+      '<span class="o2">' + (showDate ? '<span class="od">' + mdw(o.date) + '</span>' : '') + '<span class="rt">' + esc(o.from) + ' → ' + esc(o.to) + '</span>' + tag +
+        (o.seats ? '<span>剩 ' + o.seats + ' 位</span>' : '') + '<span class="tx">' + tax + '</span></span>' +
+      '<span class="o3"><span class="ca">' + (o.airlines.length ? '實際搭乘：' + esc(o.airlines.map(carrierName).join('、')) : '') + '</span><span class="age">' + ago(o.updated) + '</span>' +
+        '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></span>' +
+    '</button><div class="trips" hidden></div></article>';
+}
+function renderList(offers, counts) {
+  let list = S.day ? offers.filter(o => o.date === S.day) : offers.slice();
+  const sort = S.prefs.sort;
+  if (sort === 'miles') list.sort((a, b) => a.miles - b.miles || a.date.localeCompare(b.date));
+  else if (sort === 'seats') list.sort((a, b) => (b.seats || 0) - (a.seats || 0) || a.miles - b.miles);
+  else list.sort((a, b) => a.date.localeCompare(b.date) || a.miles - b.miles);
+  if (!list.length) {
+    $('#list').innerHTML = emptyHtml(counts);
+    return;
+  }
+  const shown = list.slice(0, S.shown);
+  let h = '', lastDate = '';
+  for (const o of shown) {
+    if (sort === 'date' && o.date !== lastDate) { h += '<h3 class="dh">' + mdw(o.date) + '</h3>'; lastDate = o.date; }
+    h += cardHtml(o, sort !== 'date');
+  }
+  if (list.length > S.shown) h += '<button type="button" class="more-btn" data-more="1">再顯示 ' + Math.min(60, list.length - S.shown) + ' 筆（還有 ' + (list.length - S.shown) + ' 筆）</button>';
+  $('#list').innerHTML = h;
+}
+function emptyHtml(counts) {
+  if (!S.rows.length) return '<div class="empty">' + MASCOT + '這段日期 seats.aero 沒有這條航線的資料。<br>試試附近的機場（例如 TPE 加上 TSA），或換個日期。</div>';
+  const others = CABINS.filter(c => c.k !== S.prefs.cabin && counts[c.k]);
+  let h = '<div class="empty">' + MASCOT + '' + (S.day ? md(S.day) + ' ' : '') + CABIN_BY[S.prefs.cabin].name + '艙沒有符合條件的位子。';
+  if (S.prefs.direct || S.prefs.off.length || filt().carriers.size) h += '<br>可以試著放寬條件：取消只看直飛、多選幾個聯盟，或清空航空公司。';
+  if (others.length) h += '<div class="chips">' + others.map(c => '<button type="button" class="chip" data-cab="' + c.k + '">看' + c.name + '（' + counts[c.k] + ' 筆）</button>').join('') + '</div>';
+  return h + '</div>';
+}
+$('#list').addEventListener('click', e => {
+  const more = e.target.closest('[data-more]');
+  if (more) { S.shown += 60; render(); return; }
+  const cab = e.target.closest('[data-cab]');
+  if (cab) { S.prefs.cabin = cab.dataset.cab; savePrefs(); render(); return; }
+  const head = e.target.closest('.ohead');
+  if (head) toggleTrips(head.closest('.offer'));
+});
+
+/* ---------- trip details ---------- */
+async function toggleTrips(art) {
+  const box = art.querySelector('.trips'), head = art.querySelector('.ohead');
+  const open = box.hidden;
+  box.hidden = !open;
+  head.setAttribute('aria-expanded', String(open));
+  if (!open || box.dataset.loaded) return;
+  const id = art.dataset.id, src = art.dataset.src;
+  box.innerHTML = '<div class="tload">讀取航班中…</div>';
+  try {
+    let res = S.trips.get(id);
+    if (!res) {
+      res = S.demo ? demoTrips(id, src) : await api('/trips/' + encodeURIComponent(id));
+      S.trips.set(id, res);
+    }
+    box.innerHTML = tripsHtml(res, src);
+    box.dataset.loaded = '1';
+  } catch (err) {
+    box.innerHTML = '<div class="terr">' + esc(err.message) + '</div>';
+  }
+}
+function tripsHtml(res, src) {
+  const want = CABIN_BY[S.prefs.cabin].api;
+  let trips = (res.data || []).slice();
+  const mine = trips.filter(t => String(t.Cabin || '').toLowerCase() === want);
+  if (mine.length) trips = mine;
+  if (S.prefs.direct) {
+    const nonstop = trips.filter(t => (t.AvailabilitySegments || []).length === 1 || t.Stops === 0);
+    if (nonstop.length) trips = nonstop;
+  }
+  trips.sort((a, b) => num(a.MileageCost) - num(b.MileageCost) || (a.TotalDuration || 0) - (b.TotalDuration || 0));
+  let h = trips.length ? trips.slice(0, 12).map(tripHtml).join('') : '<div class="tnone">seats.aero 沒有這筆的航班細節。</div>';
+  if (trips.length > 12) h += '<div class="tmore">還有 ' + (trips.length - 12) + ' 個航班組合沒有列出。</div>';
+  const links = (res.booking_links || []).filter(l => /^https:\/\//i.test(l.link || '')).sort((a, b) => (b.primary ? 1 : 0) - (a.primary ? 1 : 0));
+  const p = prog(src);
+  h += '<div class="book">' + (links.length
+    ? links.map(l => '<a class="btn' + (l.primary ? ' pri' : '') + '" href="' + esc(l.link) + '" target="_blank" rel="noopener">' + esc(l.label || '去訂位') + '</a>').join('')
+    : (p.url ? '<a class="btn pri" href="' + esc(p.url) + '" target="_blank" rel="noopener">到 ' + esc(p.name) + ' 官網訂位</a>' : '')) + '</div>';
+  return h;
+}
+function tripHtml(t) {
+  const segs = (t.AvailabilitySegments || []).slice().sort((a, b) => (a.Order || 0) - (b.Order || 0));
+  const first = segs[0] || {}, last = segs[segs.length - 1] || {};
+  const dep = t.DepartsAt || first.DepartsAt, arr = t.ArrivesAt || last.ArrivesAt;
+  const plus = dayDiff(dep, arr);
+  const stops = segs.length ? segs.length - 1 : num(t.Stops);
+  const miles = num(t.MileageCost);
+  let h = '<div class="trip"><div class="t1"><b>' + hm(dep) + '</b><span class="ap3">' + esc(first.OriginAirport || '') + '</span> → <b>' + hm(arr) + '</b><span class="ap3">' + esc(last.DestinationAirport || '') + '</span>' +
+    (plus ? '<sup>+' + plus + '</sup>' : '') + '<span class="t-mi">' + (miles ? fmtMiles(miles) + ' 哩' : '') + (t.TotalTaxes ? ' + ' + money(t.TotalTaxes / 100, t.TaxesCurrency) : '') + '</span></div>';
+  const bits = ['<span class="fn">' + esc(t.FlightNumbers || '') + '</span>', dur(t.TotalDuration), stops ? '轉機 ' + stops + ' 次' : '直飛'];
+  if (num(t.RemainingSeats)) bits.push('剩 ' + num(t.RemainingSeats) + ' 位');
+  if (t.MixedCabinPct) bits.push('有 ' + Math.round(t.MixedCabinPct) + '% 航程是較低艙等');
+  h += '<div class="t2">' + bits.filter(x => x && x !== '<span class="fn"></span>').map(x => '<span>' + x + '</span>').join('') + '</div>';
+  const extra = s => [s.AircraftName && esc(s.AircraftName), s.Cabin && CABIN_ZH[String(s.Cabin).toLowerCase()], s.FareClass && '艙位 ' + esc(s.FareClass)].filter(Boolean).map(x => '<span>' + x + '</span>').join('');
+  if (segs.length === 1) {
+    if (extra(segs[0])) h += '<div class="sg2">' + extra(segs[0]) + '</div>';
+  } else if (segs.length > 1) {
+    h += '<div class="segs">';
+    segs.forEach((s, i) => {
+      if (i) h += '<div class="lay">在 ' + esc(s.OriginAirport) + ' 轉機 ' + dur(minsBetween(segs[i - 1].ArrivesAt, s.DepartsAt)) + '</div>';
+      const plusSeg = dayDiff(s.DepartsAt, s.ArrivesAt);
+      h += '<div class="sg"><div class="sg1"><b>' + esc(s.FlightNumber || '') + '</b>' + esc(s.OriginAirport) + ' ' + hm(s.DepartsAt) + ' → ' + esc(s.DestinationAirport) + ' ' + hm(s.ArrivesAt) +
+        (plusSeg ? '<sup>+' + plusSeg + '</sup>' : '') + '</div>' + (extra(s) ? '<div class="sg2">' + extra(s) + '</div>' : '') + '</div>';
+    });
+    h += '</div>';
+  }
+  return h + '</div>';
+}
+
+/* ---------- demo data (clearly fake; only used when the user asks for it) ---------- */
+function rng(seed) {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+  return () => {
+    h = (h + 0x6D2B79F5) | 0;
+    let t = Math.imul(h ^ (h >>> 15), 1 | h);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const DEMO_CARRIERS = { star: ['BR', 'UA', 'NH'], oneworld: ['AS', 'CX', 'JL'], skyteam: ['DL', 'CI', 'KE'], none: ['EK', 'EY'] };
+const DEMO_HUB = { star: 'NRT', oneworld: 'HKG', skyteam: 'ICN', none: 'DXB' };
+function demoRows(p) {
+  const rows = [];
+  const o = p.o.split(',')[0], d = p.d.split(',')[0];
+  const srcs = ['united', 'aeroplan', 'turkish', 'lufthansa', 'alaska', 'american', 'qantas', 'delta', 'flyingblue', 'virginatlantic', 'emirates', 'etihad'];
+  for (let t = parseDate(p.s); isoDate(t) <= p.e; t = new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1)) {
+    const date = isoDate(t);
+    for (const src of srcs) {
+      const r = rng(date + src + o + d);
+      if (r() < 0.4) continue;
+      const al = PROGRAMS[src][2], cs = DEMO_CARRIERS[al];
+      const row = { ID: 'demo' + date.replace(/-/g, '') + src, Route: { OriginAirport: o, DestinationAirport: d, Source: src }, Date: date, Source: src, TaxesCurrency: 'USD',
+        UpdatedAt: new Date(Date.now() - r() * 50 * 36e5).toISOString() };
+      for (const [k, lo, hi, pr] of [['Y', 25, 45, 0.85], ['W', 45, 75, 0.35], ['J', 60, 130, 0.5], ['F', 110, 190, 0.12]]) {
+        const ok = r() < pr, direct = ok && r() < 0.5, cost = Math.round(lo + r() * (hi - lo)) * 1000;
+        const taxes = Math.round(560 + r() * 25000), seats = 1 + Math.floor(r() * 6);
+        Object.assign(row, {
+          [k + 'Available']: ok, [k + 'MileageCost']: ok ? String(cost) : '0', [k + 'Direct']: direct,
+          [k + 'DirectMileageCost']: direct ? cost : 0, [k + 'TotalTaxes']: ok ? taxes : 0, [k + 'DirectTotalTaxes']: direct ? taxes : 0,
+          [k + 'RemainingSeats']: ok ? seats : 0, [k + 'DirectRemainingSeats']: direct ? seats : 0,
+          [k + 'Airlines']: ok ? cs.slice(0, 1 + Math.floor(r() * 2)).join(', ') : '', [k + 'DirectAirlines']: direct ? cs[0] : '',
+        });
+      }
+      rows.push(row);
+    }
+  }
+  return rows;
+}
+function demoTrips(id, src) {
+  const row = (S.rows || []).find(x => x.ID === id);
+  if (!row) return { data: [] };
+  const r = rng(id), al = PROGRAMS[src] ? PROGRAMS[src][2] : 'none', cs = DEMO_CARRIERS[al], hub = DEMO_HUB[al];
+  const o = row.Route.OriginAirport, d = row.Route.DestinationAirport, data = [];
+  for (const c of CABINS) {
+    if (!row[c.k + 'Available']) continue;
+    const at = (day, h, m) => row.Date.slice(0, 8) + pad(+row.Date.slice(8) + day) + 'T' + pad(h) + ':' + pad(m) + ':00Z';
+    const fn = cs[0] + ' ' + (10 + Math.floor(r() * 90));
+    if (row[c.k + 'Direct']) {
+      data.push({ Cabin: c.api, MileageCost: num(row[c.k + 'MileageCost']), TotalTaxes: row[c.k + 'TotalTaxes'], TaxesCurrency: 'USD', RemainingSeats: row[c.k + 'RemainingSeats'],
+        FlightNumbers: fn, TotalDuration: 650, Stops: 0,
+        AvailabilitySegments: [{ FlightNumber: fn.replace(' ', ''), OriginAirport: o, DestinationAirport: d, DepartsAt: at(0, 23, 40), ArrivesAt: at(0, 19, 30), AircraftName: 'Boeing 777-300ER', Cabin: c.api, FareClass: 'I', Order: 0 }] });
+    }
+    const f1 = cs[0] + (100 + Math.floor(r() * 800)), f2 = cs[cs.length - 1] + (100 + Math.floor(r() * 800));
+    data.push({ Cabin: c.api, MileageCost: num(row[c.k + 'MileageCost']), TotalTaxes: row[c.k + 'TotalTaxes'], TaxesCurrency: 'USD', RemainingSeats: 2,
+      FlightNumbers: f1 + ', ' + f2, TotalDuration: 900, Stops: 1,
+      AvailabilitySegments: [
+        { FlightNumber: f1, OriginAirport: o, DestinationAirport: hub, DepartsAt: at(0, 8, 50), ArrivesAt: at(0, 13, 10), AircraftName: 'Airbus A350-900', Cabin: c.api, FareClass: 'I', Order: 0 },
+        { FlightNumber: f2, OriginAirport: hub, DestinationAirport: d, DepartsAt: at(0, 16, 55), ArrivesAt: at(0, 9, 40), AircraftName: 'Boeing 787-9', Cabin: c.api, FareClass: 'I', Order: 1 }] });
+  }
+  return { data, booking_links: [] };
+}
+
+/* ---------- start ---------- */
+function showApp() {
+  $('#login').hidden = true;
+  $('#app').hidden = false;
+  const hh = () => document.documentElement.style.setProperty('--hh', $('.top').offsetHeight + 'px');
+  hh();
+  addEventListener('resize', hh);
+  const q = load('award-quota', null);
+  if (q && q.day === new Date().toISOString().slice(0, 10)) showQuota(q.n);
+  if (location.hash === '#demo' && S.params) runSearch(S.params, true);
+}
+function init() {
+  renderMonths();
+  renderProgramList();
+  renderAlliances();
+  renderCabins(null);
+  renderRecent();
+  $('#direct').checked = S.prefs.direct;
+  $('#carriers').value = S.prefs.carriers;
+  const today = isoDate(new Date());
+  const last = load('award-last', null);
+  if (last && last.e >= today) {
+    $('#from').value = last.o; $('#to').value = last.d;
+    setRange(last.s < today ? today : last.s, last.e);
+    S.params = { o: last.o, d: last.d, s: $('#d1').value, e: last.e };
+    const hit = cacheGet(cacheKey(S.params));
+    if (hit) { S.rows = hit.rows; S.truncated = hit.truncated; S.fetchedAt = hit.t; $('#results').hidden = false; render(); }
+  } else {
+    $('#from').value = 'TPE'; $('#to').value = 'SEA';
+    const d = new Date();
+    setRange(...monthRange(d.getMonth() === 11 ? d.getFullYear() + 1 : d.getFullYear(), (d.getMonth() + 1) % 12 + 1));
+    S.params = readForm();
+  }
+  showNames($('#from')); showNames($('#to'));
+  if (localStorage.getItem('award-token')) showApp();
+  else showLogin('');
+}
+init();
+</script>
+</body>
+</html>
