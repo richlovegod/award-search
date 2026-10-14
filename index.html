@@ -160,6 +160,11 @@ details.danger summary{cursor:pointer;list-style:none;font-size:17px}
 details.danger summary::-webkit-details-marker{display:none}
 details.danger[open] summary{margin-bottom:8px}
 
+/* 中文 / English: a small pill showing the other language */
+.lang-btn{flex:0 0 auto;border:2px solid var(--ink);border-radius:999px;background:var(--paper);font-size:13px;line-height:1.5;padding:1px 9px;min-height:30px;touch-action:manipulation}
+.lang-btn:active{transform:scale(.95)}
+.lcard{position:relative}
+.lang-login{position:absolute;top:12px;right:12px}
 /* top bar */
 .top{position:sticky;top:0;z-index:20;background:var(--paper);border-top:7px solid var(--water);border-bottom:var(--line)}
 .top .in{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:8px;padding:calc(6px + env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) 6px max(12px,env(safe-area-inset-left))}
@@ -472,12 +477,22 @@ details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13p
 }
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 .route-h .ar svg{width:100%;height:100%}
+/* English runs wider than Chinese: words in fixed boxes get smaller type, and a long title ends in … */
+.brand span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+html[lang=en] .seg button{font-size:clamp(12px,3.7vw,16px)}
+html[lang=en] .al4 .chip{font-size:clamp(12px,3.7vw,15px);gap:4px}
+html[lang=en] .df .dv{font-size:clamp(15px,4.4vw,18px)}
+html[lang=en] .swap{font-size:12px;letter-spacing:0}
+html[lang=en] .brand{font-size:18px}
+@media (max-width:430px){html[lang=en] .al4 .chip .dot{display:none}}
+@media (max-width:359px){html[lang=en] .df label{font-size:10.5px} html[lang=en] .df .dv{font-size:14px}}
 </style>
 </head>
 <body>
 
 <section id="login" class="login" hidden>
   <div class="lcard">
+    <button type="button" class="lang-btn lang-login" aria-label="English / 中文">EN</button>
     <div class="pic" aria-hidden="true"><svg viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"><path d="M0 66q30-10 60 0t60 0v14H0z" fill="#B9DAA5"/><g class="float"><path d="M46 12v6"/><circle cx="46" cy="11" r="1.6" fill="#3E3A39"/><rect x="32" y="18" width="28" height="24" rx="9" fill="#F2A497"/><circle cx="40.5" cy="28" r="4.2" fill="#F6D27A"/><circle cx="51.5" cy="28" r="4.2" fill="#F6D27A"/><path d="M42.5 36q3.5 3 7 0"/><path d="M37 50l3-5M55 50l-3-5"/></g><g class="sway"><rect x="68" y="34" width="22" height="18" rx="4" fill="#F6D27A"/><path d="M72 34v-6a7 7 0 0 1 14 0v6"/><circle cx="79" cy="42" r="2.4" fill="#3E3A39"/><path d="M79 44v4"/></g></g></svg></div>
     <h1>里程機位搜尋</h1>
     <p id="lsub">用 Email 登入。新帳號要有邀請碼。</p>
@@ -619,6 +634,436 @@ details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13p
 
 <script>
 'use strict';
+/* ---------- language: 中文 / English ---------- */
+// Chinese is the source text everywhere; EN maps it ({0}, {1}... are filled in by t()). A missing entry shows the
+// Chinese, so nothing goes blank. The choice is kept in localStorage 'award-lang'.
+let LANG = localStorage.getItem('award-lang') === 'en' ? 'en' : 'zh';
+const LOC = () => (LANG === 'en' ? 'en-US' : 'zh-TW');
+const EN = {
+  "1 週": "1 wk",
+  "2 週": "2 wk",
+  "3 小時內剛更新過，不用核對": "Updated in the last 3 hours, no need to check",
+  "3 週": "3 wk",
+  "4 週": "4 wk",
+  "Amex、Chase、Citi、Capital One、萬豪的點數都轉不過去這個計畫。": "Amex, Chase, Citi, Capital One and Marriott points cannot reach this program.",
+  "Avios 在英航、伊比利亞、芬航、卡達之間 1:1 免費互轉，但帳戶要開滿 30 天，名字和 Email 要一致；卡達只能跟英航互轉。": "Avios move 1:1 for free between BA, Iberia, Finnair and Qatar, but each account must be 30 days old with the same name and email; Qatar links only with BA.",
+  "Email 或密碼不對。": "Wrong email or password.",
+  "Email 的格式不對。": "That email address is not valid.",
+  "Google Flights 看現金價": "Cash fare on Google Flights",
+  "Google Flights 看現金價（打開後改成豪經）": "Cash fare on Google Flights (switch to Premium economy there)",
+  "Strata Premier／Elite／Prestige 的比例；其他 Citi 卡是七折": "Ratio for Strata Premier, Elite and Prestige; other Citi cards get 70%",
+  "ThankYou Mastercard 從 2026/9/20 起不能轉": "Not from the ThankYou Mastercard since 2026/9/20",
+  "seats.aero 不接受這把 API key（{0}），需要重新產生一把。": "seats.aero rejected this API key ({0}). Generate a new one.",
+  "seats.aero 回傳的資料看不懂，等一下再試。": "Couldn't read the data from seats.aero. Try again in a moment.",
+  "seats.aero 找不到這筆，重新搜尋看看": "seats.aero can't find this result. Try searching again.",
+  "seats.aero 暫時有問題（HTTP {0}），等一下再試。": "seats.aero is having trouble (HTTP {0}). Try again in a moment.",
+  "seats.aero 正在向航空公司重查，最多等 2 分鐘": "seats.aero is re-checking with the airline. This can take up to 2 minutes.",
+  "seats.aero 正在處理這個計畫的問題": "seats.aero is working on a problem with this program",
+  "seats.aero 沒有這筆的航班細節。": "No flight details from seats.aero for this one.",
+  "seats.aero 的 Pro 訂閱已經過期，續訂之後才查得到。": "The seats.aero Pro subscription has expired. Renew it to search again.",
+  "seats.aero 的資料是 {0}的": "seats.aero data was {0}",
+  "seats.aero 還在排隊，等一下再按一次看看": "This is still in the seats.aero queue. Wait a moment and tap again.",
+  "seats.aero 還在查，等一下再按一次看看": "seats.aero is still checking. Wait a moment and tap again.",
+  "seats.aero 那邊有時候很忙，15 分鐘後可以再試": "seats.aero is sometimes busy. Try again in 15 minutes.",
+  "seats.aero 預設會藏起來": "seats.aero hides these by default",
+  "{0} <b>{1}</b> 筆，<b>{2}</b> 天有位": "{0}: <b>{1}</b> results, <b>{2}</b> days with seats",
+  "{0} {1}艙沒有符合條件的位子。": "No {1} seats on {0} match your filters.",
+  "{0} 人": "{0}",
+  "{0} 分": "{0} min",
+  "{0} 分鐘前": "{0} min ago",
+  "{0} 分鐘前更新": "updated {0} min ago",
+  "{0} 到 {1}": "{0} to {1}",
+  "{0} 哩": "{0} miles",
+  "{0} 天前": "{0} days ago",
+  "{0} 天前更新": "updated {0} days ago",
+  "{0} 小時": "{0} h",
+  "{0} 小時內": "Up to {0} h",
+  "{0} 小時前": "{0} h ago",
+  "{0} 小時前更新": "updated {0} h ago",
+  "{0} 年 {1} 月": "{2} {0}",
+  "{0} 最低 {1} 哩": "{0}, lowest {1} miles",
+  "{0} 月": "{1}",
+  "{0} 沒有位子": "{0}, no seats",
+  "{0} 筆": "{0}",
+  "{0} 等 {1} 個": "{0}… ({1} airports)",
+  "{0} 美分": "{0} cents",
+  "{0} 邀請你加入！填好 Email 和密碼就能註冊 ✈️": "{0} invited you! Enter an email and password to sign up ✈️",
+  "{0} 點": "{0} pts",
+  "{0}-{1} 點": "{0}:00-{1}:00",
+  "{0}不能早於{1}。": "{0} can't be before {1}.",
+  "{0}不能早於{1}，已改成 {2}": "{0} can't be before {1}, so it moved to {2}",
+  "{0}已經沒有位子了": "No {0} seats left",
+  "{0}已跟著改成 {1}": "{0} moved to {1} to match",
+  "{0}最低 {1} 哩": "{0} from {1} miles",
+  "{0}沒有位子": "No {0} seats",
+  "{0}艙沒有符合條件的位子。": "No {0} seats match your filters.",
+  "{0}萬": "{1}k",
+  "{0}重置": "Resets {0}",
+  "{0}（{1}）": "{1} {0}",
+  "{0} ({1})": "{1} {0}",
+  "← 回搜尋": "← Back to search",
+  "← 我的帳號": "← My account",
+  "★ 已收藏": "★ Saved",
+  "☆ 收藏這個搜尋": "☆ Save this search",
+  "✈️ {0} 邀請你一起用「里程機位搜尋」！": "✈️ {0} invites you to join Award Seat Search!",
+  "、": ", ",
+  "。": ". ",
+  "一般帳號": "Member",
+  "上午": "Morning",
+  "上次看 {0}": "Last viewed {0}",
+  "下午": "Afternoon",
+  "不明的裝置": "Unknown device",
+  "不能對自己的帳號做這件事。": "You can't do this to your own account.",
+  "不要經過（點了就排除）": "Avoid connecting in (tap to exclude)",
+  "不限": "Any",
+  "不限，例：80000": "No limit, e.g. 80000",
+  "不限，例：BR,DL": "Any, e.g. BR,DL",
+  "丹麥": "Denmark",
+  "乘客": "Passenger",
+  "交換": "Swap",
+  "交換出發和抵達": "Swap From and To",
+  "人數（座位至少要有幾個）": "Passengers (seats needed)",
+  "今天已用 {0} 次，還剩 {1} 次{2}，{3}重置": "Used {0} calls today, {1} left{2}. The quota resets {3}",
+  "今天整個網站的額度快用完了，剩下的先留給管理員，{0}重置。": "The site's quota for today is almost used up, and the rest is reserved for the owner. It resets {0}.",
+  "今天用了 {0} 次（不限）": "Used {0} today (no limit)",
+  "今天用了 {0} 次／上限 {1}": "Used {0}/{1} today",
+  "今天用了 {0} 次／上限 {1}（預設）": "Used {0}/{1} today (default)",
+  "今天的 1,000 次查詢額度用完了，{0}重置。": "Today's quota of 1,000 calls is used up. It resets {0}.",
+  "今天的 API 額度已用 {0} 次，共 {1} 次": "API quota today: {0} of {1} calls used",
+  "今天的額度不夠了": "Not enough quota left today",
+  "以 250 點為單位；要付消費稅補貼費：每 1,000 點 0.6 美元，最多 99 美元": "In steps of 250; US airline excise fee: $0.60 per 1,000 points, up to $99",
+  "以 500 點為單位": "In steps of 500",
+  "伺服器出了問題，請稍後再試。": "Something went wrong on the server. Try again later.",
+  "你": "You",
+  "你今天已用 {0} 次，上限 {1} 次{2}，{3}重置": "You've used {0} of your {1} calls today{2}. The quota resets {3}",
+  "你今天的 {0} 次額度用完了，{1}重置。": "You've used all {0} of your calls for today. The quota resets {1}.",
+  "你已經登入了，這個邀請碼可以留給別人用": "You're already signed in. Keep this invite code for someone else.",
+  "你是唯一的管理員，不能刪除自己的帳號。": "You're the only owner, so you can't delete your own account.",
+  "你的朋友": "Your friend",
+  "使用者：{0}": "Used by: {0}",
+  "使用：{0}": "Used: {0}",
+  "來回": "Round trip",
+  "來回最低合計 <b>{0}</b> 哩（{1}，兩段可以用不同計畫）": "Round trip from <b>{0}</b> miles ({1}; each leg can use a different program)",
+  "例：ABCDE-FGHJK": "e.g. ABCDE-FGHJK",
+  "例：SEA": "e.g. SEA",
+  "例：TPE": "e.g. TPE",
+  "例：{0}": "e.g. {0}",
+  "例：測試帳號 1": "e.g. Test account 1",
+  "依日期": "Date",
+  "便宜": "Cheap",
+  "停用": "Disable",
+  "備註（選填）": "Note (optional)",
+  "備註：{0}": "Note: {0}",
+  "先看示範資料": "See demo data for now",
+  "全部 {0} 個計畫": "All {0} programs",
+  "兩個欄位都要填。": "Fill in both fields.",
+  "共 {0}": "{0} total",
+  "其他裝置都已登出": "All other devices are signed out",
+  "再試一次": "Try again",
+  "再錯 {0} 次，這個帳號會鎖 15 分鐘。": " Attempts left before a 15-minute lock: {0}.",
+  "再顯示 {0} 筆（還有 {1} 筆）": "Show {0} more ({1} left)",
+  "凌晨": "Early morning",
+  "出了點問題（HTTP {0}）。": "Something went wrong (HTTP {0}).",
+  "出發": "From",
+  "出發星期": "Departure day",
+  "分享": "Share",
+  "刪除": "Delete",
+  "刪除帳號": "Delete account",
+  "刪除這個收藏": "Delete this saved search",
+  "刪除這個收藏？": "Delete this saved search?",
+  "到": "to",
+  "到 {0} 官網訂位": "Book on {0}",
+  "到管理頁": "Go to Admin",
+  "剛剛": "just now",
+  "剛才核對沒成功，15 分鐘後可以再試": "The last check failed. Try again in 15 minutes.",
+  "剛核對（{0}）：{1}": "Checked at {0}: {1}",
+  "剩 1 位": "1 seat left",
+  "剩 {0} 位": "{0} seats left",
+  "加拿大": "Canada",
+  "包含動態高價位子": "Include high dynamic prices",
+  "包含混艙": "Include mixed cabins",
+  "即時核對": "Live check",
+  "去 seats.aero 續訂": "Renew on seats.aero",
+  "去程": "Outbound",
+  "去程日期範圍最多 3 個月，請縮短一點。": "The outbound date range can be 3 months at most. Please shorten it.",
+  "去程最早": "Outbound earliest",
+  "去程最晚": "Outbound latest",
+  "去訂位": "Book",
+  "取消收藏這個搜尋？": "Remove this search from saved searches?",
+  "另有 {0} 筆沒有航班細節，沒辦法檢查航班條件，先不列出": "{0} more hidden: no flight details to check against your flight filters",
+  "只有管理員可以做這件事。": "Only owners can do this.",
+  "只看 {0}": "Only {0}",
+  "只看直飛": "Nonstop only",
+  "可以試著放寬條件：取消只看直飛、多選幾個聯盟，或清空航空公司。": "Try loosening the filters: turn off Nonstop only, pick more alliances, or clear the airline codes.",
+  "可轉：": "Transfer from: ",
+  "台灣": "Taiwan",
+  "右上小點代表有直飛": "A dot at top right means a nonstop",
+  "哩": "miles",
+  "啟用": "Enable",
+  "單程": "One way",
+  "單程或來回": "One way or round trip",
+  "回到登入": "Back to sign in",
+  "回程": "Return",
+  "回程不能早於去程。": "Return dates can't start before outbound dates.",
+  "回程不能早於去程，已改成 {0}": "The return can't start before the outbound, so it moved to {0}",
+  "回程日期範圍最多 3 個月，請縮短一點。": "The return date range can be 3 months at most. Please shorten it.",
+  "回程最早": "Return earliest",
+  "回程最早已跟著改成 {0}": "Return earliest moved to {0} to match",
+  "回程最晚": "Return latest",
+  "回程最晚不能早於回程最早。": "Return latest can't be before Return earliest.",
+  "回程最晚不能早於回程最早，已改成 {0}": "Return latest can't be before Return earliest, so it moved to {0}",
+  "回程最晚已跟著改成 {0}": "Return latest moved to {0} to match",
+  "回首頁": "Home",
+  "在 {0} 轉機 {1}": "{1} layover in {0}",
+  "太頻繁了，請過一陣子再試。": "Too many requests. Try again in a little while.",
+  "密碼": "Password",
+  "密碼不能跟 Email 一樣。": "Password can't be the same as your email.",
+  "密碼更新好了，其他裝置都已登出。": "Password updated. All other devices are signed out.",
+  "密碼最多 128 個字。": "Password can't be longer than 128 characters.",
+  "密碼至少要 10 個字。": "Password must be at least 10 characters.",
+  "實際搭乘的航空公司（代碼）": "Operated by (airline codes)",
+  "實際搭乘：{0}": "Operated by {0}",
+  "已交換。出發 {0}，抵達 {1}": "Swapped. From: {0}. To: {1}",
+  "已停用": "Disabled",
+  "已刪除的帳號": "a deleted account",
+  "已取消收藏": "Removed from saved searches",
+  "已收藏。下次打開會標出新出現和降價的位子": "Saved. Next time you open it, new and cheaper seats will be marked.",
+  "已改回預設 200 次": "Daily limit back to the default of 200",
+  "已用": "Used",
+  "已登出。": "You're signed out.",
+  "已複製": "Copied",
+  "已過期": "Expired",
+  "帳號": "Account",
+  "帳號和所有登入中的裝置都會刪掉，不能復原。": "This deletes your account and signs out all its devices. It can't be undone.",
+  "帳號已停用，它的裝置都已登出": "Account disabled and all its devices signed out",
+  "帳號已刪除": "Account deleted",
+  "帳號已刪除。": "Account deleted.",
+  "帳號已重新啟用": "Account re-enabled",
+  "帳號建立好了，歡迎！": "Account created. Welcome!",
+  "幫這個帳號設定新密碼：": "Set a new password for this account:",
+  "建立帳號": "Create account",
+  "建立：{0}": "Created: {0}",
+  "待多久": "Stay for",
+  "忘記密碼？": "Forgot password?",
+  "我的帳號": "My account",
+  "我的收藏": "Saved searches",
+  "我的點數（只看轉得過去的計畫）": "My points (only programs they transfer to)",
+  "所有帳號": "All accounts",
+  "找不到這筆資料，可能已經刪掉了。": "Couldn't find it. It may have been deleted.",
+  "把這個連結傳給他。30 分鐘內有效，只能用一次。": "Send them this link. It works once, within 30 minutes.",
+  "抵達": "To",
+  "抵達時段": "Arrival time",
+  "按「複製邀請」會複製下面這段，貼到 LINE 或簡訊就可以了：": "“Copy invite” copies the message below. Paste it into LINE or a text message:",
+  "挪威": "Norway",
+  "排序": "Sort",
+  "搜尋": "Search",
+  "搜尋中…": "Searching…",
+  "搜尋條件的格式不對。": "The search settings aren't in a valid format.",
+  "搜尋選項（改了要重新搜尋）": "Search options (search again to apply)",
+  "撤銷": "Revoke",
+  "收藏最多 20 個，先刪掉一些再收藏。": "You can save up to 20 searches. Delete some before saving more.",
+  "改密碼": "Change password",
+  "改每日上限": "Change daily limit",
+  "數字都是假的": "All numbers are fake",
+  "新": "New",
+  "新加坡": "Singapore",
+  "新密碼設定好了，其他裝置都已登出": "New password set. Other devices are signed out.",
+  "新密碼（至少 10 個字）": "New password (at least 10 characters)",
+  "新帳號要有邀請碼才能註冊。每個碼只能用一次，{0} 天後失效。": "New accounts need an invite code to sign up. Each code works once and expires after {0} days.",
+  "日期範圍最多 3 個月，請縮短一點。": "The date range can be 3 months at most. Please shorten it.",
+  "日本": "Japan",
+  "晚上": "Evening",
+  "更多篩選": "More filters",
+  "更新": "updated",
+  "更新密碼": "Update password",
+  "最低稅金": "Lowest taxes",
+  "最便宜": "Cheapest",
+  "最多 1 次": "Up to 1 stop",
+  "最多座位": "Most seats",
+  "最多里程": "Max miles",
+  "最少里程": "Fewest miles",
+  "最後使用：{0}": "Last used: {0}",
+  "最早出發": "Earliest departure",
+  "最晚出發": "Latest departure",
+  "最短時間": "Shortest",
+  "最近登入：{0}": "Last sign-in: {0}",
+  "會在你這邊的 {0}（UTC 0 點）": "at {0} your time (midnight UTC)",
+  "有 {0}% 航程是較低艙等": "{0}% of the trip is in a lower cabin",
+  "有位": "Available",
+  "有效到": "Valid until",
+  "未填": "empty",
+  "未知": "unknown",
+  "查不到": "Search failed",
+  "查不到：{0}": "Search failed: {0}",
+  "核對中…": "Checking…",
+  "核對好了，但重新讀取失敗：{0}": "Checked, but reloading failed: {0}",
+  "機位搜尋": "Award Search",
+  "歡迎回來": "Welcome back",
+  "每哩約 {0}": "About {0} per mile",
+  "每哩約 {0}（已扣稅金約 {1}）": "About {0} per mile (after subtracting about {1} in taxes)",
+  "每哩約 {0}（查不到 {1} 匯率，稅金沒有扣）": "About {0} per mile (no {1} exchange rate, so taxes are not subtracted)",
+  "每日上限已改成 {0} 次": "Daily limit set to {0}",
+  "每次轉滿 6 萬點加送 1 萬哩": "+10,000 miles for every 60,000 points in one transfer",
+  "每次轉滿 6 萬點加送 5,000 哩": "+5,000 miles for every 60,000 points in one transfer",
+  "比上次（{0}）新出現 {1} 筆、降價 {2} 筆": "Since your last look ({0}): {1} new, {2} cheaper",
+  "比例是 {0} 查證的，常會調整，轉點前先到銀行網站確認。轉出去就不能退回。": "Ratios checked {0}. They change often: confirm on the bank site before you transfer. Transfers cannot be undone.",
+  "永久刪除我的帳號": "Permanently delete my account",
+  "沒有 6 萬點加送": "No 60,000-point bonus",
+  "沒有拿到核對結果（{0}）": "No check result ({0})",
+  "沒辦法核對：{0}": "Couldn't check: {0}",
+  "清除航班條件": "Clear flight filters",
+  "現金票價 {0}": "Cash fare {0}",
+  "現金票價（台幣）": "Cash fare (NT dollars)",
+  "現金票價（美元）": "Cash fare (US dollars)",
+  "瑞典": "Sweden",
+  "產生邀請碼": "Create invite code",
+  "產生重設連結": "Create reset link",
+  "用 Email 登入。新帳號要有邀請碼。": "Sign in with email. New accounts need an invite code.",
+  "用哩程換機票，最難的是找到有位子的那一天。這個小網站一次查二十幾個哩程計畫，月曆一眼看出哪天最便宜 🗓️": "The hardest part of booking flights with miles is finding a day with seats. This little site searches 20+ mileage programs at once, and its calendar shows at a glance which day is cheapest 🗓️",
+  "用哪個聯盟的里程": "Use miles from",
+  "用新選項重新搜尋": "Search again with new options",
+  "用點數換": "Pay with points",
+  "用點數換（{0} 哩要準備多少）": "Pay with points (for {0} miles)",
+  "登入": "Sign in",
+  "登入中的裝置": "Signed-in devices",
+  "登入或註冊": "Sign in or sign up",
+  "登入：{0}": "Signed in: {0}",
+  "登出": "Sign out",
+  "登出其他所有裝置": "Sign out of all other devices",
+  "登出後，這台裝置要重新輸入 Email 和密碼。": "After you sign out, you'll need your email and password again on this device.",
+  "登出這台裝置": "Sign out of this device",
+  "目前的密碼": "Current password",
+  "目前的密碼不對。": "Your current password is wrong.",
+  "直飛": "Nonstop",
+  "直飛另價 {0}": "Nonstop for {0}",
+  "看{0}（{1} 筆）": "See {0} ({1})",
+  "看不懂「{0}」，請輸入三碼機場代號，例如 TPE。": "Didn't recognize \"{0}\". Enter a 3-letter airport code, such as TPE.",
+  "確定要刪除 {0} 嗎？不能復原。": "Delete {0}? This can't be undone.",
+  "確定要永久刪除這個帳號嗎？": "Permanently delete this account?",
+  "示範資料": "Demo data",
+  "示範資料不能收藏，請用真的搜尋": "Demo data can't be saved. Run a real search.",
+  "稅金、每哩價值和 Google Flights 都會用這個幣別，匯率每天更新一次。": "Taxes, value per mile and Google Flights links all use this currency. Exchange rates update once a day.",
+  "稅金未提供": "Taxes not provided",
+  "管理": "Admin",
+  "管理員": "Owner",
+  "結束示範": "End demo",
+  "結果太多，只拿到前 5,000 筆，請縮短日期。": "Too many results: only the first 5,000 were loaded. Try a shorter date range",
+  "經 {0}": "via {0}",
+  "總飛行時間": "Total flight time",
+  "美國": "United States",
+  "至少 10 個字。可以直接用 iPhone 建議的強密碼。": "At least 10 characters. You can just use the strong password your iPhone suggests.",
+  "至少一半航程在這個艙等": "At least half the trip in this cabin",
+  "航班條件": "Flight filters",
+  "航空公司和里程計畫": "Airlines and programs",
+  "艙位 {0}": "Fare class {0}",
+  "艙等": "Cabin",
+  "英國": "United Kingdom",
+  "裝置：{0} 台": "Devices: {0}",
+  "複製": "Copy",
+  "複製邀請": "Copy invite",
+  "計畫 {0} / {1}": "{0} of {1} programs",
+  "記住我（30 天內不用再登入）": "Remember me for 30 days",
+  "設定新密碼並登入": "Set password and sign in",
+  "註冊": "Sign up",
+  "註冊好就能開始找位子，祝你搶到好位！🤖": "Once you've signed up, you can start finding seats. Hope you land a great one! 🤖",
+  "註冊日期": "Signed up",
+  "註冊：{0}": "Signed up: {0}",
+  "試試附近的機場（例如 TPE 加上 TSA），或換個日期。": "Try nearby airports too (for example, TPE plus TSA) or other dates.",
+  "語言": "Language",
+  "請 seats.aero 馬上向航空公司重查一次，約用 2 次額度": "Asks seats.aero to re-check with the airline now. Uses about 2 calls of your daily quota.",
+  "請管理員到「管理」頁幫你產生重設連結，連結 30 分鐘內有效。": "Ask the owner to create a reset link for you on the Admin page. The link works for 30 minutes.",
+  "請輸入 0 到 1000 的整數，或留空": "Enter a whole number from 0 to 1000, or leave it blank",
+  "請輸入 Email 和密碼。": "Enter your email and password.",
+  "請輸入出發和抵達的機場。": "Enter the From and To airports.",
+  "請輸入密碼。": "Enter your password.",
+  "請輸入邀請碼。": "Enter your invite code.",
+  "請選出發日期的範圍。": "Pick a range of departure dates.",
+  "請選去程日期的範圍。": "Pick a range of outbound dates.",
+  "請選回程日期的範圍。": "Pick a range of return dates.",
+  "請重新登入。": "Please sign in again.",
+  "讀取中…": "Loading…",
+  "讀取航班中…": "Loading flights…",
+  "資料更新：最新 {0}，最舊 {1}": "Data updated: newest {0}, oldest {1}",
+  "資料的格式不對。": "The data is not in the right format.",
+  "起飛時段": "Departure time",
+  "身分": "Role",
+  "輸入 0 到 1000；留空 = 預設 200 次。": "Enter 0 to 1000, or leave blank for the default of 200.",
+  "輸入密碼確認": "Enter your password to confirm",
+  "轉到 Virgin Red，跟 Flying Club 綁定後就能用": "Goes to Virgin Red; usable once linked to Flying Club",
+  "轉機": "Connecting",
+  "轉機 1 次": "1 stop",
+  "轉機 {0} 次": "{0} stops",
+  "轉機次數": "Stops",
+  "轉美國航空公司要付消費稅補貼費：每 1,000 點 0.6 美元，最多 99 美元": "US airline excise fee: $0.60 per 1,000 points, up to $99",
+  "這五家點數都轉不過去": "None of the five transfer here",
+  "這些日期已經過了。": "These dates have already passed.",
+  "這個 Email 已經註冊過了，請直接登入。": "This email is already registered. Sign in instead.",
+  "這個帳號已經停用，請聯絡管理員。": "This account is disabled. Contact the site owner.",
+  "這個帳號每天最多可以用幾次 seats.aero 額度？": "How many seats.aero calls can this account make per day?",
+  "這個帳號錯太多次了，先鎖 15 分鐘。": "Too many wrong attempts on this account. It's locked for 15 minutes.",
+  "這個網路錯太多次了，請 15 分鐘後再試。": "Too many wrong attempts from this network. Try again in 15 minutes.",
+  "這個里程計畫不能即時核對": "Live check isn't available for this program",
+  "這個里程計畫暫時查不到": "This program can't be checked right now",
+  "這個重設連結已經用過、過期或不存在，請管理員重新產生。": "This reset link was already used, has expired, or doesn't exist. Ask the site owner for a new one.",
+  "這台": "This device",
+  "這是 seats.aero 的快取資料，可能已經過時。轉點數或訂位前，一定要先到航空公司網站確認還有位子。": "This is cached data from seats.aero and may be out of date. Before you transfer points or book, always check the airline's website to confirm the seats are still available.",
+  "這次搜尋沒有轉機機場。": "No connecting airports in this search.",
+  "這次沒核對成功，額度已退回": "This check failed. Your quota was refunded.",
+  "這段日期 seats.aero 沒有這條航線的資料。": "No seats.aero data for this route on these dates.",
+  "這組密碼出現在外洩的密碼名單裡（Have I Been Pwned），請換一組。": "This password is on a list of leaked passwords (Have I Been Pwned). Choose another one.",
+  "連不上中繼站，請檢查網路後再試一次。": "Can't reach the server. Check your connection and try again.",
+  "連不上伺服器，請檢查網路。": "Can't reach the server. Check your connection.",
+  "選日期": "Pick a date",
+  "邀請人": "Invited by",
+  "邀請函": "Invitation",
+  "邀請碼": "Invite code",
+  "邀請碼不對、已經用過，或過期了。": "This invite code is wrong, already used, or expired.",
+  "邀請碼已撤銷": "Invite code revoked",
+  "邀請訊息已複製，貼給朋友就可以了": "Invite copied, ready to paste to a friend",
+  "還有 1 個航班": "1 more flight",
+  "還有 {0} 個航班": "{0} more flights",
+  "還有 {0} 個航班組合沒有列出。": "{0} more not shown.",
+  "還有位子（剩 {0} 位），{1} 哩": "Still available ({0} left), {1} miles",
+  "還有位子（剩 {0} 位），{1} 哩（原本 {2} 哩）": "Still available ({0} left), {1} miles (was {2} miles)",
+  "還有位子，{0} 哩": "Still available, {0} miles",
+  "還有位子，{0} 哩（原本 {1} 哩）": "Still available, {0} miles (was {1} miles)",
+  "還沒有": "never",
+  "還沒有邀請碼。": "No invite codes yet.",
+  "還沒用，{0} 前有效": "Not used yet, expires {0}",
+  "那台裝置已登出": "That device is signed out",
+  "里程機位<br>搜尋": "Award Seat<br>Search",
+  "里程機位搜尋": "Award Search",
+  "里程機位搜尋邀請": "Award Seat Search invite",
+  "重設連結": "Reset link",
+  "金額": "Show in",
+  "金額幣別": "Currency",
+  "金額改用 {0}": "Amounts now in {0}",
+  "降 {0}": "Down {0}",
+  "限 Strata Premier／Elite／Prestige（ThankYou Preferred、Strata、Double Cash、Custom Cash 是七折）": "Strata Premier, Elite and Prestige only (ThankYou Preferred, Strata, Double Cash and Custom Cash get 70%)",
+  "隱藏": "Hide",
+  "韓國": "South Korea",
+  "顯示": "Show",
+  "顯示設定": "Display",
+  "香港": "Hong Kong",
+  "（{0} 的匯率）": " (rates as of {0})",
+  "（{0} 的數字）": " (as of {0})",
+  "（{0}）": " ({0})",
+  "（經{0}）": " (via {0})",
+  "（這個碼建立時還沒有存下來）": "(created before codes were saved)",
+  "，先轉到{0}再到{1}，再移過去": ", via {0}, then {1}",
+  "，先轉到{0}，再移過去": ", via {0}",
+  "，只看 {0}": ", {0} only",
+  "，回 {0} 到 {1}": ", return {0} to {1}",
+  "，條件 {0} 項": ", filters: {0}",
+  "；": ". ",
+  "；整個網站今天還剩 {0} 次，剩 {1} 次時會先留給管理員": "; the whole site has {0} left, and the last {1} are reserved for the owner",
+  "🎟️ 邀請碼：{0}（{1} 前有效，只能用一次）": "🎟️ Invite code: {0} (expires {1}, one use only)",
+  "👉 點這裡註冊：{0}": "👉 Sign up here: {0}"
+  };
+function t(zh, ...a) {
+  const s = LANG === 'en' && EN[zh] != null ? EN[zh] : zh;
+  return a.length ? s.replace(/\{(\d+)\}/g, (m, i) => (a[+i] == null ? '' : a[+i])) : s;
+}
 const MASCOT = '<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g fill="none" stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"><path d="M20 3v6"/><circle cx="20" cy="3" r="1.5" fill="#3E3A39"/><rect x="6" y="9" width="28" height="24" rx="9" fill="#F2A497"/><circle cx="14.5" cy="19" r="4.2" fill="#F6D27A"/><circle cx="25.5" cy="19" r="4.2" fill="#F6D27A"/><path d="M16.5 27q3.5 3 7 0"/><path d="M11 38l3-5M29 38l-3-5"/></g></svg>';
 const PLANE = '<svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g fill="#FFFCF6" stroke="#3E3A39" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"><path d="M3 16l23-8c2-.6 3 1.4 1.2 2.4L9 19z"/><path d="M12 13l-3-7h4l6 5"/><path d="M13 17l-1 7h4l4-8"/></g></svg>';
 // On this computer (python -m http.server) talk to the local Worker, or to the one named in
@@ -735,30 +1180,31 @@ function pointsFor(miles, bank, src, r) {
 }
 // the short line on a card: banks at 1:1 by name only, other ratios spelled out, Avios routes marked 經
 function transferLine(src) {
-  const t = routesTo(src);
-  const bits = BANKS.filter(([k]) => t[k]).map(([k, name]) => { const [b, m, , via] = t[k];
-    return name + (b === 1 && m === 1 ? '' : ' ' + b + ':' + m) + (via ? '（經' + via.split(',').map(v => AVIOS_ZH[v]).join('、') + '）' : ''); });
-  return bits.length ? '可轉：' + bits.join('・') : '這五家點數都轉不過去';
+  const routes = routesTo(src);
+  const bits = BANKS.filter(([k]) => routes[k]).map(([k, name]) => { const [b, m, , via] = routes[k];
+    return name + (b === 1 && m === 1 ? '' : ' ' + b + ':' + m) + (via ? t('（經{0}）', via.split(',').map(v => AVIOS_ZH[v]).join(t('、'))) : ''); });
+  return bits.length ? t('可轉：') + bits.join('・') : t('這五家點數都轉不過去');
 }
 // the same line for a card, each bank kept on one line (萬豪 3:1 must not break between 萬豪 and 3:1)
 function transferLineHtml(src) {
-  const t = transferLine(src), head = t.startsWith('可轉：') ? '可轉：' : '';
-  return esc(head) + t.slice(head.length).split('・').map(x => '<span class="xi">' + esc(x) + '</span>').join('・');
+  const line = transferLine(src), head = line.startsWith(t('可轉：')) ? t('可轉：') : '';
+  return esc(head) + line.slice(head.length).split('・').map(x => '<span class="xi">' + esc(x) + '</span>').join('・');
 }
 // the 用點數換 block in a card's details
 function transferHtml(src, miles) {
-  const t = routesTo(src), rows = BANKS.filter(([k]) => t[k]);
-  if (!rows.length) return '<div class="xfer"><b>用點數換</b><p class="note0">Amex、Chase、Citi、Capital One、萬豪的點數都轉不過去這個計畫。</p></div>';
+  const routes = routesTo(src), rows = BANKS.filter(([k]) => routes[k]);
+  if (!rows.length) return '<div class="xfer"><b>' + t('用點數換') + '</b><p class="note0">' + t('Amex、Chase、Citi、Capital One、萬豪的點數都轉不過去這個計畫。') + '</p></div>';
   let viaUsed = false;
   const lines = rows.map(([k, name]) => {
-    const [b, m, note, via] = t[k], need = pointsFor(miles, k, src, [b, m]);
+    const [b, m, note, via] = routes[k], need = pointsFor(miles, k, src, [b, m]);
     if (via) viaUsed = true;
-    return '<li><span class="xb">' + esc(name) + '</span><span class="xn">' + (need ? fmtMiles(need) + ' 點' : '') + '</span><span class="xr">' + b + ':' + m +
-      (via ? '，先轉到' + via.split(',').map(v => AVIOS_ZH[v]).join('再到') + '，再移過去' : '') + '</span>' + (note ? '<small>' + esc(note) + '</small>' : '') + '</li>';
+    const path = via ? via.split(',').map(v => AVIOS_ZH[v]) : [];
+    return '<li><span class="xb">' + esc(name) + '</span><span class="xn">' + (need ? t('{0} 點', fmtMiles(need)) : '') + '</span><span class="xr">' + b + ':' + m +
+      (path.length > 1 ? t('，先轉到{0}再到{1}，再移過去', ...path) : path.length ? t('，先轉到{0}，再移過去', path[0]) : '') + '</span>' + (note ? '<small>' + esc(t(note)) + '</small>' : '') + '</li>';
   }).join('');
-  return '<div class="xfer"><b>用點數換（' + fmtMiles(miles) + ' 哩要準備多少）</b><ul>' + lines + '</ul>' +
-    (viaUsed ? '<p class="note0">Avios 在英航、伊比利亞、芬航、卡達之間 1:1 免費互轉，但帳戶要開滿 30 天，名字和 Email 要一致；卡達只能跟英航互轉。</p>' : '') +
-    '<p class="note0">比例是 ' + TRANSFER_AS_OF + ' 查證的，常會調整，轉點前先到銀行網站確認。轉出去就不能退回。</p></div>';
+  return '<div class="xfer"><b>' + t('用點數換（{0} 哩要準備多少）', fmtMiles(miles)) + '</b><ul>' + lines + '</ul>' +
+    (viaUsed ? '<p class="note0">' + t('Avios 在英航、伊比利亞、芬航、卡達之間 1:1 免費互轉，但帳戶要開滿 30 天，名字和 Email 要一致；卡達只能跟英航互轉。') + '</p>' : '') +
+    '<p class="note0">' + t('比例是 {0} 查證的，常會調整，轉點前先到銀行網站確認。轉出去就不能退回。', TRANSFER_AS_OF) + '</p></div>';
 }
 
 const CARRIERS = {
@@ -808,6 +1254,47 @@ const PLACES = [
 ].map(([codes, zh, en, pop]) => ({ codes: codes.split(','), zh, en, pop: !!pop }));
 const AIRPORT_ZH = Object.fromEntries(PLACES.filter(p => p.codes.length === 1).map(p => [p.codes[0], p.zh]));
 
+/* ---------- names in the data tables, switched with the language ---------- */
+const CABIN_EN = { Y: 'Economy', W: 'Premium', J: 'Business', F: 'First' };
+const ALLIANCE_EN = { star: ['Star Alliance', 'Star'], oneworld: ['oneworld', 'oneworld'], skyteam: ['SkyTeam', 'SkyTeam'], none: ['Non-alliance', 'Other'] };
+const PROGRAM_AIRLINE_EN = {
+  united: 'United Airlines', aeroplan: 'Air Canada', turkish: 'Turkish Airlines', singapore: 'Singapore Airlines', lufthansa: 'Lufthansa',
+  connectmiles: 'Copa Airlines', ethiopian: 'Ethiopian Airlines', lifemiles: 'Avianca', american: 'American Airlines', alaska: 'Alaska Airlines',
+  qantas: 'Qantas', qatar: 'Qatar Airways', finnair: 'Finnair', british: 'British Airways', iberia: 'Iberia', delta: 'Delta Air Lines',
+  flyingblue: 'Air France KLM', virginatlantic: 'Virgin Atlantic', aeromexico: 'Aeromexico', eurobonus: 'SAS', saudia: 'Saudia',
+  emirates: 'Emirates', etihad: 'Etihad Airways', velocity: 'Virgin Australia', jetblue: 'JetBlue', azul: 'Azul', smiles: 'GOL',
+  frontier: 'Frontier', spirit: 'Spirit',
+};
+const CARRIERS_EN = {
+  BR: 'EVA Air', CI: 'China Airlines', JX: 'STARLUX', AE: 'Mandarin', B7: 'UNI Air', IT: 'Tigerair Taiwan',
+  UA: 'United', AA: 'American', DL: 'Delta', AS: 'Alaska', HA: 'Hawaiian', B6: 'JetBlue', WN: 'Southwest', F9: 'Frontier', NK: 'Spirit',
+  AC: 'Air Canada', WS: 'WestJet', AM: 'Aeromexico', CM: 'Copa', AV: 'Avianca', LA: 'LATAM', G3: 'GOL', AD: 'Azul',
+  NH: 'ANA', JL: 'JAL', MM: 'Peach', KE: 'Korean Air', OZ: 'Asiana', CX: 'Cathay Pacific', HX: 'Hong Kong Airlines', UO: 'HK Express', NX: 'Air Macau',
+  CA: 'Air China', MU: 'China Eastern', CZ: 'China Southern', MF: 'Xiamen Air', HU: 'Hainan', '3U': 'Sichuan', ZH: 'Shenzhen',
+  SQ: 'Singapore', TR: 'Scoot', TG: 'Thai', MH: 'Malaysia', VN: 'Vietnam', PR: 'Philippine', '5J': 'Cebu Pacific', GA: 'Garuda', AI: 'Air India', UL: 'SriLankan',
+  EK: 'Emirates', EY: 'Etihad', QR: 'Qatar', SV: 'Saudia', TK: 'Turkish', ET: 'Ethiopian', MS: 'EgyptAir', SA: 'South African', RJ: 'Royal Jordanian', GF: 'Gulf Air',
+  LH: 'Lufthansa', LX: 'SWISS', OS: 'Austrian', SN: 'Brussels', LO: 'LOT', A3: 'Aegean', TP: 'TAP', SK: 'SAS', AY: 'Finnair', FI: 'Icelandair',
+  BA: 'British Airways', IB: 'Iberia', EI: 'Aer Lingus', VS: 'Virgin Atlantic', AF: 'Air France', KL: 'KLM', AZ: 'ITA', UX: 'Air Europa',
+  QF: 'Qantas', VA: 'Virgin Australia', NZ: 'Air New Zealand', FJ: 'Fiji Airways',
+};
+const AVIOS_EN = { british: 'BA', qatar: 'Qatar', iberia: 'Iberia', finnair: 'Finnair' };
+// the Chinese names as written above, so switching back restores them exactly
+const NAMES_ZH = {
+  cab: CABINS.map(c => c.name), al: ALLIANCES.map(a => [a.name, a.short]), car: Object.assign({}, CARRIERS),
+  prog: Object.fromEntries(Object.entries(PROGRAMS).map(([k, p]) => [k, p[1]])), banks: BANKS.map(b => b[1]), avios: Object.assign({}, AVIOS_ZH),
+  airport: Object.assign({}, AIRPORT_ZH),
+};
+function applyNames() {
+  const en = LANG === 'en';
+  CABINS.forEach((c, i) => { c.name = en ? CABIN_EN[c.k] : NAMES_ZH.cab[i]; CABIN_ZH[c.api] = c.name; });
+  ALLIANCES.forEach((a, i) => { [a.name, a.short] = en ? ALLIANCE_EN[a.k] : NAMES_ZH.al[i]; });
+  for (const c of Object.keys(NAMES_ZH.car)) CARRIERS[c] = en ? CARRIERS_EN[c] || c : NAMES_ZH.car[c];
+  for (const k of Object.keys(PROGRAMS)) PROGRAMS[k][1] = en ? PROGRAM_AIRLINE_EN[k] || '' : NAMES_ZH.prog[k];
+  BANKS.forEach((b, i) => { b[1] = en && b[0] === 'marriott' ? 'Marriott' : NAMES_ZH.banks[i]; BANK_NAME[b[0]] = b[1]; });
+  for (const k of Object.keys(AVIOS_ZH)) AVIOS_ZH[k] = en ? AVIOS_EN[k] : NAMES_ZH.avios[k];
+  for (const p of PLACES) if (p.codes.length === 1) AIRPORT_ZH[p.codes[0]] = en ? p.en : NAMES_ZH.airport[p.codes[0]];
+}
+
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -835,19 +1322,82 @@ const prog = src => {
 // Google Flights' public logo images, one per airline code; an unknown code gets its plain grey tail.
 const logo = c => /^[A-Z0-9]{2}$/.test(c) ? '<img class="lg" src="https://www.gstatic.com/flights/airline_logos/70px/' + c + '.png" alt="" loading="lazy" onerror="this.remove()">' : '';
 
+
+/* ---------- switching the language ---------- */
+// The static HTML is written in Chinese: in English its text nodes and placeholder / aria-label / title attributes
+// are swapped from EN. Each swap remembers [the Chinese, what it wrote], so switching back restores the Chinese,
+// and a node or attribute that code has rewritten since (the meter's label, for one) is taken as it is now, not
+// put back. Everything rendered by code uses t(), so switching re-renders those parts.
+const ZH_TEXT = new WeakMap(), ZH_ATTR = new WeakMap();
+const HAS_CJK = /[\u3400-\u9fff\uff00-\uffef]/;
+// the Chinese to translate from: the recorded one while the value is still what was written, else the value
+// itself if it is Chinese; null (leave it alone) for English or neutral text that code set
+const zhSource = (rec, v) => (rec && v === rec[1] ? rec[0] : HAS_CJK.test(v) ? v : null);
+function translateStatic() {
+  const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let nd = walk.nextNode(); nd; nd = walk.nextNode()) {
+    const zh = zhSource(ZH_TEXT.get(nd), nd.nodeValue);
+    if (zh == null) continue;
+    const key = zh.trim();
+    nd.nodeValue = LANG === 'en' && EN[key] != null ? zh.replace(key, EN[key]) : zh;
+    ZH_TEXT.set(nd, [zh, nd.nodeValue]);
+  }
+  for (const el of document.querySelectorAll('[placeholder],[aria-label],[title]')) {
+    const recs = ZH_ATTR.get(el) || {};
+    for (const at of ['placeholder', 'aria-label', 'title']) {
+      if (!el.hasAttribute(at)) continue;
+      const zh = zhSource(recs[at], el.getAttribute(at));
+      if (zh == null) continue;
+      el.setAttribute(at, LANG === 'en' && EN[zh] != null ? EN[zh] : zh);
+      recs[at] = [zh, el.getAttribute(at)];
+    }
+    ZH_ATTR.set(el, recs);
+  }
+}
+function langNames() {
+  applyNames();
+  WD = LANG === 'en' ? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] : '日一二三四五六';
+  document.documentElement.lang = LANG === 'en' ? 'en' : 'zh-Hant-TW';
+  document.title = t('里程機位搜尋');
+  const appName = $('meta[name="apple-mobile-web-app-title"]');
+  if (appName) appName.content = t('機位搜尋');
+  for (const b of $$('.lang-btn')) b.textContent = LANG === 'en' ? '中文' : 'EN';
+}
+function setLang(l) {
+  LANG = l === 'en' ? 'en' : 'zh';
+  localStorage.setItem('award-lang', LANG);
+  langNames();
+  // everything drawn by code, in its new language
+  renderMonths(); setTrip(TRIP); showNames($('#from')); showNames($('#to'));
+  renderRecent(); renderSaved(); renderProgramList(); renderAlliances(); renderCabins(null); showQuota(); setMode(MODE);
+  const open = $$('.offer').filter(a => a.querySelector('.trips') && !a.querySelector('.trips').hidden).map(a => a.dataset.id);
+  if (S.rows) render();
+  if (!$('#app').hidden) route();
+  for (const a of $$('.offer')) if (open.includes(a.dataset.id)) toggleTrips(a);   // open cards stay open (no new call)
+  if (!$('#sugg').hidden && suggFor) suggest(suggFor);   // an open airport list, in the new language
+  if (LSUB_NOW) $('#lsub').textContent = t(...LSUB_NOW);
+  for (const b of $$('.eye')) b.textContent = b.getAttribute('aria-pressed') === 'true' ? t('隱藏') : t('顯示');
+  setBusy($('#go').disabled);
+  translateStatic();
+}
+// the 語言 中文 | English switch on the account page, in the same style as the currency switch
+const langSeg = () => '<span class="dseg" role="group" aria-label="' + t('語言') + '">' +
+  [['zh', '中文', 'zh-Hant-TW'], ['en', 'English', 'en']].map(([k, x, l]) => '<button type="button" data-lang="' + k + '" lang="' + l + '" aria-pressed="' + (LANG === k) + '">' + x + '</button>').join('') + '</span>';
+document.addEventListener('click', e => { const b = e.target.closest('[data-lang]'); if (b && b.dataset.lang !== LANG) setLang(b.dataset.lang); });
+document.addEventListener('click', e => { if (e.target.closest('.lang-btn')) setLang(LANG === 'en' ? 'zh' : 'en'); });
 /* ---------- dates and formats ---------- */
 const pad = x => String(x).padStart(2, '0');
 const isoDate = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 const parseDate = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
-const WD = '日一二三四五六';
+let WD = '日一二三四五六';
 const md = s => { const d = parseDate(s); return (d.getMonth() + 1) + '/' + d.getDate(); };
-const mdw = s => n(md(s)) + '（' + WD[parseDate(s).getDay()] + '）';
+const mdw = s => t('{0}（{1}）', n(md(s)), WD[parseDate(s).getDay()]);
 const daysBetween = (a, b) => Math.round((parseDate(b) - parseDate(a)) / 864e5);
 const fmtMiles = m => m.toLocaleString('en-US');
 function fmtMan(m) {
   if (m < 10000) return fmtMiles(m);
   const v = m / 10000;
-  return (v >= 100 ? Math.round(v) : Math.round(v * 10) / 10) + '萬';
+  return t('{0}萬', v >= 100 ? Math.round(v) : Math.round(v * 10) / 10, Math.round(v * 10));
 }
 function money(v, cur) {
   if (cur) {
@@ -860,18 +1410,18 @@ function money(v, cur) {
   return '稅 ' + v.toFixed(2);
 }
 function ago(ts) {
-  const t = Date.parse(ts);
-  if (!t) return '';
-  const m = Math.max(0, (Date.now() - t) / 60000);
-  if (m < 60) return Math.max(1, Math.round(m)) + ' 分鐘前更新';
-  if (m < 2880) return Math.round(m / 60) + ' 小時前更新';
-  return Math.round(m / 1440) + ' 天前更新';
+  const ms = Date.parse(ts);
+  if (!ms) return '';
+  const m = Math.max(0, (Date.now() - ms) / 60000);
+  if (m < 60) return t('{0} 分鐘前更新', Math.max(1, Math.round(m)));
+  if (m < 2880) return t('{0} 小時前更新', Math.round(m / 60));
+  return t('{0} 天前更新', Math.round(m / 1440));
 }
 function dur(min) {
   min = Math.round(min || 0);
   if (min <= 0) return '';
   const h = Math.floor(min / 60), m = min % 60;
-  return (h ? h + ' 小時' : '') + (h && m ? ' ' : '') + (m ? m + ' 分' : '');
+  return (h ? t('{0} 小時', h) : '') + (h && m ? ' ' : '') + (m ? t('{0} 分', m) : '');
 }
 // seats.aero trip times are each airport's local clock with a trailing Z, so read them as text.
 const hm = ts => (ts || '').slice(11, 16);
@@ -910,7 +1460,7 @@ function moneyHtml(minor, cur) {
 const moneyText = (minor, cur) => { const v = inDisp(minor, cur); return v == null ? money(minor / 100, cur || 'USD') : money(v, DISP()); };
 const dispSign = () => (DISP() === 'TWD' ? 'NT$' : 'US$');
 // the small 金額 US$ | NT$ switch (results sort bar and the account page)
-const dispSeg = () => '<span class="dseg" role="group" aria-label="金額幣別"><span>金額</span>' +
+const dispSeg = () => '<span class="dseg" role="group" aria-label="' + t('金額幣別') + '"><span>' + t('金額') + '</span>' +
   [['USD', 'US$'], ['TWD', 'NT$']].map(([k, x]) => '<button type="button" data-disp="' + k + '" aria-pressed="' + (DISP() === k) + '">' + x + '</button>').join('') + '</span>';
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-disp]');
@@ -919,7 +1469,7 @@ document.addEventListener('click', e => {
   savePrefs();
   for (const x of $$('[data-disp]')) x.setAttribute('aria-pressed', String(x.dataset.disp === DISP()));
   if (S.rows) render();
-  toast('金額改用 ' + dispSign() + (FX ? '（' + md(FX.day) + ' 的匯率）' : ''));
+  toast(t('金額改用 {0}', dispSign()) + (FX ? t('（{0} 的匯率）', md(FX.day)) : ''));
 });
 // arrival day against departure day: +1 next day; -1 when flying east over the date line lands the day before
 const dayTag = d => d ? '<sup>' + (d > 0 ? '+' : '') + d + '</sup>' : '';
@@ -928,7 +1478,7 @@ const carrierName = c => ((CARRIERS[c] || '') + ' ' + c).trim();
 function resetText() {
   const d = new Date();
   const r = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1));
-  return '會在你這邊的 ' + r.toLocaleTimeString('zh-TW', { hour: 'numeric', minute: '2-digit' }) + '（UTC 0 點）';
+  return t('會在你這邊的 {0}（UTC 0 點）', r.toLocaleTimeString(LOC(), { hour: 'numeric', minute: '2-digit' }));
 }
 
 /* ---------- accounts: sign in, sign up, reset ---------- */
@@ -980,13 +1530,13 @@ async function call(method, path, body) {
   try {
     r = await fetch(RELAY + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
   } catch {
-    throw new ApiError('network', '連不上伺服器，請檢查網路。');
+    throw new ApiError('network', t('連不上伺服器，請檢查網路。'));
   }
   const b = await r.json().catch(() => ({}));
   if (r.ok) return b;
-  let msg = ERR[b.error] || '出了點問題（HTTP ' + r.status + '）。';
-  if (b.error === 'login' && b.left > 0 && b.left < 5) msg += '再錯 ' + b.left + ' 次，這個帳號會鎖 15 分鐘。';
-  if (b.error === 'auth' && !path.startsWith('/auth/')) logout(ERR.auth, false);
+  let msg = ERR[b.error] ? t(ERR[b.error]) : t('出了點問題（HTTP {0}）。', r.status);
+  if (b.error === 'login' && b.left > 0 && b.left < 5) msg += t('再錯 {0} 次，這個帳號會鎖 15 分鐘。', b.left);
+  if (b.error === 'auth' && !path.startsWith('/auth/')) logout(t(ERR.auth), false);
   throw new ApiError(b.error || 'http', msg);
 }
 function shakeIt(el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
@@ -1008,7 +1558,7 @@ function setMode(mode) {
   $('#forgot').hidden = mode !== 'in';
   $('#forgot-t').hidden = true;
   $('#pw').setAttribute('autocomplete', mode === 'up' ? 'new-password' : 'current-password');
-  $('#ago').textContent = mode === 'up' ? '建立帳號' : '登入';
+  $('#ago').textContent = mode === 'up' ? t('建立帳號') : t('登入');
   $('#lerr').textContent = '';
 }
 $('#tab-in').addEventListener('click', () => setMode('in'));
@@ -1022,10 +1572,12 @@ document.addEventListener('click', e => {   // 顯示 / 隱藏 on any password f
   const input = $('#' + b.dataset.for);
   const show = input.type === 'password';
   input.type = show ? 'text' : 'password';
-  b.textContent = show ? '隱藏' : '顯示';
+  b.textContent = show ? t('隱藏') : t('顯示');
   b.setAttribute('aria-pressed', String(show));
 });
 const LSUB = '用 Email 登入。新帳號要有邀請碼。';
+let LSUB_NOW = null;   // the line now showing, so switching the language can redraw it
+const setLsub = (...a) => { LSUB_NOW = a; $('#lsub').textContent = t(...a); };
 function showLogin(msg) {
   $('#app').hidden = true;
   $('#login').hidden = false;
@@ -1033,7 +1585,7 @@ function showLogin(msg) {
   $('#rf').hidden = true;
   $('#atabs').hidden = false;
   $('#lsub').hidden = false;
-  $('#lsub').textContent = LSUB;
+  setLsub(LSUB);
   $('#lerr').textContent = msg || '';
   $('#pw').value = '';
   setTimeout(() => ($('#em').value ? $('#pw') : $('#em')).focus(), 50);
@@ -1049,9 +1601,9 @@ $('#af').addEventListener('submit', async e => {
   const email = $('#em').value.trim(), password = $('#pw').value, remember = $('#rem').checked;
   const mode = MODE;
   $('#lerr').textContent = '';
-  if (!email || !password) { $('#lerr').textContent = '請輸入 Email 和密碼。'; return; }
-  if (mode === 'up' && password.length < 10) { $('#lerr').textContent = ERR.pw_short; return; }
-  if (mode === 'up' && !$('#inv').value.trim()) { $('#lerr').textContent = '請輸入邀請碼。'; return; }
+  if (!email || !password) { $('#lerr').textContent = t('請輸入 Email 和密碼。'); return; }
+  if (mode === 'up' && password.length < 10) { $('#lerr').textContent = t(ERR.pw_short); return; }
+  if (mode === 'up' && !$('#inv').value.trim()) { $('#lerr').textContent = t('請輸入邀請碼。'); return; }
   $('#ago').disabled = true;
   try {
     const body = { email, password, remember };
@@ -1063,7 +1615,7 @@ $('#af').addEventListener('submit', async e => {
     $('#inv').value = '';
     if (JOIN.test(location.hash)) clearHash();
     showApp();
-    toast(mode === 'up' ? '帳號建立好了，歡迎！' : '歡迎回來');
+    toast(mode === 'up' ? t('帳號建立好了，歡迎！') : t('歡迎回來'));
   } catch (err) {
     $('#lerr').textContent = err.message;
     shakeIt($('#af'));
@@ -1079,7 +1631,7 @@ function startJoin(raw) {
   showLogin('');
   setMode('up');
   $('#inv').value = c.slice(0, 5) + '-' + c.slice(5);
-  $('#lsub').textContent = INVITER + ' 邀請你加入！填好 Email 和密碼就能註冊 ✈️';
+  setLsub('{0} 邀請你加入！填好 Email 和密碼就能註冊 ✈️', INVITER);
 }
 // A reset link opens the page at #reset=<token>.
 async function startReset(token) {
@@ -1091,7 +1643,7 @@ async function startReset(token) {
   $('#lsub').hidden = true;
   $('#rf').hidden = false;
   $('#rerr').textContent = '';
-  $('#rf-email').textContent = '讀取中…';
+  $('#rf-email').textContent = t('讀取中…');
   $('#rgo').disabled = true;
   try {
     const r = await call('GET', '/auth/reset?token=' + encodeURIComponent(token));
@@ -1108,7 +1660,7 @@ const clearHash = () => history.replaceState(null, '', location.pathname + locat
 $('#rf').addEventListener('submit', async e => {
   e.preventDefault();
   const password = $('#rpw').value;
-  if (password.length < 10) { $('#rerr').textContent = ERR.pw_short; return; }
+  if (password.length < 10) { $('#rerr').textContent = t(ERR.pw_short); return; }
   $('#rgo').disabled = true;
   try {
     const r = await call('POST', '/auth/reset', { token: RESET_TOKEN, password });
@@ -1117,7 +1669,7 @@ $('#rf').addEventListener('submit', async e => {
     $('#rpw').value = '';
     clearHash();
     showApp();
-    toast('新密碼設定好了，其他裝置都已登出');
+    toast(t('新密碼設定好了，其他裝置都已登出'));
   } catch (err) {
     $('#rerr').textContent = err.message;
     $('#rgo').disabled = false;
@@ -1141,7 +1693,7 @@ addEventListener('hashchange', () => {
   const reset = /^#reset=([A-Za-z0-9_-]{40,64})$/.exec(location.hash), join = JOIN.exec(location.hash);
   if (reset) startReset(reset[1]);
   else if (join && $('#app').hidden) startJoin(join[1]);
-  else if (join) { clearHash(); toast('你已經登入了，這個邀請碼可以留給別人用'); route(); }
+  else if (join) { clearHash(); toast(t('你已經登入了，這個邀請碼可以留給別人用')); route(); }
   else if (!$('#app').hidden) route();
 });
 $('#acct-btn').addEventListener('click', () => { location.hash = '#/account'; });
@@ -1156,14 +1708,14 @@ $('#home').addEventListener('click', e => {
 const COUNTRY = { TW: '台灣', US: '美國', CA: '加拿大', JP: '日本', KR: '韓國', HK: '香港', SG: '新加坡', GB: '英國', DK: '丹麥', NO: '挪威', SE: '瑞典' };
 const fmtDay = sec => { const d = new Date(sec * 1000); return d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate(); };
 function since(sec) {
-  if (!sec) return '還沒有';
+  if (!sec) return t('還沒有');
   const m = Math.max(0, (Date.now() / 1000 - sec) / 60);
-  if (m < 2) return '剛剛';
-  if (m < 60) return Math.round(m) + ' 分鐘前';
-  if (m < 2880) return Math.round(m / 60) + ' 小時前';
-  return Math.round(m / 1440) + ' 天前';
+  if (m < 2) return t('剛剛');
+  if (m < 60) return t('{0} 分鐘前', Math.round(m));
+  if (m < 2880) return t('{0} 小時前', Math.round(m / 60));
+  return t('{0} 天前', Math.round(m / 1440));
 }
-const pwField = (id, label, ac) => '<div class="field pwf"><label for="' + id + '">' + label + '</label><input id="' + id + '" type="password" autocomplete="' + ac + '"><button type="button" class="eye" data-for="' + id + '" aria-pressed="false">顯示</button></div>';
+const pwField = (id, label, ac) => '<div class="field pwf"><label for="' + id + '">' + label + '</label><input id="' + id + '" type="password" autocomplete="' + ac + '"><button type="button" class="eye" data-for="' + id + '" aria-pressed="false">' + t('顯示') + '</button></div>';
 function setMsg(id, text, ok) { const el = $('#' + id); el.className = 'msg ' + (ok ? 'ok' : 'bad'); el.textContent = text; }
 
 async function loadAccount() {
@@ -1172,34 +1724,34 @@ async function loadAccount() {
   let m;
   try { m = await call('GET', '/me'); } catch (err) { box.innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; return; }
   ME = { email: m.email, role: m.role };
-  const devices = m.sessions.map(x => '<div class="rowi"><div class="main"><b>' + esc(x.device || '不明的裝置') + '</b><small>' +
-      (x.country ? '<span>' + esc(COUNTRY[x.country] || x.country) + '</span>' : '') + '<span>最後使用：' + since(x.last_seen_at) + '</span><span>登入：' + fmtDay(x.created_at) + '</span></small></div>' +
-      '<div class="acts">' + (x.id === m.current ? '<span class="tag me">這台</span>' : '<button type="button" class="btn ghost" data-sess="' + esc(x.id) + '">登出</button>') + '</div></div>').join('');
+  const devices = m.sessions.map(x => '<div class="rowi"><div class="main"><b>' + esc(x.device || t('不明的裝置')) + '</b><small>' +
+      (x.country ? '<span>' + esc(t(COUNTRY[x.country] || x.country)) + '</span>' : '') + '<span>' + t('最後使用：{0}', since(x.last_seen_at)) + '</span><span>' + t('登入：{0}', fmtDay(x.created_at)) + '</span></small></div>' +
+      '<div class="acts">' + (x.id === m.current ? '<span class="tag me">' + t('這台') + '</span>' : '<button type="button" class="btn ghost" data-sess="' + esc(x.id) + '">' + t('登出') + '</button>') + '</div></div>').join('');
   box.innerHTML =
-    '<div class="acard y"><h3>帳號</h3>' +
+    '<div class="acard y"><h3>' + t('帳號') + '</h3>' +
       '<div class="kv"><span>Email</span><b>' + esc(m.email) + '</b></div>' +
-      '<div class="kv"><span>身分</span><b>' + (m.role === 'owner' ? '管理員' : '一般帳號') + '</b></div>' +
-      '<div class="kv"><span>註冊日期</span><b>' + fmtDay(m.created_at) + '</b></div>' +
-      (m.role === 'owner' ? '<a class="btn pri" href="#/admin">到管理頁</a>' : '') + '</div>' +
-    '<div class="acard w" id="prefs-card"><h3>顯示</h3><div class="kv"><span>金額幣別</span>' + dispSeg() + '</div><p class="note0">稅金、每哩價值和 Google Flights 都會用這個幣別，匯率每天更新一次。</p></div>' +
-    '<form class="acard" id="pwform" novalidate><h3>改密碼</h3>' +
+      '<div class="kv"><span>' + t('身分') + '</span><b>' + (m.role === 'owner' ? t('管理員') : t('一般帳號')) + '</b></div>' +
+      '<div class="kv"><span>' + t('註冊日期') + '</span><b>' + fmtDay(m.created_at) + '</b></div>' +
+      (m.role === 'owner' ? '<a class="btn pri" href="#/admin">' + t('到管理頁') + '</a>' : '') + '</div>' +
+    '<div class="acard w" id="prefs-card"><h3>' + t('顯示設定') + '</h3><div class="kv"><span>' + t('語言') + '</span>' + langSeg() + '</div><div class="kv"><span>' + t('金額幣別') + '</span>' + dispSeg() + '</div><p class="note0">' + t('稅金、每哩價值和 Google Flights 都會用這個幣別，匯率每天更新一次。') + '</p></div>' +
+    '<form class="acard" id="pwform" novalidate><h3>' + t('改密碼') + '</h3>' +
       '<input type="email" class="sr" autocomplete="username" value="' + esc(m.email) + '" tabindex="-1" aria-hidden="true">' +
-      pwField('pw-cur', '目前的密碼', 'current-password') + pwField('pw-new', '新密碼（至少 10 個字）', 'new-password') +
-      '<button class="btn pri" type="submit">更新密碼</button><p class="msg" id="pw-msg" role="status"></p></form>' +
-    '<div class="acard w"><h3>登入中的裝置</h3>' + devices +
-      (m.sessions.length > 1 ? '<button type="button" class="btn" id="out-others">登出其他所有裝置</button>' : '') + '</div>' +
-    '<div class="acard"><h3>登出</h3><p class="note0">登出後，這台裝置要重新輸入 Email 和密碼。</p><button type="button" class="btn pri" id="out-me">登出這台裝置</button></div>' +
-    '<details class="acard c danger"><summary>刪除帳號</summary><form id="delform" novalidate>' +
-      '<p class="note0">帳號和所有登入中的裝置都會刪掉，不能復原。</p>' + pwField('del-pw', '輸入密碼確認', 'current-password') +
-      '<button class="btn warn" type="submit">永久刪除我的帳號</button><p class="msg" id="del-msg" role="status"></p></form></details>';
+      pwField('pw-cur', t('目前的密碼'), 'current-password') + pwField('pw-new', t('新密碼（至少 10 個字）'), 'new-password') +
+      '<button class="btn pri" type="submit">' + t('更新密碼') + '</button><p class="msg" id="pw-msg" role="status"></p></form>' +
+    '<div class="acard w"><h3>' + t('登入中的裝置') + '</h3>' + devices +
+      (m.sessions.length > 1 ? '<button type="button" class="btn" id="out-others">' + t('登出其他所有裝置') + '</button>' : '') + '</div>' +
+    '<div class="acard"><h3>' + t('登出') + '</h3><p class="note0">' + t('登出後，這台裝置要重新輸入 Email 和密碼。') + '</p><button type="button" class="btn pri" id="out-me">' + t('登出這台裝置') + '</button></div>' +
+    '<details class="acard c danger"><summary>' + t('刪除帳號') + '</summary><form id="delform" novalidate>' +
+      '<p class="note0">' + t('帳號和所有登入中的裝置都會刪掉，不能復原。') + '</p>' + pwField('del-pw', t('輸入密碼確認'), 'current-password') +
+      '<button class="btn warn" type="submit">' + t('永久刪除我的帳號') + '</button><p class="msg" id="del-msg" role="status"></p></form></details>';
 }
 $('#acct-body').addEventListener('click', async e => {
   const b = e.target.closest('button');
   if (!b) return;
   try {
-    if (b.dataset.sess) { b.disabled = true; await call('DELETE', '/me/sessions/' + b.dataset.sess); toast('那台裝置已登出'); loadAccount(); }
-    else if (b.id === 'out-others') { await call('DELETE', '/me/sessions/others'); toast('其他裝置都已登出'); loadAccount(); }
-    else if (b.id === 'out-me') logout('已登出。');
+    if (b.dataset.sess) { b.disabled = true; await call('DELETE', '/me/sessions/' + b.dataset.sess); toast(t('那台裝置已登出')); loadAccount(); }
+    else if (b.id === 'out-others') { await call('DELETE', '/me/sessions/others'); toast(t('其他裝置都已登出')); loadAccount(); }
+    else if (b.id === 'out-me') logout(t('已登出。'));
   } catch (err) {
     b.disabled = false;
     toast(err.message);
@@ -1209,24 +1761,24 @@ $('#acct-body').addEventListener('submit', async e => {
   e.preventDefault();
   if (e.target.id === 'pwform') {
     const cur = $('#pw-cur').value, next = $('#pw-new').value;
-    if (!cur || !next) return setMsg('pw-msg', '兩個欄位都要填。');
-    if (next.length < 10) return setMsg('pw-msg', ERR.pw_short);
+    if (!cur || !next) return setMsg('pw-msg', t('兩個欄位都要填。'));
+    if (next.length < 10) return setMsg('pw-msg', t(ERR.pw_short));
     try {
       await call('POST', '/me/password', { current: cur, next });
       $('#pw-cur').value = $('#pw-new').value = '';
-      setMsg('pw-msg', '密碼更新好了，其他裝置都已登出。', true);
+      setMsg('pw-msg', t('密碼更新好了，其他裝置都已登出。'), true);
     } catch (err) { setMsg('pw-msg', err.message); }
   }
   if (e.target.id === 'delform') {
     const password = $('#del-pw').value;
-    if (!password) return setMsg('del-msg', '請輸入密碼。');
-    if (!confirm('確定要永久刪除這個帳號嗎？')) return;
+    if (!password) return setMsg('del-msg', t('請輸入密碼。'));
+    if (!confirm(t('確定要永久刪除這個帳號嗎？'))) return;
     try {
       await call('DELETE', '/me', { password });
       clearToken();
       ME = null;
       location.hash = '';
-      showLogin('帳號已刪除。');
+      showLogin(t('帳號已刪除。'));
     } catch (err) { setMsg('del-msg', err.message); }
   }
 });
@@ -1236,29 +1788,29 @@ const INVITER = 'Gino';   // the owner's name in invite messages
 // the sign-up link opens the 註冊 tab with the code already filled in
 const joinUrl = code => location.origin + location.pathname + '#join=' + code.replace('-', '');
 function inviteText(code, exp) {
-  return '✈️ ' + INVITER + ' 邀請你一起用「里程機位搜尋」！\n\n' +
-    '用哩程換機票，最難的是找到有位子的那一天。這個小網站一次查二十幾個哩程計畫，月曆一眼看出哪天最便宜 🗓️\n\n' +
-    '👉 點這裡註冊：' + joinUrl(code) + '\n' +
-    '🎟️ 邀請碼：' + code + '（' + fmtDay(exp) + ' 前有效，只能用一次）\n\n' +
-    '註冊好就能開始找位子，祝你搶到好位！🤖';
+  return t('✈️ {0} 邀請你一起用「里程機位搜尋」！', INVITER) + '\n\n' +
+    t('用哩程換機票，最難的是找到有位子的那一天。這個小網站一次查二十幾個哩程計畫，月曆一眼看出哪天最便宜 🗓️') + '\n\n' +
+    t('👉 點這裡註冊：{0}', joinUrl(code)) + '\n' +
+    t('🎟️ 邀請碼：{0}（{1} 前有效，只能用一次）', code, fmtDay(exp)) + '\n\n' +
+    t('註冊好就能開始找位子，祝你搶到好位！🤖');
 }
 const canShare = () => typeof navigator.share === 'function';
-const inviteBtns = (code, exp, cls) => '<button type="button" class="btn ' + cls + '" data-invite="' + esc(code) + '" data-exp="' + exp + '">複製邀請</button>' +
-  (canShare() ? '<button type="button" class="btn ' + (cls === 'pri' ? '' : cls) + '" data-share="' + esc(code) + '" data-exp="' + exp + '">分享</button>' : '');
+const inviteBtns = (code, exp, cls) => '<button type="button" class="btn ' + cls + '" data-invite="' + esc(code) + '" data-exp="' + exp + '">' + t('複製邀請') + '</button>' +
+  (canShare() ? '<button type="button" class="btn ' + (cls === 'pri' ? '' : cls) + '" data-share="' + esc(code) + '" data-exp="' + exp + '">' + t('分享') + '</button>' : '');
 // a boarding-pass invite card with the message under it, shown when a code is made
 function passHtml(code, exp) {
   return '<div class="pass"><div class="pass-main">' +
-      '<div class="pass-h"><b>邀請函</b><span>BOARDING PASS</span></div>' +
-      '<div class="pass-row"><span><small>邀請人</small>' + esc(INVITER) + '</span><span><small>乘客</small>你的朋友</span><span><small>有效到</small>' + fmtDay(exp) + '</span></div>' +
-      '<div class="pass-code"><small>邀請碼</small>' + esc(code) + '</div>' +
-    '</div><div class="pass-stub">' + MASCOT + '<span>里程機位<br>搜尋</span></div></div>' +
-    '<p class="pass-note">按「複製邀請」會複製下面這段，貼到 LINE 或簡訊就可以了：</p>' +
+      '<div class="pass-h"><b>' + t('邀請函') + '</b><span>BOARDING PASS</span></div>' +
+      '<div class="pass-row"><span><small>' + t('邀請人') + '</small>' + esc(INVITER) + '</span><span><small>' + t('乘客') + '</small>' + t('你的朋友') + '</span><span><small>' + t('有效到') + '</small>' + fmtDay(exp) + '</span></div>' +
+      '<div class="pass-code"><small>' + t('邀請碼') + '</small>' + esc(code) + '</div>' +
+    '</div><div class="pass-stub">' + MASCOT + '<span>' + t('里程機位<br>搜尋') + '</span></div></div>' +
+    '<p class="pass-note">' + t('按「複製邀請」會複製下面這段，貼到 LINE 或簡訊就可以了：') + '</p>' +
     '<pre class="pass-msg">' + esc(inviteText(code, exp)) + '</pre>' +
     '<div class="acts pass-acts">' + inviteBtns(code, exp, 'pri') + '</div>';
 }
 function codeBox(text, note, isUrl) {
-  return '<div class="codebox">' + (isUrl ? '<input readonly value="' + esc(text) + '" aria-label="重設連結">' : '<span class="code">' + esc(text) + '</span>') +
-    '<button type="button" class="btn" data-copy="' + esc(text) + '">複製</button><small>' + esc(note) + '</small></div>';
+  return '<div class="codebox">' + (isUrl ? '<input readonly value="' + esc(text) + '" aria-label="' + t('重設連結') + '">' : '<span class="code">' + esc(text) + '</span>') +
+    '<button type="button" class="btn" data-copy="' + esc(text) + '">' + t('複製') + '</button><small>' + esc(note) + '</small></div>';
 }
 async function loadAdmin() {
   const box = $('#admin-body');
@@ -1266,33 +1818,33 @@ async function loadAdmin() {
   let u, inv;
   try { [u, inv] = await Promise.all([call('GET', '/admin/users'), call('GET', '/admin/invites')]); }
   catch (err) { box.innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; return; }
-  const t = Date.now() / 1000;
+  const now = Date.now() / 1000;
   const invites = inv.invites.map(i => {
-    const open = !i.used_at && i.expires_at >= t;
-    const code = i.code ? '<span class="icode">' + esc(i.code) + '</span>' : '<span class="icode old">（這個碼建立時還沒有存下來）</span>';
-    const who = i.used_at ? '<span class="who">使用者：' + esc(i.used_by || '已刪除的帳號') + '</span>' : '';
-    const state = i.used_at ? '使用：' + fmtDay(i.used_at) : i.expires_at < t ? '已過期' : '還沒用，' + fmtDay(i.expires_at) + ' 前有效';
-    return '<div class="rowi"><div class="main"><b>' + code + '</b>' + who + '<small>' + (i.label ? '<span>備註：' + esc(i.label) + '</span>' : '') + '<span>' + state + '</span><span>建立：' + fmtDay(i.created_at) + '</span></small></div>' +
+    const open = !i.used_at && i.expires_at >= now;
+    const code = i.code ? '<span class="icode">' + esc(i.code) + '</span>' : '<span class="icode old">' + t('（這個碼建立時還沒有存下來）') + '</span>';
+    const who = i.used_at ? '<span class="who">' + t('使用者：{0}', esc(i.used_by || t('已刪除的帳號'))) + '</span>' : '';
+    const state = i.used_at ? t('使用：{0}', fmtDay(i.used_at)) : i.expires_at < now ? t('已過期') : t('還沒用，{0} 前有效', fmtDay(i.expires_at));
+    return '<div class="rowi"><div class="main"><b>' + code + '</b>' + who + '<small>' + (i.label ? '<span>' + t('備註：{0}', esc(i.label)) + '</span>' : '') + '<span>' + state + '</span><span>' + t('建立：{0}', fmtDay(i.created_at)) + '</span></small></div>' +
       (open ? '<div class="acts">' + (i.code ? inviteBtns(i.code, i.expires_at, 'ghost') : '') +
-        '<button type="button" class="btn ghost" data-revoke="' + esc(i.id) + '">撤銷</button></div>' : '') + '</div>';
-  }).join('') || '<p class="note0">還沒有邀請碼。</p>';
+        '<button type="button" class="btn ghost" data-revoke="' + esc(i.id) + '">' + t('撤銷') + '</button></div>' : '') + '</div>';
+  }).join('') || '<p class="note0">' + t('還沒有邀請碼。') + '</p>';
   const users = u.users.map(x => {
     const self = x.id === u.me;
-    const tags = (x.role === 'owner' ? '<span class="tag own">管理員</span>' : '') + (x.status !== 'active' ? '<span class="tag off">已停用</span>' : '') + (self ? '<span class="tag me">你</span>' : '');
-    const acts = '<button type="button" class="btn ghost" data-reset="' + x.id + '">產生重設連結</button>' + (self ? '' :
-      '<button type="button" class="btn ghost" data-limit="' + x.id + '" data-cur="' + (x.daily_limit ?? '') + '">改每日上限</button>' +
-      '<button type="button" class="btn ghost" data-status="' + x.id + '" data-to="' + (x.status === 'active' ? 'disabled' : 'active') + '">' + (x.status === 'active' ? '停用' : '啟用') + '</button>' +
-      '<button type="button" class="btn warn" data-del="' + x.id + '" data-email="' + esc(x.email) + '">刪除</button>');
+    const tags = (x.role === 'owner' ? '<span class="tag own">' + t('管理員') + '</span>' : '') + (x.status !== 'active' ? '<span class="tag off">' + t('已停用') + '</span>' : '') + (self ? '<span class="tag me">' + t('你') + '</span>' : '');
+    const acts = '<button type="button" class="btn ghost" data-reset="' + x.id + '">' + t('產生重設連結') + '</button>' + (self ? '' :
+      '<button type="button" class="btn ghost" data-limit="' + x.id + '" data-cur="' + (x.daily_limit ?? '') + '">' + t('改每日上限') + '</button>' +
+      '<button type="button" class="btn ghost" data-status="' + x.id + '" data-to="' + (x.status === 'active' ? 'disabled' : 'active') + '">' + (x.status === 'active' ? t('停用') : t('啟用')) + '</button>' +
+      '<button type="button" class="btn warn" data-del="' + x.id + '" data-email="' + esc(x.email) + '">' + t('刪除') + '</button>');
     // today's seats.aero calls against the account's cap (the owner has none)
-    const use = '<span>今天用了 ' + x.used_today + ' 次' + (x.limit == null ? '（不限）' : '／上限 ' + x.limit + (x.daily_limit == null ? '（預設）' : '')) + '</span>';
-    return '<div class="rowi col"><div class="main"><b>' + esc(x.email) + tags + '</b><small>' + use + '<span>註冊：' + fmtDay(x.created_at) + '</span><span>最近登入：' + since(x.last_login_at) + '</span><span>裝置：' + x.devices + ' 台</span></small></div>' +
+    const use = '<span>' + (x.limit == null ? t('今天用了 {0} 次（不限）', x.used_today) : x.daily_limit == null ? t('今天用了 {0} 次／上限 {1}（預設）', x.used_today, x.limit) : t('今天用了 {0} 次／上限 {1}', x.used_today, x.limit)) + '</span>';
+    return '<div class="rowi col"><div class="main"><b>' + esc(x.email) + tags + '</b><small>' + use + '<span>' + t('註冊：{0}', fmtDay(x.created_at)) + '</span><span>' + t('最近登入：{0}', since(x.last_login_at)) + '</span><span>' + t('裝置：{0} 台', x.devices) + '</span></small></div>' +
       '<div class="acts">' + acts + '</div><div class="out" id="reset-out-' + x.id + '"></div></div>';
   }).join('');
   box.innerHTML =
-    '<div class="acard y"><h3>邀請碼</h3><p class="note0">新帳號要有邀請碼才能註冊。每個碼只能用一次，' + inv.days + ' 天後失效。</p>' +
-      '<form id="invform" class="invnew" novalidate><div class="field"><label for="inv-label">備註（選填）</label><input id="inv-label" maxlength="40" placeholder="例：測試帳號 1"></div><button class="btn pri" type="submit">產生邀請碼</button></form>' +
+    '<div class="acard y"><h3>' + t('邀請碼') + '</h3><p class="note0">' + t('新帳號要有邀請碼才能註冊。每個碼只能用一次，{0} 天後失效。', inv.days) + '</p>' +
+      '<form id="invform" class="invnew" novalidate><div class="field"><label for="inv-label">' + t('備註（選填）') + '</label><input id="inv-label" maxlength="40" placeholder="' + t('例：測試帳號 1') + '"></div><button class="btn pri" type="submit">' + t('產生邀請碼') + '</button></form>' +
       '<div id="inv-out"></div>' + invites + '</div>' +
-    '<div class="acard w"><h3>所有帳號</h3>' + users + '</div>';
+    '<div class="acard w"><h3>' + t('所有帳號') + '</h3>' + users + '</div>';
 }
 $('#admin-body').addEventListener('submit', async e => {
   e.preventDefault();
@@ -1307,32 +1859,32 @@ $('#admin-body').addEventListener('click', async e => {
   const b = e.target.closest('button');
   if (!b) return;
   try {
-    if (b.dataset.copy) { await navigator.clipboard.writeText(b.dataset.copy); toast('已複製'); }
-    else if (b.dataset.invite) { await navigator.clipboard.writeText(inviteText(b.dataset.invite, +b.dataset.exp)); toast('邀請訊息已複製，貼給朋友就可以了'); }
+    if (b.dataset.copy) { await navigator.clipboard.writeText(b.dataset.copy); toast(t('已複製')); }
+    else if (b.dataset.invite) { await navigator.clipboard.writeText(inviteText(b.dataset.invite, +b.dataset.exp)); toast(t('邀請訊息已複製，貼給朋友就可以了')); }
     else if (b.dataset.share) {
-      try { await navigator.share({ title: '里程機位搜尋邀請', text: inviteText(b.dataset.share, +b.dataset.exp) }); }
+      try { await navigator.share({ title: t('里程機位搜尋邀請'), text: inviteText(b.dataset.share, +b.dataset.exp) }); }
       catch (err) { if (err.name !== 'AbortError') throw err; }   // closing the share sheet is not an error
     }
-    else if (b.dataset.revoke) { await call('DELETE', '/admin/invites/' + b.dataset.revoke); toast('邀請碼已撤銷'); loadAdmin(); }
+    else if (b.dataset.revoke) { await call('DELETE', '/admin/invites/' + b.dataset.revoke); toast(t('邀請碼已撤銷')); loadAdmin(); }
     else if (b.dataset.reset) {
       const r = await call('POST', '/admin/users/' + b.dataset.reset + '/reset-link');
-      $('#reset-out-' + b.dataset.reset).innerHTML = codeBox(r.url, '把這個連結傳給他。30 分鐘內有效，只能用一次。', true);
+      $('#reset-out-' + b.dataset.reset).innerHTML = codeBox(r.url, t('把這個連結傳給他。30 分鐘內有效，只能用一次。'), true);
     } else if (b.dataset.limit) {
-      const v = prompt('這個帳號每天最多可以用幾次 seats.aero 額度？\n輸入 0 到 1000；留空 = 預設 200 次。', b.dataset.cur);
+      const v = prompt(t('這個帳號每天最多可以用幾次 seats.aero 額度？') + '\n' + t('輸入 0 到 1000；留空 = 預設 200 次。'), b.dataset.cur);
       if (v === null) return;
       const limit = v.trim() === '' ? null : Number(v.trim());
-      if (limit !== null && !(Number.isInteger(limit) && limit >= 0 && limit <= 1000)) { toast('請輸入 0 到 1000 的整數，或留空'); return; }
+      if (limit !== null && !(Number.isInteger(limit) && limit >= 0 && limit <= 1000)) { toast(t('請輸入 0 到 1000 的整數，或留空')); return; }
       await call('POST', '/admin/users/' + b.dataset.limit + '/limit', { limit });
-      toast(limit === null ? '已改回預設 200 次' : '每日上限已改成 ' + limit + ' 次');
+      toast(limit === null ? t('已改回預設 200 次') : t('每日上限已改成 {0} 次', limit));
       loadAdmin();
     } else if (b.dataset.status) {
       await call('POST', '/admin/users/' + b.dataset.status + '/status', { status: b.dataset.to });
-      toast(b.dataset.to === 'disabled' ? '帳號已停用，它的裝置都已登出' : '帳號已重新啟用');
+      toast(b.dataset.to === 'disabled' ? t('帳號已停用，它的裝置都已登出') : t('帳號已重新啟用'));
       loadAdmin();
     } else if (b.dataset.del) {
-      if (!confirm('確定要刪除 ' + b.dataset.email + ' 嗎？不能復原。')) return;
+      if (!confirm(t('確定要刪除 {0} 嗎？不能復原。', b.dataset.email))) return;
       await call('DELETE', '/admin/users/' + b.dataset.del);
-      toast('帳號已刪除');
+      toast(t('帳號已刪除'));
       loadAdmin();
     }
   } catch (err) { toast(err.message); }
@@ -1347,7 +1899,7 @@ async function api(path, payload) {
     r = await fetch(RELAY + path, payload === undefined ? { headers: { Authorization: 'Bearer ' + getToken() } }
       : { method: 'POST', headers: { Authorization: 'Bearer ' + getToken(), 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
   } catch {
-    throw new ApiError('network', '連不上中繼站，請檢查網路後再試一次。');
+    throw new ApiError('network', t('連不上中繼站，請檢查網路後再試一次。'));
   }
   const q = r.headers.get('X-RateLimit-Remaining');
   if (q !== null && q !== '' && !isNaN(q)) setQuota(Number(q), Number(r.headers.get('X-RateLimit-Limit')) || 1000, Date.now());
@@ -1356,19 +1908,19 @@ async function api(path, payload) {
   let body = null;
   try { body = JSON.parse(text); } catch {}
   if (r.ok) {
-    if (!body) throw new ApiError('bad', 'seats.aero 回傳的資料看不懂，等一下再試。');
+    if (!body) throw new ApiError('bad', t('seats.aero 回傳的資料看不懂，等一下再試。'));
     return body;
   }
-  if (body && body.error === 'auth') { logout(ERR.auth, false); throw new ApiError('auth', ERR.auth); }
-  if (body && body.error === 'param') throw new ApiError('param', '搜尋條件的格式不對。');
+  if (body && body.error === 'auth') { logout(t(ERR.auth), false); throw new ApiError('auth', t(ERR.auth)); }
+  if (body && body.error === 'param') throw new ApiError('param', t('搜尋條件的格式不對。'));
   // the account's own daily budget, or the reserve kept for the owner (see the Worker's budgetCheck)
-  if (body && body.error === 'user_quota') throw new ApiError('quota', '你今天的 ' + body.limit + ' 次額度用完了，' + resetText() + '重置。');
-  if (body && body.error === 'reserve') throw new ApiError('quota', '今天整個網站的額度快用完了，剩下的先留給管理員，' + resetText() + '重置。');
-  const t = text.toLowerCase();
-  if (t.includes('subscription_expired')) throw new ApiError('expired', 'seats.aero 的 Pro 訂閱已經過期，續訂之後才查得到。');
-  if (r.status === 429) throw new ApiError('quota', '今天的 1,000 次查詢額度用完了，' + resetText() + '重置。');
-  if (t.includes('partner_key') || r.status === 401 || r.status === 403) throw new ApiError('key', 'seats.aero 不接受這把 API key（' + text.slice(0, 40) + '），需要重新產生一把。');
-  throw new ApiError('upstream', 'seats.aero 暫時有問題（HTTP ' + r.status + '），等一下再試。');
+  if (body && body.error === 'user_quota') throw new ApiError('quota', t('你今天的 {0} 次額度用完了，{1}重置。', body.limit, resetText()));
+  if (body && body.error === 'reserve') throw new ApiError('quota', t('今天整個網站的額度快用完了，剩下的先留給管理員，{0}重置。', resetText()));
+  const lower = text.toLowerCase();
+  if (lower.includes('subscription_expired')) throw new ApiError('expired', t('seats.aero 的 Pro 訂閱已經過期，續訂之後才查得到。'));
+  if (r.status === 429) throw new ApiError('quota', t('今天的 1,000 次查詢額度用完了，{0}重置。', resetText()));
+  if (lower.includes('partner_key') || r.status === 401 || r.status === 403) throw new ApiError('key', t('seats.aero 不接受這把 API key（{0}），需要重新產生一把。', text.slice(0, 40)));
+  throw new ApiError('upstream', t('seats.aero 暫時有問題（HTTP {0}），等一下再試。', r.status));
 }
 // Today's seats.aero calls as 已用 XXX/1000. The count comes from seats.aero itself (X-RateLimit-Remaining), so it
 // covers every use of the key, not only this site. The relay also keeps the latest count (GET /quota, no call),
@@ -1405,11 +1957,11 @@ function showQuota() {
   const el = $('#quota');
   if (!Q && !personal()) { el.hidden = true; return; }
   const { lim, used } = quotaUsed(), pct = Math.min(100, used / lim * 100);
-  el.querySelector('.qt').innerHTML = '已用 <b>' + used.toLocaleString('en-US') + '</b>/' + lim.toLocaleString('en-US');
+  el.querySelector('.qt').innerHTML = t('已用') + ' <b>' + used.toLocaleString('en-US') + '</b>/' + lim.toLocaleString('en-US');
   el.querySelector('.qbar i').style.width = (used ? Math.max(pct, 4) : 0) + '%';   // a sliver even for a few calls
   el.classList.toggle('warn', pct >= 70 && pct < 90);
   el.classList.toggle('bad', pct >= 90);
-  el.setAttribute('aria-label', '今天的 API 額度已用 ' + used + ' 次，共 ' + lim + ' 次');
+  el.setAttribute('aria-label', t('今天的 API 額度已用 {0} 次，共 {1} 次', used, lim));
   el.hidden = false;
   // drop back to 0 at the next UTC midnight if the page is still open
   clearTimeout(quotaTimer);
@@ -1418,12 +1970,12 @@ function showQuota() {
 $('#quota').addEventListener('click', () => {
   const { lim, used } = quotaUsed();
   if (personal()) {
-    const site = Q && Q.at >= lastReset() ? '；整個網站今天還剩 ' + Q.left + ' 次，剩 ' + MEQ.reserve + ' 次時會先留給管理員' : '';
-    toast('你今天已用 ' + used + ' 次，上限 ' + lim + ' 次' + site + '，' + resetText() + '重置');
+    const site = Q && Q.at >= lastReset() ? t('；整個網站今天還剩 {0} 次，剩 {1} 次時會先留給管理員', Q.left, MEQ.reserve) : '';
+    toast(t('你今天已用 {0} 次，上限 {1} 次{2}，{3}重置', used, lim, site, resetText()));
     return;
   }
-  const seen = Q && Q.at >= lastReset() ? '（' + new Date(Q.at).toLocaleTimeString('zh-TW', { hour: 'numeric', minute: '2-digit' }) + ' 的數字）' : '';
-  toast('今天已用 ' + used + ' 次，還剩 ' + (lim - used) + ' 次' + seen + '，' + resetText() + '重置');
+  const seen = Q && Q.at >= lastReset() ? t('（{0} 的數字）', new Date(Q.at).toLocaleTimeString(LOC(), { hour: 'numeric', minute: '2-digit' })) : '';
+  toast(t('今天已用 {0} 次，還剩 {1} 次{2}，{3}重置', used, (lim - used), seen, resetText()));
 });
 
 /* ---------- cache ---------- */
@@ -1443,18 +1995,18 @@ function cacheSet(k, v) {
 function resolve(text) {
   const tokens = text.toUpperCase().split(/[\s,，、/]+/).filter(Boolean);
   const codes = [];
-  for (const t of tokens) {
-    if (/^[A-Z]{3}$/.test(t)) { codes.push(t); continue; }
+  for (const tok of tokens) {
+    if (/^[A-Z]{3}$/.test(tok)) { codes.push(tok); continue; }
     const bare = s => s.replace(/（.*?）/g, '');
-    const hit = PLACES.find(p => p.zh === t || bare(p.zh) === t || p.en.toUpperCase() === t);
+    const hit = PLACES.find(p => p.zh === tok || bare(p.zh) === tok || p.en.toUpperCase() === tok);
     if (hit) { codes.push(...hit.codes); continue; }
-    return { codes: [], err: '看不懂「' + t + '」，請輸入三碼機場代號，例如 TPE。' };
+    return { codes: [], err: t('看不懂「{0}」，請輸入三碼機場代號，例如 TPE。', tok) };
   }
   return { codes: [...new Set(codes)].slice(0, 10) };
 }
 function showNames(input) {
   const r = resolve(input.value);
-  $('#' + input.id + '-names').textContent = r.err ? '' : r.codes.map(c => AIRPORT_ZH[c] || c).join('、');
+  $('#' + input.id + '-names').textContent = r.err ? '' : r.codes.map(c => AIRPORT_ZH[c] || c).join(t('、'));
 }
 let suggFor = null;
 function suggest(input) {
@@ -1468,7 +2020,7 @@ function suggest(input) {
   const box = $('#sugg');
   if (!items.length) { box.hidden = true; return; }
   // a big group (美西 has 8 airports) shows its first two codes and a count, so the row stays readable
-  box.innerHTML = items.map(p => '<button type="button" data-codes="' + p.codes.join(',') + '"><b>' + (p.codes.length > 3 ? p.codes.slice(0, 2).join(',') + ' 等 ' + p.codes.length + ' 個' : p.codes.join(',')) + '</b><span>' + esc(p.zh) + '　' + esc(p.en) + '</span></button>').join('');
+  box.innerHTML = items.map(p => '<button type="button" data-codes="' + p.codes.join(',') + '"><b>' + (p.codes.length > 3 ? t('{0} 等 {1} 個', p.codes.slice(0, 2).join(','), p.codes.length) : p.codes.join(',')) + '</b><span>' + (LANG === 'en' ? esc(p.en) : esc(p.zh) + '　' + esc(p.en)) + '</span></button>').join('');
   box.hidden = false;
 }
 function pick(codes) {
@@ -1500,7 +2052,7 @@ $('#sugg').addEventListener('pointerdown', e => {
 let TRIP = 'ow';
 const plusDays = (v, k) => { const d = parseDate(v); d.setDate(d.getDate() + k); return isoDate(d); };
 // the words on the outbound date boxes: with two legs on screen, each names its leg (去程 over 回程)
-const outWord = i => (TRIP === 'rt' ? ['去程最早', '去程最晚'] : ['最早出發', '最晚出發'])[i];
+const outWord = i => (TRIP === 'rt' ? [t('去程最早'), t('去程最晚')] : [t('最早出發'), t('最晚出發')])[i];
 function setTrip(t) {
   TRIP = t;
   for (const b of $$('#tt button')) b.setAttribute('aria-checked', String(b.dataset.tt === t));
@@ -1536,14 +2088,14 @@ $('#swap').addEventListener('click', () => {
     fly([b, $('#to-names')], -26);
   }
   $('#swap').focus({ preventScroll: true });   // Safari doesn't focus a tapped button; a second tap swaps back
-  const say = (input, names) => (input.value.toUpperCase() || '未填') + (names.textContent ? '（' + names.textContent + '）' : '');
-  $('#swap-live').textContent = '已交換。出發 ' + say(a, $('#from-names')) + '，抵達 ' + say(b, $('#to-names'));
+  const say = (input, names) => (input.value.toUpperCase() || t('未填')) + (names.textContent ? t('（{0}）', names.textContent) : '');
+  $('#swap-live').textContent = t('已交換。出發 {0}，抵達 {1}', say(a, $('#from-names')), say(b, $('#to-names')));
 });
 // a tap anywhere in an airport box (label, code or city line) goes to its input
 for (const box of $$('.route .ap')) box.addEventListener('click', e => { if (e.target.tagName !== 'INPUT') box.querySelector('input').focus(); });
 
 /* ---------- dates ---------- */
-const shortDay = v => { const d = parseDate(v); return (d.getMonth() + 1) + '/' + d.getDate() + ' (' + WD[d.getDay()] + ')'; };
+const shortDay = v => { const d = parseDate(v); return t('{0} ({1})', (d.getMonth() + 1) + '/' + d.getDate(), WD[d.getDay()]); };
 function setRange(s, e) {
   $('#d1').value = s;
   $('#d2').value = e;
@@ -1555,7 +2107,7 @@ function renderMonths() {
   for (let i = 0; i < 12; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
     const y = d.getFullYear(), m = d.getMonth() + 1;
-    h += '<button type="button" class="mchip" data-y="' + y + '" data-m="' + m + '">' + (i === 0 || m === 1 ? '<small>' + y + '</small>' : '') + m + ' 月</button>';
+    h += '<button type="button" class="mchip" data-y="' + y + '" data-m="' + m + '">' + (i === 0 || m === 1 ? '<small>' + y + '</small>' : '') + t('{0} 月', m, d.toLocaleDateString(LOC(), { month: 'short' })) + '</button>';
   }
   $('#months').innerHTML = h;
 }
@@ -1567,7 +2119,7 @@ function monthRange(y, m) {
 function showDates() {
   for (const id of ['d1', 'd2', 'r1', 'r2']) {
     const v = $('#' + id).value;
-    $('#' + id + 'v').textContent = v ? shortDay(v) : '選日期';
+    $('#' + id + 'v').textContent = v ? shortDay(v) : t('選日期');
     $('#' + id + 'y').textContent = v ? parseDate(v).getFullYear() : '';
   }
   // the pickers grey out days that can't be chosen: nothing before today, 最晚 never before 最早,
@@ -1621,19 +2173,19 @@ for (const id of ['d1', 'd2', 'r1', 'r2']) $('#' + id).addEventListener('change'
   const said = [];
   if (s && e && e < s) {
     $('#d2').value = s;
-    said.push(id === 'd1' ? outWord(1) + '已跟著改成 ' + shortDay(s) : outWord(1) + '不能早於' + outWord(0) + '，已改成 ' + shortDay(s));
+    said.push(id === 'd1' ? t('{0}已跟著改成 {1}', outWord(1), shortDay(s)) : t('{0}不能早於{1}，已改成 {2}', outWord(1), outWord(0), shortDay(s)));
   }
   const r1 = $('#r1').value;
   if (TRIP === 'rt' && s && r1 && r1 < s) {
     $('#r1').value = s;
-    said.push(id === 'r1' ? '回程不能早於去程，已改成 ' + shortDay(s) : '回程最早已跟著改成 ' + shortDay(s));
+    said.push(id === 'r1' ? t('回程不能早於去程，已改成 {0}', shortDay(s)) : t('回程最早已跟著改成 {0}', shortDay(s)));
   }
   const ra = $('#r1').value, rb = $('#r2').value;
   if (TRIP === 'rt' && ra && rb && rb < ra) {
     $('#r2').value = ra;
-    said.push(id === 'r2' ? '回程最晚不能早於回程最早，已改成 ' + shortDay(ra) : '回程最晚已跟著改成 ' + shortDay(ra));
+    said.push(id === 'r2' ? t('回程最晚不能早於回程最早，已改成 {0}', shortDay(ra)) : t('回程最晚已跟著改成 {0}', shortDay(ra)));
   }
-  if (said.length) toast(said.join('；'));
+  if (said.length) toast(said.join(t('；')));
   markMonths();
 });
 for (const id of ['d1', 'd2', 'r1', 'r2']) $('#' + id).addEventListener('click', e => { try { e.target.showPicker(); } catch {} });
@@ -1641,7 +2193,7 @@ for (const id of ['d1', 'd2', 'r1', 'r2']) $('#' + id).addEventListener('click',
 /* ---------- filters ---------- */
 function renderCabins(counts) {
   $('#cabins').innerHTML = CABINS.map(c => '<button type="button" role="radio" data-k="' + c.k + '" aria-checked="' + (S.prefs.cabin === c.k) + '">' + c.name +
-    '<span class="n">' + (counts ? counts[c.k] + ' 筆' : '') + '</span></button>').join('');
+    '<span class="n">' + (counts ? t('{0} 筆', counts[c.k]) : '') + '</span></button>').join('');
 }
 $('#cabins').addEventListener('click', e => {
   const b = e.target.closest('button[data-k]');
@@ -1663,7 +2215,7 @@ function renderAlliances() {
   const total = Object.keys(PROGRAMS).length, on = total - S.prefs.off.filter(s => PROGRAMS[s]).length;
   const cs = (S.prefs.carriers.toUpperCase().match(/[A-Z0-9]{2}/g) || []);
   const conds = activeConds();
-  $('#prog-sum').textContent = (on === total ? '全部 ' + total + ' 個計畫' : '計畫 ' + on + ' / ' + total) + (cs.length ? '，只看 ' + cs.join(',') : '') + (conds ? '，條件 ' + conds + ' 項' : '');
+  $('#prog-sum').textContent = (on === total ? t('全部 {0} 個計畫', total) : t('計畫 {0} / {1}', on, total)) + (cs.length ? t('，只看 {0}', cs.join(',')) : '') + (conds ? t('，條件 {0} 項', conds) : '');
   for (const cb of $$('#prog-list input')) cb.checked = !S.prefs.off.includes(cb.dataset.src);
 }
 function renderProgramList() {
@@ -1733,23 +2285,23 @@ function formErr(msg) { $('#ferr').textContent = msg || ''; }
 function readForm() {
   const o = resolve($('#from').value), d = resolve($('#to').value);
   if (o.err || d.err) return formErr(o.err || d.err);
-  if (!o.codes.length || !d.codes.length) return formErr('請輸入出發和抵達的機場。');
+  if (!o.codes.length || !d.codes.length) return formErr(t('請輸入出發和抵達的機場。'));
   let s = $('#d1').value, e = $('#d2').value;
-  if (!s || !e) return formErr(TRIP === 'rt' ? '請選去程日期的範圍。' : '請選出發日期的範圍。');
-  if (e < s) return formErr(outWord(1) + '不能早於' + outWord(0) + '。');
+  if (!s || !e) return formErr(TRIP === 'rt' ? t('請選去程日期的範圍。') : t('請選出發日期的範圍。'));
+  if (e < s) return formErr(t('{0}不能早於{1}。', t(outWord(1)), t(outWord(0))));
   const today = isoDate(new Date());
-  if (e < today) return formErr('這些日期已經過了。');
+  if (e < today) return formErr(t('這些日期已經過了。'));
   if (s < today) s = today;
-  if (daysBetween(s, e) > MAX_DAYS) return formErr((TRIP === 'rt' ? '去程' : '') + '日期範圍最多 3 個月，請縮短一點。');
+  if (daysBetween(s, e) > MAX_DAYS) return formErr(TRIP === 'rt' ? t('去程日期範圍最多 3 個月，請縮短一點。') : t('日期範圍最多 3 個月，請縮短一點。'));
   const p = { o: o.codes.join(','), d: d.codes.join(','), s, e };
   if (TRIP === 'rt') {
     let rs = $('#r1').value;
     const re = $('#r2').value;
-    if (!rs || !re) return formErr('請選回程日期的範圍。');
-    if (re < rs) return formErr('回程最晚不能早於回程最早。');
-    if (rs < s) return formErr('回程不能早於去程。');
+    if (!rs || !re) return formErr(t('請選回程日期的範圍。'));
+    if (re < rs) return formErr(t('回程最晚不能早於回程最早。'));
+    if (rs < s) return formErr(t('回程不能早於去程。'));
     if (rs < today) rs = today;
-    if (daysBetween(rs, re) > MAX_DAYS) return formErr('回程日期範圍最多 3 個月，請縮短一點。');
+    if (daysBetween(rs, re) > MAX_DAYS) return formErr(t('回程日期範圍最多 3 個月，請縮短一點。'));
     p.rt = { s: rs, e: re };
   }
   // pre-search options: seats.aero applies them on its side, so they are part of the search (and its cache)
@@ -1764,7 +2316,7 @@ const legsOf = p => [{ o: p.o, d: p.d, s: p.s, e: p.e, mixed: p.mixed, dyn: p.dy
 const searchKey = p => JSON.stringify([p.o, p.d, p.s, p.e, p.rt ? [p.rt.s, p.rt.e] : 0, p.mixed ? 1 : 0, p.dyn ? 1 : 0]);
 function setBusy(on) {
   $('#go').disabled = on;
-  $('#go-t').textContent = on ? '搜尋中…' : '搜尋';
+  $('#go-t').textContent = on ? t('搜尋中…') : t('搜尋');
 }
 const cacheKey = lp => 'award-c:' + [lp.o, lp.d, lp.s, lp.e].join('|') + (lp.mixed ? '|m' : '') + (lp.dyn ? '|f' : '');
 const toResults = () => $('#results').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1808,7 +2360,7 @@ async function runSearch(p, demo, scroll) {
   setBanner('');
   renderLegs();
   renderRoute(S.params);
-  $('#sum').textContent = '搜尋中…';
+  $('#sum').textContent = t('搜尋中…');
   $('#fresh').textContent = '';
   $('#filters').hidden = true;
   $('#cal').innerHTML = '';
@@ -1869,11 +2421,11 @@ async function loadSaved() {
 function renderSaved() {
   const box = $('#saved');
   if (!S.saved.length) { box.hidden = true; box.innerHTML = ''; return; }
-  box.innerHTML = '<h3>我的收藏</h3>' + S.saved.map(x => {
+  box.innerHTML = '<h3>' + t('我的收藏') + '</h3>' + S.saved.map(x => {
     const p = x.params;
-    return '<div class="sv"><button type="button" class="svgo" data-sv="' + x.id + '"><span>' + n(esc(p.o) + (p.rt ? ' ⇄ ' : ' → ') + esc(p.d)) + '　' + md(p.s) + ' 到 ' + md(p.e) +
-      (p.rt ? '，回 ' + md(p.rt.s) + ' 到 ' + md(p.rt.e) : '') + '</span>' + (x.seen_at ? '<small>上次看 ' + whenShort(x.seen_at) + '</small>' : '') + '</button>' +
-      '<button type="button" class="svx" data-svdel="' + x.id + '" aria-label="刪除這個收藏">✕</button></div>';
+    return '<div class="sv"><button type="button" class="svgo" data-sv="' + x.id + '"><span>' + n(esc(p.o) + (p.rt ? ' ⇄ ' : ' → ') + esc(p.d)) + '　' + t('{0} 到 {1}', md(p.s), md(p.e)) +
+      (p.rt ? t('，回 {0} 到 {1}', md(p.rt.s), md(p.rt.e)) : '') + '</span>' + (x.seen_at ? '<small>' + t('上次看 {0}', whenShort(x.seen_at)) + '</small>' : '') + '</button>' +
+      '<button type="button" class="svx" data-svdel="' + x.id + '" aria-label="' + t('刪除這個收藏') + '">✕</button></div>';
   }).join('');
   box.hidden = false;
 }
@@ -1881,7 +2433,7 @@ function renderSaveBtn() {
   const b = $('#save-btn');
   if (!S.search || !S.legs || !S.legs[0].rows) { b.hidden = true; return; }
   const x = savedOf(S.search);
-  b.textContent = x ? '★ 已收藏' : '☆ 收藏這個搜尋';
+  b.textContent = x ? t('★ 已收藏') : t('☆ 收藏這個搜尋');
   b.setAttribute('aria-pressed', String(!!x));
   b.hidden = false;
 }
@@ -1889,13 +2441,13 @@ $('#save-btn').addEventListener('click', async () => {
   const x = savedOf(S.search);
   try {
     if (x) {
-      if (!confirm('取消收藏這個搜尋？')) return;
+      if (!confirm(t('取消收藏這個搜尋？'))) return;
       await call('DELETE', '/me/saved/' + x.id);
-      toast('已取消收藏');
+      toast(t('已取消收藏'));
     } else {
-      if (S.demo) { toast('示範資料不能收藏，請用真的搜尋'); return; }
+      if (S.demo) { toast(t('示範資料不能收藏，請用真的搜尋')); return; }
       await call('POST', '/me/saved', { params: S.search, seen: snapshot(S.legs) });
-      toast('已收藏。下次打開會標出新出現和降價的位子');
+      toast(t('已收藏。下次打開會標出新出現和降價的位子'));
     }
   } catch (err) { toast(err.message); }
   loadSaved();
@@ -1903,7 +2455,7 @@ $('#save-btn').addEventListener('click', async () => {
 $('#saved').addEventListener('click', async e => {
   const del = e.target.closest('[data-svdel]');
   if (del) {
-    if (!confirm('刪除這個收藏？')) return;
+    if (!confirm(t('刪除這個收藏？'))) return;
     try { await call('DELETE', '/me/saved/' + del.dataset.svdel); } catch (err) { toast(err.message); }
     loadSaved();
     return;
@@ -1941,9 +2493,9 @@ function renderLegs() {
   const low = L => { if (!L.rows) return null; const m = offersOf(L.rows, cab, f).map(o => o.miles); return m.length ? Math.min(...m) : 0; };
   const lows = S.legs.map(low);
   box.innerHTML = S.legs.map((L, i) => '<button type="button" role="tab" data-leg="' + i + '" aria-selected="' + (S.leg === i) + '"' + (L.rows ? '' : ' disabled') + '>' +
-    '<small>' + (i ? '回程' : '去程') + '　' + md(L.p.s) + ' 到 ' + md(L.p.e) + '</small><b>' + esc(L.p.o) + ' → ' + esc(L.p.d) + '</b>' +
-    '<small>' + (L.error ? '查不到：' + esc(L.error) : !L.rows ? '讀取中…' : lows[i] ? CABIN_BY[cab].name + '最低 ' + fmtMiles(lows[i]) + ' 哩' : CABIN_BY[cab].name + '沒有位子') + '</small></button>').join('') +
-    (lows[0] && lows[1] ? '<p class="sum2">來回最低合計 <b>' + fmtMiles(lows[0] + lows[1]) + '</b> 哩（' + CABIN_BY[cab].name + '，兩段可以用不同計畫）</p>' : '');
+    '<small>' + (i ? t('回程') : t('去程')) + '　' + t('{0} 到 {1}', md(L.p.s), md(L.p.e)) + '</small><b>' + esc(L.p.o) + ' → ' + esc(L.p.d) + '</b>' +
+    '<small>' + (L.error ? t('查不到：{0}', esc(L.error)) : !L.rows ? t('讀取中…') : lows[i] ? t('{0}最低 {1} 哩', CABIN_BY[cab].name, fmtMiles(lows[i])) : t('{0}沒有位子', CABIN_BY[cab].name)) + '</small></button>').join('') +
+    (lows[0] && lows[1] ? '<p class="sum2">' + t('來回最低合計 <b>{0}</b> 哩（{1}，兩段可以用不同計畫）', fmtMiles(lows[0] + lows[1]), CABIN_BY[cab].name) + '</p>' : '');
   box.hidden = false;
 }
 $('#legs').addEventListener('click', e => {
@@ -1976,9 +2528,9 @@ function showError(err) {
   $('#sum').textContent = '';
   $('#list').innerHTML = '';
   if (err.kind === 'auth') return;
-  let acts = '<button type="button" class="btn" data-act="retry">再試一次</button>';
-  if (err.kind === 'expired') acts = '<a class="btn pri" href="https://seats.aero/settings" target="_blank" rel="noopener">去 seats.aero 續訂</a><button type="button" class="btn" data-act="demo">先看示範資料</button>';
-  setBanner('<b>查不到</b>' + esc(err.message) + '<div class="acts">' + acts + '</div>', 'bad');
+  let acts = '<button type="button" class="btn" data-act="retry">' + t('再試一次') + '</button>';
+  if (err.kind === 'expired') acts = '<a class="btn pri" href="https://seats.aero/settings" target="_blank" rel="noopener">' + t('去 seats.aero 續訂') + '</a><button type="button" class="btn" data-act="demo">' + t('先看示範資料') + '</button>';
+  setBanner('<b>' + t('查不到') + '</b>' + esc(err.message) + '<div class="acts">' + acts + '</div>', 'bad');
 }
 $('#banner').addEventListener('click', e => {
   const b = e.target.closest('[data-act]');
@@ -1998,8 +2550,8 @@ function addRecent(p) {
 }
 function renderRecent() {
   const list = load('award-recent', []);
-  $('#recent').innerHTML = list.map((p, i) => '<button type="button" data-i="' + i + '">' + n(esc(p.o) + (p.rt ? ' ⇄ ' : ' → ') + esc(p.d)) + '　' + md(p.s) + ' 到 ' + md(p.e) +
-    (p.rt ? '，回 ' + md(p.rt.s) + ' 到 ' + md(p.rt.e) : '') + '</button>').join('');
+  $('#recent').innerHTML = list.map((p, i) => '<button type="button" data-i="' + i + '">' + n(esc(p.o) + (p.rt ? ' ⇄ ' : ' → ') + esc(p.d)) + '　' + t('{0} 到 {1}', md(p.s), md(p.e)) +
+    (p.rt ? t('，回 {0} 到 {1}', md(p.rt.s), md(p.rt.e)) : '') + '</button>').join('');
 }
 // put a saved search (recent, last, or a 收藏) back into the form
 function fillForm(p) {
@@ -2085,7 +2637,7 @@ function render() {
   const per = {};
   for (const o of all) per[o.src] = (per[o.src] || 0) + 1;
   for (const em of $$('#prog-list em')) em.textContent = per[em.dataset.c] ? per[em.dataset.c] : '';
-  if (S.demo) setBanner('<span><b>示範資料</b>數字都是假的</span><div class="acts"><button type="button" class="btn" data-act="exit-demo">結束示範</button></div>', 'demo');
+  if (S.demo) setBanner('<span><b>' + t('示範資料') + '</b>' + t('數字都是假的') + '</span><div class="acts"><button type="button" class="btn" data-act="exit-demo">' + t('結束示範') + '</button></div>', 'demo');
   renderTripFilters();
   renderLegs();
   renderSaveBtn();
@@ -2101,19 +2653,19 @@ function renderSummary(offers) {
   const p = S.params, cab = CABIN_BY[S.prefs.cabin].name;
   const days = new Set(offers.map(o => o.date)).size;
   renderRoute(p);
-  $('#sum').innerHTML = n(md(p.s)) + ' 到 ' + n(md(p.e)) + '　' + cab + ' <b>' + offers.length + '</b> 筆，<b>' + days + '</b> 天有位';
+  $('#sum').innerHTML = t('{0} 到 {1}', n(md(p.s)), n(md(p.e))) + '　' + t('{0} <b>{1}</b> 筆，<b>{2}</b> 天有位', cab, offers.length, days);
   const ts = offers.map(o => Date.parse(o.updated)).filter(Boolean);
   let fresh = '';
   if (ts.length) {
     const newest = new Date(Math.max(...ts)).toISOString(), oldest = new Date(Math.min(...ts)).toISOString();
-    fresh = '資料更新：最新 ' + ago(newest).replace('更新', '') + '，最舊 ' + ago(oldest).replace('更新', '');
+    fresh = t('資料更新：最新 {0}，最舊 {1}', ago(newest).replace(t('更新'), '').trim(), ago(oldest).replace(t('更新'), '').trim());
   }
-  if (S.truncated) fresh += (fresh ? '。' : '') + '結果太多，只拿到前 5,000 筆，請縮短日期。';
-  if (offers.noData) fresh += (fresh ? '。' : '') + '另有 ' + offers.noData + ' 筆沒有航班細節，沒辦法檢查航班條件，先不列出';
+  if (S.truncated) fresh += (fresh ? t('。') : '') + t('結果太多，只拿到前 5,000 筆，請縮短日期。');
+  if (offers.noData) fresh += (fresh ? t('。') : '') + t('另有 {0} 筆沒有航班細節，沒辦法檢查航班條件，先不列出', offers.noData);
   if (S.seen) {
     const was = o => S.seen[seenKey(S.leg, S.prefs.cabin, o.date, o.src)];
     const nw = offers.filter(o => was(o) == null).length, dn = offers.filter(o => was(o) != null && o.base < was(o)).length;
-    fresh = '比上次（' + whenShort(S.seenAt) + '）新出現 ' + nw + ' 筆、降價 ' + dn + ' 筆' + (fresh ? '。' + fresh : '');
+    fresh = t('比上次（{0}）新出現 {1} 筆、降價 {2} 筆', whenShort(S.seenAt), nw, dn) + (fresh ? t('。') + fresh : '');
   }
   $('#fresh').textContent = fresh;
 }
@@ -2131,14 +2683,14 @@ function renderTripFilters() {
   }
   const via = [...new Set([...seen.keys(), ...p.noVia])].sort((a, b) => (seen.get(b) || 0) - (seen.get(a) || 0)).slice(0, 16);
   $('#tf').innerHTML =
-    group('我的點數（只看轉得過去的計畫）', BANKS.map(([k, name]) => chip('myBanks', k, esc(name), (p.myBanks || []).includes(k))).join('')) +
-    group('人數（座位至少要有幾個）', [1, 2, 3, 4, 5, 6].map(x => chip('pax', x, x + ' 人', (p.pax || 1) === x)).join('')) +
-    group('出發星期', [...WD].map((w, i) => chip('wd', i, w, p.wd.includes(i))).join('')) +
-    group('起飛時段', BANDS.map(([x, a, b], i) => chip('dep', i, x + '<small>' + a + '-' + b + ' 點</small>', p.dep.includes(i))).join('')) +
-    group('抵達時段', BANDS.map(([x, a, b], i) => chip('arr', i, x + '<small>' + a + '-' + b + ' 點</small>', p.arr.includes(i))).join('')) +
-    group('轉機次數', [[9, '不限'], [1, '最多 1 次']].map(([v, x]) => chip('maxStops', v, x, (p.maxStops ?? 9) === v)).join('')) +
-    group('總飛行時間', [[0, '不限'], [12, '12 小時內'], [16, '16 小時內'], [20, '20 小時內'], [24, '24 小時內']].map(([v, x]) => chip('maxHours', v, x, (p.maxHours || 0) === v)).join('')) +
-    group('不要經過（點了就排除）', via.length ? via.map(a => chip('noVia', a, esc(a) + (seen.get(a) ? '<small>' + seen.get(a) + '</small>' : ''), p.noVia.includes(a))).join('') : '<span class="note0">這次搜尋沒有轉機機場。</span>');
+    group(t('我的點數（只看轉得過去的計畫）'), BANKS.map(([k, name]) => chip('myBanks', k, esc(name), (p.myBanks || []).includes(k))).join('')) +
+    group(t('人數（座位至少要有幾個）'), [1, 2, 3, 4, 5, 6].map(x => chip('pax', x, t('{0} 人', x), (p.pax || 1) === x)).join('')) +
+    group(t('出發星期'), [...WD].map((w, i) => chip('wd', i, w, p.wd.includes(i))).join('')) +
+    group(t('起飛時段'), BANDS.map(([x, a, b], i) => chip('dep', i, t(x) + '<small>' + t('{0}-{1} 點', a, b) + '</small>', p.dep.includes(i))).join('')) +
+    group(t('抵達時段'), BANDS.map(([x, a, b], i) => chip('arr', i, t(x) + '<small>' + t('{0}-{1} 點', a, b) + '</small>', p.arr.includes(i))).join('')) +
+    group(t('轉機次數'), [[9, t('不限')], [1, t('最多 1 次')]].map(([v, x]) => chip('maxStops', v, x, (p.maxStops ?? 9) === v)).join('')) +
+    group(t('總飛行時間'), [[0, t('不限')], [12, t('{0} 小時內', 12)], [16, t('{0} 小時內', 16)], [20, t('{0} 小時內', 20)], [24, t('{0} 小時內', 24)]].map(([v, x]) => chip('maxHours', v, x, (p.maxHours || 0) === v)).join('')) +
+    group(t('不要經過（點了就排除）'), via.length ? via.map(a => chip('noVia', a, esc(a) + (seen.get(a) ? '<small>' + seen.get(a) + '</small>' : ''), p.noVia.includes(a))).join('') : '<span class="note0">' + t('這次搜尋沒有轉機機場。') + '</span>');
   $('#tf-clear').hidden = !activeConds();
 }
 $('#tf').addEventListener('click', e => {
@@ -2180,7 +2732,7 @@ function renderCalendar(offers) {
   const start = parseDate(p.s), end = parseDate(p.e);
   let h = '';
   for (let y = start.getFullYear(), m = start.getMonth(); y < end.getFullYear() || (y === end.getFullYear() && m <= end.getMonth()); m === 11 ? (y++, m = 0) : m++) {
-    h += '<div class="month"><div class="mh">' + y + ' 年 ' + (m + 1) + ' 月</div><div class="grid">' + [...WD].map(w => '<div class="wd">' + w + '</div>').join('');
+    h += '<div class="month"><div class="mh">' + t('{0} 年 {1} 月', y, m + 1, new Date(y, m, 1).toLocaleDateString(LOC(), { month: 'long' })) + '</div><div class="grid">' + [...WD].map(w => '<div class="wd">' + w + '</div>').join('');
     const first = new Date(y, m, 1).getDay(), last = new Date(y, m + 1, 0).getDate();
     for (let i = 0; i < first; i++) h += '<span class="day out"></span>';
     for (let d = 1; d <= last; d++) {
@@ -2188,7 +2740,7 @@ function renderCalendar(offers) {
       if (iso < p.s || iso > p.e) { h += '<span class="day out">' + d + '</span>'; continue; }
       const b = best.get(iso);
       const cls = (b ? level(b) : 'none') + (dir.has(iso) ? ' dir' : '') + (S.day === iso ? ' sel' : '');
-      h += '<button type="button" class="day ' + cls + '" data-d="' + iso + '" aria-label="' + md(iso) + (b ? ' 最低 ' + fmtMiles(b) + ' 哩' : ' 沒有位子') + '"><span class="dn">' + d + '</span><span class="dm">' + (b ? fmtMan(b) : '·') + '</span></button>';
+      h += '<button type="button" class="day ' + cls + '" data-d="' + iso + '" aria-label="' + (b ? t('{0} 最低 {1} 哩', md(iso), fmtMiles(b)) : t('{0} 沒有位子', md(iso))) + '"><span class="dn">' + d + '</span><span class="dm">' + (b ? fmtMan(b) : '·') + '</span></button>';
     }
     h += '</div></div>';
   }
@@ -2207,9 +2759,9 @@ $('#cal').addEventListener('click', e => {
   }
 });
 function renderSortbar() {
-  const opts = [['date', '依日期'], ['miles', '最少里程'], ['dur', '最短時間'], ['tax', '最低稅金'], ['seats', '最多座位']];
-  $('#sortbar').innerHTML = '排序' + opts.map(([k, x]) => '<button type="button" class="chip" data-sort="' + k + '" aria-pressed="' + (S.prefs.sort === k) + '">' + x + '</button>').join('') +
-    (S.day ? '<button type="button" class="chip dayf" data-clear="1">只看 ' + md(S.day) + '　✕</button>' : '') + dispSeg();
+  const opts = [['date', t('依日期')], ['miles', t('最少里程')], ['dur', t('最短時間')], ['tax', t('最低稅金')], ['seats', t('最多座位')]];
+  $('#sortbar').innerHTML = t('排序') + opts.map(([k, x]) => '<button type="button" class="chip" data-sort="' + k + '" aria-pressed="' + (S.prefs.sort === k) + '">' + x + '</button>').join('') +
+    (S.day ? '<button type="button" class="chip dayf" data-clear="1">' + t('只看 {0}', md(S.day)) + '　✕</button>' : '') + dispSeg();
 }
 $('#sortbar').addEventListener('click', e => {
   const b = e.target.closest('.chip');
@@ -2222,28 +2774,28 @@ $('#sortbar').addEventListener('click', e => {
 function cardHtml(o, showDate) {
   const p = prog(o.src), al = ALLIANCE_BY[p.al] || ALLIANCE_BY.none;
   const tag = o.direct
-    ? (o.dmiles && o.dmiles !== o.miles ? '<span class="tag">直飛另價 ' + n(fmtMiles(o.dmiles)) + '</span>' : '<span class="tag d">直飛</span>')
-    : '<span class="tag">轉機</span>';
+    ? (o.dmiles && o.dmiles !== o.miles ? '<span class="tag">' + t('直飛另價 {0}', n(fmtMiles(o.dmiles))) + '</span>' : '<span class="tag d">' + t('直飛') + '</span>')
+    : '<span class="tag">' + t('轉機') + '</span>';
   // against the 收藏's last look: 新 = not there last time, 降 = cheaper than last time
   const was = S.seen ? S.seen[seenKey(S.leg, S.prefs.cabin, o.date, o.src)] : undefined;
-  const since = !S.seen ? '' : was == null ? '<span class="tag nw">新</span>' : o.base < was ? '<span class="tag dn">降 ' + fmtMiles(was - o.base) + '</span>' : '';
-  const tax = o.taxes ? '+ ' + moneyHtml(o.taxes, o.cur) : NO_TAX.has(o.src) ? '稅金未提供' : '';
-  const t = o.trip, plus = t ? dayDiff(t.dep, t.arr) : 0;
+  const since = !S.seen ? '' : was == null ? '<span class="tag nw">' + t('新') + '</span>' : o.base < was ? '<span class="tag dn">' + t('降 {0}', fmtMiles(was - o.base)) + '</span>' : '';
+  const tax = o.taxes ? '+ ' + moneyHtml(o.taxes, o.cur) : NO_TAX.has(o.src) ? t('稅金未提供') : '';
+  const trip = o.trip, plus = trip ? dayDiff(trip.dep, trip.arr) : 0;
   // times, total time and connections of the flight the card describes (only when the search brought flights along)
-  const when = t && t.dep && t.arr ? '<span class="o4"><b>' + hm(t.dep) + '</b>→<b>' + hm(t.arr) + '</b>' + dayTag(plus) +
-    (t.mins ? '<span class="du">共 ' + dur(t.mins) + '</span>' : '') +
-    (t.via.length ? '<span class="via">經 ' + esc(t.via.join('、')) + '</span>' : t.stops ? '<span class="via">轉機 ' + t.stops + ' 次</span>' : '') +
-    (o.more ? '<span class="more">還有 ' + o.more + ' 個航班</span>' : '') + '</span>' : '';
+  const when = trip && trip.dep && trip.arr ? '<span class="o4"><b>' + hm(trip.dep) + '</b>→<b>' + hm(trip.arr) + '</b>' + dayTag(plus) +
+    (trip.mins ? '<span class="du">' + t('共 {0}', dur(trip.mins)) + '</span>' : '') +
+    (trip.via.length ? '<span class="via">' + t('經 {0}', esc(trip.via.join(t('、')))) + '</span>' : trip.stops ? '<span class="via">' + (trip.stops === 1 ? t('轉機 1 次') : t('轉機 {0} 次', trip.stops)) + '</span>' : '') +
+    (o.more ? '<span class="more">' + (o.more === 1 ? t('還有 1 個航班') : t('還有 {0} 個航班', o.more)) + '</span>' : '') + '</span>' : '';
   // each flight with its airline, so two airlines on one trip both show; without flights, the row's airline list
-  const who = t && t.flights.length ? t.flights.map(flightHtml).join(' → ')
-    : o.airlines.map(c => '<span class="fl">' + logo(c) + esc(carrierName(c)) + '</span>').join('、');
+  const who = trip && trip.flights.length ? trip.flights.map(flightHtml).join(' → ')
+    : o.airlines.map(c => '<span class="fl">' + logo(c) + esc(carrierName(c)) + '</span>').join(t('、'));
   return '<article class="offer" data-id="' + esc(o.id) + '" data-src="' + esc(o.src) + '" data-date="' + esc(o.date) + '" data-from="' + esc(o.from) + '" data-to="' + esc(o.to) +
     '" data-miles="' + o.miles + '" data-tax="' + (o.taxes || 0) + '" data-cur="' + esc(o.cur) + '" data-upd="' + esc(o.updated || '') + '">' +
     '<button type="button" class="ohead" aria-expanded="false">' +
-      '<span class="o1"><span class="pn">' + esc(p.name) + '</span><span class="pz">' + esc(p.zh) + '</span>' + logo(p.code) + '<span class="al" style="--c:var(--' + p.al + ')">' + al.short + '</span><span class="mi">' + fmtMiles(o.miles) + '<small>哩</small></span></span>' +
+      '<span class="o1"><span class="pn">' + esc(p.name) + '</span><span class="pz">' + esc(p.zh) + '</span>' + logo(p.code) + '<span class="al" style="--c:var(--' + p.al + ')">' + al.short + '</span><span class="mi">' + fmtMiles(o.miles) + '<small>' + t('哩') + '</small></span></span>' +
       '<span class="o2">' + (showDate ? '<span class="od">' + mdw(o.date) + '</span>' : '') + '<span class="rt">' + esc(o.from) + ' → ' + esc(o.to) + '</span>' + tag + since +
-        (o.seats ? '<span>剩 ' + o.seats + ' 位</span>' : '') + '<span class="tx">' + tax + '</span></span>' + when +
-      '<span class="o3"><span class="ca">' + (who ? '實際搭乘：' + who : '') + '</span><span class="age">' + ago(o.updated) + '</span>' +
+        (o.seats ? '<span>' + (o.seats === 1 ? t('剩 1 位') : t('剩 {0} 位', o.seats)) + '</span>' : '') + '<span class="tx">' + tax + '</span></span>' + when +
+      '<span class="o3"><span class="ca">' + (who ? t('實際搭乘：{0}', who) : '') + '</span><span class="age">' + ago(o.updated) + '</span>' +
         '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></span>' +
       '<span class="o5">' + transferLineHtml(o.src) + '</span>' +
     '</button><div class="trips" hidden></div></article>';
@@ -2270,15 +2822,15 @@ function renderList(offers, counts) {
     if (sort === 'date' && o.date !== lastDate) { h += '<h3 class="dh">' + mdw(o.date) + '</h3>'; lastDate = o.date; }
     h += cardHtml(o, sort !== 'date');
   }
-  if (list.length > S.shown) h += '<button type="button" class="more-btn" data-more="1">再顯示 ' + Math.min(60, list.length - S.shown) + ' 筆（還有 ' + (list.length - S.shown) + ' 筆）</button>';
+  if (list.length > S.shown) h += '<button type="button" class="more-btn" data-more="1">' + t('再顯示 {0} 筆（還有 {1} 筆）', Math.min(60, list.length - S.shown), list.length - S.shown) + '</button>';
   $('#list').innerHTML = h;
 }
 function emptyHtml(counts) {
-  if (!S.rows.length) return '<div class="empty">' + MASCOT + '這段日期 seats.aero 沒有這條航線的資料。<br>試試附近的機場（例如 TPE 加上 TSA），或換個日期。</div>';
+  if (!S.rows.length) return '<div class="empty">' + MASCOT + t('這段日期 seats.aero 沒有這條航線的資料。') + '<br>' + t('試試附近的機場（例如 TPE 加上 TSA），或換個日期。') + '</div>';
   const others = CABINS.filter(c => c.k !== S.prefs.cabin && counts[c.k]);
-  let h = '<div class="empty">' + MASCOT + '' + (S.day ? md(S.day) + ' ' : '') + CABIN_BY[S.prefs.cabin].name + '艙沒有符合條件的位子。';
-  if (S.prefs.direct || S.prefs.off.length || filt().carriers.size) h += '<br>可以試著放寬條件：取消只看直飛、多選幾個聯盟，或清空航空公司。';
-  if (others.length) h += '<div class="chips">' + others.map(c => '<button type="button" class="chip" data-cab="' + c.k + '">看' + c.name + '（' + counts[c.k] + ' 筆）</button>').join('') + '</div>';
+  let h = '<div class="empty">' + MASCOT + '' + (S.day ? t('{0} {1}艙沒有符合條件的位子。', md(S.day), CABIN_BY[S.prefs.cabin].name) : t('{0}艙沒有符合條件的位子。', CABIN_BY[S.prefs.cabin].name));
+  if (S.prefs.direct || S.prefs.off.length || filt().carriers.size) h += '<br>' + t('可以試著放寬條件：取消只看直飛、多選幾個聯盟，或清空航空公司。');
+  if (others.length) h += '<div class="chips">' + others.map(c => '<button type="button" class="chip" data-cab="' + c.k + '">' + t('看{0}（{1} 筆）', c.name, counts[c.k]) + '</button>').join('') + '</div>';
   return h + '</div>';
 }
 $('#list').addEventListener('click', e => {
@@ -2299,7 +2851,7 @@ async function toggleTrips(art) {
   head.setAttribute('aria-expanded', String(open));
   if (!open || box.dataset.loaded) return;
   const id = art.dataset.id, src = art.dataset.src;
-  box.innerHTML = '<div class="tload">讀取航班中…</div>';
+  box.innerHTML = '<div class="tload">' + t('讀取航班中…') + '</div>';
   try {
     let res = S.trips.get(id);
     if (!res) {
@@ -2322,13 +2874,13 @@ function tripsHtml(res, src) {
     if (nonstop.length) trips = nonstop;
   }
   trips.sort((a, b) => num(a.MileageCost) - num(b.MileageCost) || (a.TotalDuration || 0) - (b.TotalDuration || 0));
-  let h = trips.length ? trips.slice(0, 12).map(tripHtml).join('') : '<div class="tnone">seats.aero 沒有這筆的航班細節。</div>';
-  if (trips.length > 12) h += '<div class="tmore">還有 ' + (trips.length - 12) + ' 個航班組合沒有列出。</div>';
+  let h = trips.length ? trips.slice(0, 12).map(tripHtml).join('') : '<div class="tnone">' + t('seats.aero 沒有這筆的航班細節。') + '</div>';
+  if (trips.length > 12) h += '<div class="tmore">' + t('還有 {0} 個航班組合沒有列出。', trips.length - 12) + '</div>';
   const links = (res.booking_links || []).filter(l => /^https:\/\//i.test(l.link || '')).sort((a, b) => (b.primary ? 1 : 0) - (a.primary ? 1 : 0));
   const p = prog(src);
   h += '<div class="book">' + (links.length
-    ? links.map(l => '<a class="btn' + (l.primary ? ' pri' : '') + '" href="' + esc(l.link) + '" target="_blank" rel="noopener">' + esc(l.label || '去訂位') + '</a>').join('')
-    : (p.url ? '<a class="btn pri" href="' + esc(p.url) + '" target="_blank" rel="noopener">到 ' + esc(p.name) + ' 官網訂位</a>' : '')) + '</div>';
+    ? links.map(l => '<a class="btn' + (l.primary ? ' pri' : '') + '" href="' + esc(l.link) + '" target="_blank" rel="noopener">' + esc(l.label || t('去訂位')) + '</a>').join('')
+    : (p.url ? '<a class="btn pri" href="' + esc(p.url) + '" target="_blank" rel="noopener">' + t('到 {0} 官網訂位', esc(p.name)) + '</a>' : '')) + '</div>';
   return h;
 }
 /* ---------- 即時核對 (加強模式): ask seats.aero to re-check this row with the airline, then re-read it ---------- */
@@ -2341,18 +2893,18 @@ function verifyHtml(d) {
   const done = S.verified[d.id];
   const hrs = (Date.now() - Date.parse(d.upd)) / 36e5;
   const cool = (load('award-vcool', {})[d.id] || 0) > Date.now();
-  let h = '<div class="verify"><span class="vage">' + esc(done || 'seats.aero 的資料是 ' + ago(d.upd) + '的') + '</span>';
+  let h = '<div class="verify"><span class="vage">' + esc(done || t('seats.aero 的資料是 {0}的', ago(d.upd))) + '</span>';
   if (!done) {
-    if (hrs < 3) h += '<small>3 小時內剛更新過，不用核對</small>';
-    else if (cool) h += '<small>剛才核對沒成功，15 分鐘後可以再試</small>';
-    else h += '<button type="button" class="btn" data-verify="1">即時核對</button><small>請 seats.aero 馬上向航空公司重查一次，約用 2 次額度</small>';
+    if (hrs < 3) h += '<small>' + t('3 小時內剛更新過，不用核對') + '</small>';
+    else if (cool) h += '<small>' + t('剛才核對沒成功，15 分鐘後可以再試') + '</small>';
+    else h += '<button type="button" class="btn" data-verify="1">' + t('即時核對') + '</button><small>' + t('請 seats.aero 馬上向航空公司重查一次，約用 2 次額度') + '</small>';
   }
   return h + '</div>';
 }
 async function runVerify(art) {
   const d = art.dataset, id = d.id, box = art.querySelector('.verify');
   const say = (msg, note) => { box.innerHTML = '<span class="vage">' + esc(msg) + '</span>' + (note ? '<small>' + esc(note) + '</small>' : ''); };
-  say('核對中…', 'seats.aero 正在向航空公司重查，最多等 2 分鐘');
+  say(t('核對中…'), t('seats.aero 正在向航空公司重查，最多等 2 分鐘'));
   let res, st = '';
   const status = () => ((res.items || []).find(x => x.availability_id === id) || {}).status || '';
   try {
@@ -2364,12 +2916,12 @@ async function runVerify(art) {
       res = await api('/refresh', { ids: [id], poll: true });
       st = status();
     }
-  } catch (err) { say('沒辦法核對：' + err.message); return; }
+  } catch (err) { say(t('沒辦法核對：{0}', err.message)); return; }
   if (st === 'succeeded') {
     let msg;
-    try { msg = await reread(d); } catch (err) { say('核對好了，但重新讀取失敗：' + err.message); return; }
-    const when = new Date().toLocaleTimeString('zh-TW', { hour: 'numeric', minute: '2-digit' });
-    S.verified[id] = '剛核對（' + when + '）：' + msg;
+    try { msg = await reread(d); } catch (err) { say(t('核對好了，但重新讀取失敗：{0}', err.message)); return; }
+    const when = new Date().toLocaleTimeString(LOC(), { hour: 'numeric', minute: '2-digit' });
+    S.verified[id] = t('剛核對（{0}）：{1}', when, msg);
     render();
     const again = [...$$('#list .offer')].find(a => a.dataset.id === id);
     if (again) toggleTrips(again); else toast(S.verified[id]);   // a card whose seats are gone has left the list
@@ -2377,16 +2929,16 @@ async function runVerify(art) {
   }
   if (st === 'failed') { const c = load('award-vcool', {}); c[id] = Date.now() + VERIFY_COOL; save('award-vcool', c); }
   const M = {
-    failed: ['這次沒核對成功，額度已退回', 'seats.aero 那邊有時候很忙，15 分鐘後可以再試'],
-    fresh: ['3 小時內剛更新過，不用核對'],
-    skipped_outage: ['這個里程計畫暫時查不到', 'seats.aero 正在處理這個計畫的問題'],
-    not_refreshable: ['這個里程計畫不能即時核對'],
-    not_found: ['seats.aero 找不到這筆，重新搜尋看看'],
-    insufficient_quota: ['今天的額度不夠了', resetText() + '重置'],
-    queued: ['seats.aero 還在排隊，等一下再按一次看看'],
-    processing: ['seats.aero 還在查，等一下再按一次看看'],
+    failed: [t('這次沒核對成功，額度已退回'), t('seats.aero 那邊有時候很忙，15 分鐘後可以再試')],
+    fresh: [t('3 小時內剛更新過，不用核對')],
+    skipped_outage: [t('這個里程計畫暫時查不到'), t('seats.aero 正在處理這個計畫的問題')],
+    not_refreshable: [t('這個里程計畫不能即時核對')],
+    not_found: [t('seats.aero 找不到這筆，重新搜尋看看')],
+    insufficient_quota: [t('今天的額度不夠了'), t('{0}重置', resetText())],
+    queued: [t('seats.aero 還在排隊，等一下再按一次看看')],
+    processing: [t('seats.aero 還在查，等一下再按一次看看')],
   };
-  const [a, b] = M[st] || ['沒有拿到核對結果（' + (st || '未知') + '）'];
+  const [a, b] = M[st] || [t('沒有拿到核對結果（{0}）', st || t('未知'))];
   say(a, b);
 }
 // read this one row again (same route, day and program), put it in place of the old one, and describe it
@@ -2402,9 +2954,9 @@ async function reread(d) {
   S.rows = L.rows;
   S.trips.delete(d.id);
   cacheSet(cacheKey(lp), { t: L.fetchedAt, rows: L.rows, truncated: L.truncated });
-  if (!fresh || !fresh[cab + 'Available']) return CABIN_BY[cab].name + '已經沒有位子了';
+  if (!fresh || !fresh[cab + 'Available']) return t('{0}已經沒有位子了', CABIN_BY[cab].name);
   const m = num(fresh[cab + 'MileageCost']), was = old ? num(old[cab + 'MileageCost']) : m, seats = num(fresh[cab + 'RemainingSeats']);
-  return '還有位子' + (seats ? '（剩 ' + seats + ' 位）' : '') + '，' + fmtMiles(m) + ' 哩' + (was && was !== m ? '（原本 ' + fmtMiles(was) + ' 哩）' : '');
+  return seats ? (was && was !== m ? t('還有位子（剩 {0} 位），{1} 哩（原本 {2} 哩）', seats, fmtMiles(m), fmtMiles(was)) : t('還有位子（剩 {0} 位），{1} 哩', seats, fmtMiles(m))) : (was && was !== m ? t('還有位子，{0} 哩（原本 {1} 哩）', fmtMiles(m), fmtMiles(was)) : t('還有位子，{0} 哩', fmtMiles(m)));
 }
 
 // Cash check: Google Flights opened on the same one-way search (its text query, tested 2026-10-14 for economy,
@@ -2412,9 +2964,9 @@ async function reread(d) {
 const GF_CABIN = { Y: 'economy', W: 'economy', J: 'business class', F: 'first class' };
 function cashHtml(d) {
   const q = 'Flights to ' + d.to + ' from ' + d.from + ' on ' + d.date + ' oneway ' + GF_CABIN[S.prefs.cabin];
-  const url = 'https://www.google.com/travel/flights?q=' + encodeURIComponent(q) + '&curr=' + DISP() + '&hl=zh-TW';
-  return '<div class="cash"><a class="btn" href="' + esc(url) + '" target="_blank" rel="noopener">Google Flights 看現金價' + (S.prefs.cabin === 'W' ? '（打開後改成豪經）' : '') + '</a>' +
-    '<label class="cpp">現金票價 ' + dispSign() + '<input inputmode="decimal" placeholder="例：' + (DISP() === 'TWD' ? '75000' : '2400') + '" data-cpp="1" aria-label="現金票價（' + (DISP() === 'TWD' ? '台幣' : '美元') + '）"></label><span class="cppv"></span></div>';
+  const url = 'https://www.google.com/travel/flights?q=' + encodeURIComponent(q) + '&curr=' + DISP() + '&hl=' + (LANG === 'en' ? 'en' : 'zh-TW');
+  return '<div class="cash"><a class="btn" href="' + esc(url) + '" target="_blank" rel="noopener">' + (S.prefs.cabin === 'W' ? t('Google Flights 看現金價（打開後改成豪經）') : t('Google Flights 看現金價')) + '</a>' +
+    '<label class="cpp">' + t('現金票價 {0}', dispSign()) + '<input inputmode="decimal" placeholder="' + t('例：{0}', DISP() === 'TWD' ? '75000' : '2400') + '" data-cpp="1" aria-label="' + (DISP() === 'TWD' ? t('現金票價（台幣）') : t('現金票價（美元）')) + '"></label><span class="cppv"></span></div>';
 }
 // value per mile = (cash fare minus the award's taxes) / miles, in US cents
 $('#list').addEventListener('input', e => {
@@ -2424,29 +2976,29 @@ $('#list').addEventListener('input', e => {
   if (!(cash > 0)) { out.textContent = ''; return; }
   // in the display currency: US cents per mile, or NT$ per mile
   const tax = +d.tax ? inDisp(+d.tax, d.cur) : 0, per = (cash - (tax || 0)) / +d.miles;
-  const value = DISP() === 'TWD' ? 'NT$' + per.toFixed(2) : (per * 100).toFixed(2) + ' 美分';
-  out.textContent = '每哩約 ' + value + (tax ? '（已扣稅金約 ' + dispSign() + Math.round(tax).toLocaleString('en-US') + '）' : tax === null ? '（查不到 ' + d.cur + ' 匯率，稅金沒有扣）' : '');
+  const value = DISP() === 'TWD' ? 'NT$' + per.toFixed(2) : t('{0} 美分', (per * 100).toFixed(2));
+  out.textContent = tax ? t('每哩約 {0}（已扣稅金約 {1}）', value, dispSign() + Math.round(tax).toLocaleString('en-US')) : tax === null ? t('每哩約 {0}（查不到 {1} 匯率，稅金沒有扣）', value, d.cur) : t('每哩約 {0}', value);
 });
-function tripHtml(t) {
-  const segs = (t.AvailabilitySegments || []).slice().sort((a, b) => (a.Order || 0) - (b.Order || 0));
+function tripHtml(trip) {
+  const segs = (trip.AvailabilitySegments || []).slice().sort((a, b) => (a.Order || 0) - (b.Order || 0));
   const first = segs[0] || {}, last = segs[segs.length - 1] || {};
-  const dep = t.DepartsAt || first.DepartsAt, arr = t.ArrivesAt || last.ArrivesAt;
+  const dep = trip.DepartsAt || first.DepartsAt, arr = trip.ArrivesAt || last.ArrivesAt;
   const plus = dayDiff(dep, arr);
-  const stops = segs.length ? segs.length - 1 : num(t.Stops);
-  const miles = num(t.MileageCost);
+  const stops = segs.length ? segs.length - 1 : num(trip.Stops);
+  const miles = num(trip.MileageCost);
   let h = '<div class="trip"><div class="t1"><b>' + hm(dep) + '</b><span class="ap3">' + esc(first.OriginAirport || '') + '</span> → <b>' + hm(arr) + '</b><span class="ap3">' + esc(last.DestinationAirport || '') + '</span>' +
-    dayTag(plus) + '<span class="t-mi">' + (miles ? fmtMiles(miles) + ' 哩' : '') + (t.TotalTaxes ? ' + ' + moneyText(t.TotalTaxes, t.TaxesCurrency) : '') + '</span></div>';
-  const bits = ['<span class="fn">' + esc(t.FlightNumbers || '') + '</span>', dur(t.TotalDuration), stops ? '轉機 ' + stops + ' 次' : '直飛'];
-  if (num(t.RemainingSeats)) bits.push('剩 ' + num(t.RemainingSeats) + ' 位');
-  if (t.MixedCabinPct) bits.push('有 ' + Math.round(t.MixedCabinPct) + '% 航程是較低艙等');
+    dayTag(plus) + '<span class="t-mi">' + (miles ? t('{0} 哩', fmtMiles(miles)) : '') + (trip.TotalTaxes ? ' + ' + moneyText(trip.TotalTaxes, trip.TaxesCurrency) : '') + '</span></div>';
+  const bits = ['<span class="fn">' + esc(trip.FlightNumbers || '') + '</span>', dur(trip.TotalDuration), stops === 1 ? t('轉機 1 次') : stops ? t('轉機 {0} 次', stops) : t('直飛')];
+  if (num(trip.RemainingSeats)) bits.push(num(trip.RemainingSeats) === 1 ? t('剩 1 位') : t('剩 {0} 位', num(trip.RemainingSeats)));
+  if (trip.MixedCabinPct) bits.push(t('有 {0}% 航程是較低艙等', Math.round(trip.MixedCabinPct)));
   h += '<div class="t2">' + bits.filter(x => x && x !== '<span class="fn"></span>').map(x => '<span>' + x + '</span>').join('') + '</div>';
-  const extra = s => [s.AircraftName && esc(s.AircraftName), s.Cabin && CABIN_ZH[String(s.Cabin).toLowerCase()], s.FareClass && '艙位 ' + esc(s.FareClass)].filter(Boolean).map(x => '<span>' + x + '</span>').join('');
+  const extra = s => [s.AircraftName && esc(s.AircraftName), s.Cabin && CABIN_ZH[String(s.Cabin).toLowerCase()], s.FareClass && t('艙位 {0}', esc(s.FareClass))].filter(Boolean).map(x => '<span>' + x + '</span>').join('');
   if (segs.length === 1) {
     if (extra(segs[0])) h += '<div class="sg2">' + extra(segs[0]) + '</div>';
   } else if (segs.length > 1) {
     h += '<div class="segs">';
     segs.forEach((s, i) => {
-      if (i) h += '<div class="lay">在 ' + esc(s.OriginAirport) + ' 轉機 ' + dur(minsBetween(segs[i - 1].ArrivesAt, s.DepartsAt)) + '</div>';
+      if (i) h += '<div class="lay">' + t('在 {0} 轉機 {1}', esc(s.OriginAirport), dur(minsBetween(segs[i - 1].ArrivesAt, s.DepartsAt))) + '</div>';
       const plusSeg = dayDiff(s.DepartsAt, s.ArrivesAt);
       h += '<div class="sg"><div class="sg1"><b>' + esc(s.FlightNumber || '') + '</b>' + esc(s.OriginAirport) + ' ' + hm(s.DepartsAt) + ' → ' + esc(s.DestinationAirport) + ' ' + hm(s.ArrivesAt) +
         dayTag(plusSeg) + '</div>' + (extra(s) ? '<div class="sg2">' + extra(s) + '</div>' : '') + '</div>';
@@ -2546,6 +3098,7 @@ function showApp() {
   loadSaved();
 }
 function init() {
+  langNames(); translateStatic();   // a saved English choice applies before anything is drawn
   renderMonths();
   renderProgramList();
   renderAlliances();
@@ -2580,7 +3133,7 @@ function init() {
   if (reset) startReset(reset[1]);
   else if (join && !getToken()) startJoin(join[1]);
   else if (getToken()) {
-    if (join) { clearHash(); toast('你已經登入了，這個邀請碼可以留給別人用'); }
+    if (join) { clearHash(); toast(t('你已經登入了，這個邀請碼可以留給別人用')); }
     // check the saved session is still valid before showing the app
     call('GET', '/me')
       .then(m => { ME = { email: m.email, role: m.role }; showApp(); })
