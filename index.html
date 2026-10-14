@@ -184,7 +184,7 @@ details.danger[open] summary{margin-bottom:8px}
 .hero{border:var(--line);border-radius:16px;background:var(--water-t);overflow:hidden;margin-bottom:10px}
 .hero svg{width:100%;height:auto}
 /* the route row and the date row share one 3-column grid, so 出發 sits over 最早出發 and 抵達 over 最晚出發 */
-.route{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 40px minmax(0,1fr);gap:6px;align-items:stretch}
+.route{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 48px minmax(0,1fr);gap:6px;align-items:stretch}
 .field{position:relative;border:var(--line);border-radius:16px;padding:4px 10px 5px;min-width:0;background:var(--paper)}
 .field:focus-within{background:var(--water-t)}
 .field label{display:block;font-size:12px;color:var(--ink2);line-height:1.35}
@@ -192,10 +192,16 @@ details.danger[open] summary{margin-bottom:8px}
 .ap input{font-size:clamp(18px,5.6vw,24px);line-height:1.3;text-transform:uppercase;letter-spacing:.5px}
 .ap input::placeholder{font-size:16px;letter-spacing:0;text-transform:none;color:#A39C98}
 .names{font-size:12px;color:var(--ink2);height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-/* the middle column is a plain arrow, not a button: one way, or both ways when 來回 is on */
-.dir{align-self:center;display:grid;place-items:center}
-.tt{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;max-width:220px;margin:0 auto 10px}
-.tt button{border:var(--line);border-radius:999px;background:var(--paper);font-size:15px;padding:2px 0;transition:transform .12s ease-out}
+/* 交換 (2026-10-14 redesign): the word itself, no arrows and never yellow, so it can't read as 來回 the way the
+   old yellow ⇄ did; paper with an ink ring like the account button, an action with no on/off look */
+.swap{align-self:center;justify-self:center;width:46px;height:46px;border-radius:50%;border:var(--line);background:var(--paper);color:var(--ink);font-size:14px;letter-spacing:1px;line-height:1;padding:0 0 0 1px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:transform .12s ease-out}
+.swap:active{transform:scale(.9)}
+.swap:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+@media (hover:hover){.swap:hover{background:var(--water-t)}}
+.vh{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.ap{cursor:text}
+.tt{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;max-width:240px;margin:0 auto 10px}
+.tt button{border:var(--line);border-radius:999px;background:var(--paper);font-size:16px;padding:6px 0;transition:transform .12s ease-out}
 .tt button:active{transform:scale(.95)}
 .tt button[aria-checked=true]{background:var(--yellow)}
 /* round trip: one tab per direction, with each direction's lowest miles */
@@ -213,8 +219,13 @@ details.danger[open] summary{margin-bottom:8px}
 .sugg button:active{background:var(--yellow-t)}
 .sugg b{flex:0 0 auto;min-width:76px;font-size:15px;letter-spacing:.5px}
 .sugg span{color:var(--ink2);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dates{display:grid;grid-template-columns:minmax(0,1fr) 40px minmax(0,1fr);gap:6px;margin-top:8px}
+.dates{display:grid;grid-template-columns:minmax(0,1fr) 48px minmax(0,1fr);gap:6px;margin-top:8px}
 .dates .to{align-self:center;text-align:center;font-size:15px}
+/* 320px phones: a slimmer middle column and gaps, so 去程最早 2027 still fits on one line */
+@media (max-width:359px){
+  .route,.dates{grid-template-columns:minmax(0,1fr) 44px minmax(0,1fr);gap:4px}
+  .swap{width:44px;height:44px;font-size:13px;letter-spacing:0}
+}
 /* the date fields show a short "11/1 (日)" label; the real date input sits on top, invisible, so a tap opens the iPhone picker */
 .df{cursor:pointer}
 .df label small{font-size:11px;margin-left:4px}
@@ -222,9 +233,18 @@ details.danger[open] summary{margin-bottom:8px}
 .df input[type=date]{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:16px;cursor:pointer}
 input[type=date]{min-height:26px;text-align:left}
 input[type=date]::-webkit-date-and-time-value{text-align:left}
-.months{display:flex;gap:6px;overflow-x:auto;overscroll-behavior-x:contain;margin:10px 0 0;padding:2px 0 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.months{display:flex;gap:6px;overflow-x:auto;overscroll-behavior-x:contain;margin:6px 0 0;padding:4px 0;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .months::-webkit-scrollbar{display:none}
-.mchip{flex:0 0 auto;min-width:66px;text-align:center;border:var(--line);border-radius:999px;background:var(--paper);padding:1px 12px;font-size:15px;white-space:nowrap;transition:transform .12s ease-out}
+/* chips draw at about 36px and take taps over 44px */
+.mchip{position:relative;flex:0 0 auto;min-width:66px;text-align:center;border:var(--line);border-radius:999px;background:var(--paper);padding:4px 12px;font-size:15px;line-height:1.35;white-space:nowrap;touch-action:manipulation;transition:transform .12s ease-out}
+.mchip::after{content:'';position:absolute;inset:-4px -2px}
+/* the return leg: its own dates, and 待多久 = the outbound range moved 1 to 4 weeks later */
+.leg{margin-top:14px}
+.leg .dates{margin-top:0}
+.qrow{display:flex;align-items:center;gap:8px;margin-top:6px}
+.ql{flex:0 0 auto;font-size:13px;color:var(--ink2)}
+.stays{flex:1;min-width:0;display:flex;gap:6px}
+.stays .mchip{flex:1 1 0;min-width:0;max-width:84px;padding:4px 4px}
 .mchip:active{transform:scale(.95)}
 .mchip small{font-size:11px;margin-right:3px;color:var(--ink2)}
 .mchip.on{background:var(--yellow)}
@@ -485,7 +505,7 @@ details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13p
           <input id="from" placeholder="例：TPE" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="next">
           <div class="names" id="from-names"></div>
         </div>
-        <span class="dir" id="dir" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24"><path d="M3.5 12h16M13.5 6l6 6-6 6" fill="none" stroke="#3E3A39" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <button type="button" class="swap" id="swap" aria-label="交換出發和抵達" title="交換出發和抵達">交換</button>
         <div class="field ap">
           <label for="to">抵達</label>
           <input id="to" placeholder="例：SEA" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="done">
@@ -494,16 +514,25 @@ details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13p
         <div class="sugg" id="sugg" hidden></div>
       </div>
       <div class="dates">
-        <div class="field df"><label for="d1">最早出發<small id="d1y"></small></label><span class="dv" id="d1v"></span><input type="date" id="d1"></div>
+        <div class="field df"><label for="d1"><span id="d1l">最早出發</span><small id="d1y"></small></label><span class="dv" id="d1v"></span><input type="date" id="d1"></div>
         <span class="to" aria-hidden="true">到</span>
-        <div class="field df"><label for="d2">最晚出發<small id="d2y"></small></label><span class="dv" id="d2v"></span><input type="date" id="d2"></div>
+        <div class="field df"><label for="d2"><span id="d2l">最晚出發</span><small id="d2y"></small></label><span class="dv" id="d2v"></span><input type="date" id="d2"></div>
       </div>
-      <div class="dates" id="rdates" hidden>
-        <div class="field df"><label for="r1">回程最早<small id="r1y"></small></label><span class="dv" id="r1v"></span><input type="date" id="r1"></div>
-        <span class="to" aria-hidden="true">到</span>
-        <div class="field df"><label for="r2">回程最晚<small id="r2y"></small></label><span class="dv" id="r2v"></span><input type="date" id="r2"></div>
-      </div>
+      <!-- month chips set the outbound range, so they sit right under it -->
       <div class="months" id="months"></div>
+      <div class="leg" id="rdates" hidden>
+        <div class="dates">
+          <div class="field df"><label for="r1">回程最早<small id="r1y"></small></label><span class="dv" id="r1v"></span><input type="date" id="r1"></div>
+          <span class="to" aria-hidden="true">到</span>
+          <div class="field df"><label for="r2">回程最晚<small id="r2y"></small></label><span class="dv" id="r2v"></span><input type="date" id="r2"></div>
+        </div>
+        <div class="qrow"><span class="ql" id="ql-s">待多久</span>
+          <div class="stays" id="stays" role="group" aria-labelledby="ql-s">
+            <button type="button" class="mchip" data-w="1">1 週</button><button type="button" class="mchip" data-w="2">2 週</button><button type="button" class="mchip" data-w="3">3 週</button><button type="button" class="mchip" data-w="4">4 週</button>
+          </div>
+        </div>
+      </div>
+      <p class="vh" id="swap-live" aria-live="polite"></p>
       <p class="ferr" id="ferr" role="alert"></p>
       <button class="go" id="go" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#3E3A39" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6" fill="#FFFCF6"/><path d="M15 15l5 5"/></g></svg><span id="go-t">搜尋</span></button>
     </form>
@@ -1303,22 +1332,49 @@ $('#sugg').addEventListener('pointerdown', e => {
 /* ---------- one way or round trip ---------- */
 // Award seats are booked one direction at a time, so a round trip is two one-way searches (twice the calls).
 let TRIP = 'ow';
-const ARROW_ONE = '<svg width="26" height="26" viewBox="0 0 24 24"><path d="M3.5 12h16M13.5 6l6 6-6 6" fill="none" stroke="#3E3A39" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-const ARROW_BOTH = '<svg width="26" height="26" viewBox="0 0 24 24"><path d="M4 8.5h15M15 4.5l4 4-4 4M20 15.5H5M9 11.5l-4 4 4 4" fill="none" stroke="#3E3A39" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const plusDays = (v, k) => { const d = parseDate(v); d.setDate(d.getDate() + k); return isoDate(d); };
+// the words on the outbound date boxes: with two legs on screen, each names its leg (去程 over 回程)
+const outWord = i => (TRIP === 'rt' ? ['去程最早', '去程最晚'] : ['最早出發', '最晚出發'])[i];
 function setTrip(t) {
   TRIP = t;
   for (const b of $$('#tt button')) b.setAttribute('aria-checked', String(b.dataset.tt === t));
   $('#rdates').hidden = t !== 'rt';
-  $('#dir').innerHTML = t === 'rt' ? ARROW_BOTH : ARROW_ONE;
-  // first time on 來回: start the return two weeks after the outbound range
+  $('#d1l').textContent = outWord(0);
+  $('#d2l').textContent = outWord(1);
+  // first time on 來回: start the return two weeks after the outbound range (the 2 週 chip lights up)
   if (t === 'rt' && !$('#r1').value && $('#d1').value && $('#d2').value) {
-    const plus = (v, k) => { const d = parseDate(v); d.setDate(d.getDate() + k); return isoDate(d); };
-    $('#r1').value = plus($('#d1').value, 14);
-    $('#r2').value = plus($('#d2').value, 14);
+    $('#r1').value = plusDays($('#d1').value, 14);
+    $('#r2').value = plusDays($('#d2').value, 14);
   }
   markMonths();
 }
 $('#tt').addEventListener('click', e => { const b = e.target.closest('[data-tt]'); if (b) setTrip(b.dataset.tt); });
+
+/* ---------- 交換: the airports (codes and city names) trade boxes; dates stay where they are ---------- */
+const still = matchMedia('(prefers-reduced-motion: reduce)');
+$('#swap').addEventListener('click', () => {
+  const a = $('#from'), b = $('#to');
+  // close the keyboard and the airport list first, so nobody keeps typing into a box that now holds the other airport
+  if (document.activeElement === a || document.activeElement === b) document.activeElement.blur();
+  $('#sugg').hidden = true;
+  // the values trade at once (a search right after uses the new direction); the motion only follows
+  [a.value, b.value] = [b.value, a.value];
+  showNames(a); showNames(b);
+  formErr('');
+  if (!still.matches) {
+    const fly = (els, from) => { for (const el of els) {
+      for (const an of el.getAnimations()) an.cancel();   // a quick second tap restarts cleanly
+      el.animate([{ transform: 'translateX(' + from + 'px) scale(.94)', opacity: 0.35 }, { transform: 'none', opacity: 1 }], { duration: 300, easing: 'cubic-bezier(.22,1,.36,1)' });
+    } };
+    fly([a, $('#from-names')], 26);    // the new 出發 slides in from the 交換 side, where it came from
+    fly([b, $('#to-names')], -26);
+  }
+  $('#swap').focus({ preventScroll: true });   // Safari doesn't focus a tapped button; a second tap swaps back
+  const say = (input, names) => (input.value.toUpperCase() || '未填') + (names.textContent ? '（' + names.textContent + '）' : '');
+  $('#swap-live').textContent = '已交換。出發 ' + say(a, $('#from-names')) + '，抵達 ' + say(b, $('#to-names'));
+});
+// a tap anywhere in an airport box (label, code or city line) goes to its input
+for (const box of $$('.route .ap')) box.addEventListener('click', e => { if (e.target.tagName !== 'INPUT') box.querySelector('input').focus(); });
 
 /* ---------- dates ---------- */
 const shortDay = v => { const d = parseDate(v); return (d.getMonth() + 1) + '/' + d.getDate() + ' (' + WD[d.getDay()] + ')'; };
@@ -1358,14 +1414,39 @@ function showDates() {
 }
 function markMonths() {
   showDates();
-  for (const b of $$('.mchip')) {
+  for (const b of $$('#months .mchip')) {
     const [s, e] = monthRange(+b.dataset.y, +b.dataset.m);
     b.classList.toggle('on', $('#d1').value === s && $('#d2').value === e);
   }
+  // a 待多久 chip is lit when the return is exactly the outbound range moved that many weeks
+  const [d1, d2, r1, r2] = ['d1', 'd2', 'r1', 'r2'].map(id => $('#' + id).value);
+  for (const b of $$('#stays .mchip')) {
+    const k = +b.dataset.w * 7;
+    b.classList.toggle('on', !!(d1 && d2 && r1 && r2) && r1 === plusDays(d1, k) && r2 === plusDays(d2, k));
+  }
 }
+// A month chip sets the outbound range. With 來回 on, the return keeps its distance from the outbound,
+// so picking a later month never leaves the return behind it (and the return range stays within 3 months).
 $('#months').addEventListener('click', e => {
   const b = e.target.closest('.mchip');
-  if (b) setRange(...monthRange(+b.dataset.y, +b.dataset.m));
+  if (!b) return;
+  const [s, t] = monthRange(+b.dataset.y, +b.dataset.m);
+  const d1 = $('#d1').value, r1 = $('#r1').value, r2 = $('#r2').value;
+  if (TRIP === 'rt' && d1 && r1 && r2) {
+    const gap = Math.max(0, daysBetween(d1, r1)), len = Math.min(MAX_DAYS, Math.max(0, daysBetween(r1, r2)));
+    $('#r1').value = plusDays(s, gap);
+    $('#r2').value = plusDays(s, gap + len);
+  }
+  setRange(s, t);
+});
+// 待多久: the return is the outbound range moved 1 to 4 weeks later
+$('#stays').addEventListener('click', e => {
+  const b = e.target.closest('.mchip');
+  const d1 = $('#d1').value, d2 = $('#d2').value;
+  if (!b || !d1 || !d2) return;
+  $('#r1').value = plusDays(d1, +b.dataset.w * 7);
+  $('#r2').value = plusDays(d2, +b.dataset.w * 7);
+  markMonths();
 });
 // A picker that ignores min (or a typed date) can still give 最晚 before 最早: move 最晚 up to 最早 and say so.
 // The return dates follow the same rule, and never start before the first outbound day.
@@ -1374,7 +1455,7 @@ for (const id of ['d1', 'd2', 'r1', 'r2']) $('#' + id).addEventListener('change'
   const said = [];
   if (s && e && e < s) {
     $('#d2').value = s;
-    said.push(id === 'd1' ? '最晚出發已跟著改成 ' + shortDay(s) : '最晚出發不能早於最早出發，已改成 ' + shortDay(s));
+    said.push(id === 'd1' ? outWord(1) + '已跟著改成 ' + shortDay(s) : outWord(1) + '不能早於' + outWord(0) + '，已改成 ' + shortDay(s));
   }
   const r1 = $('#r1').value;
   if (TRIP === 'rt' && s && r1 && r1 < s) {
@@ -1488,12 +1569,12 @@ function readForm() {
   if (o.err || d.err) return formErr(o.err || d.err);
   if (!o.codes.length || !d.codes.length) return formErr('請輸入出發和抵達的機場。');
   let s = $('#d1').value, e = $('#d2').value;
-  if (!s || !e) return formErr('請選出發日期的範圍。');
-  if (e < s) return formErr('最晚出發不能早於最早出發。');
+  if (!s || !e) return formErr(TRIP === 'rt' ? '請選去程日期的範圍。' : '請選出發日期的範圍。');
+  if (e < s) return formErr(outWord(1) + '不能早於' + outWord(0) + '。');
   const today = isoDate(new Date());
   if (e < today) return formErr('這些日期已經過了。');
   if (s < today) s = today;
-  if (daysBetween(s, e) > MAX_DAYS) return formErr('日期範圍最多 3 個月，請縮短一點。');
+  if (daysBetween(s, e) > MAX_DAYS) return formErr((TRIP === 'rt' ? '去程' : '') + '日期範圍最多 3 個月，請縮短一點。');
   const p = { o: o.codes.join(','), d: d.codes.join(','), s, e };
   if (TRIP === 'rt') {
     let rs = $('#r1').value;
