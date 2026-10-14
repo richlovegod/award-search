@@ -202,7 +202,7 @@ async function currentSession(req, env) {
   if (!m) return null;
   const sid = await sha256(m[1]);
   const s = await env.DB.prepare(
-    'SELECT s.id AS sid, s.expires_at, s.last_seen_at, u.id, u.email, u.role, u.status, u.created_at ' +
+    'SELECT s.id AS sid, s.expires_at, s.last_seen_at, u.id, u.email, u.role, u.status, u.created_at, u.daily_limit ' +
     'FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.id = ?').bind(sid).first();
   if (!s || s.expires_at < now() || s.status !== 'active') return null;
   if (now() - s.last_seen_at > 3600) {   // at most one write an hour per device
@@ -366,6 +366,7 @@ function removeUser(env, uid) {
     env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(uid),
     env.DB.prepare('DELETE FROM reset_links WHERE user_id = ?').bind(uid),
     env.DB.prepare('DELETE FROM saved_searches WHERE user_id = ?').bind(uid),
+    env.DB.prepare('DELETE FROM usage WHERE user_id = ?').bind(uid),
     env.DB.prepare('UPDATE invites SET used_by = NULL WHERE used_by = ?').bind(uid),
     env.DB.prepare('DELETE FROM users WHERE id = ?').bind(uid),
   ]);
@@ -383,10 +384,12 @@ async function admin(req, env, s, url, h) {
   let mm;
   if (p === '/admin/users' && m === 'GET') {
     const r = await env.DB.prepare(
-      'SELECT u.id, u.email, u.role, u.status, u.created_at, u.last_login_at, ' +
-      '(SELECT COUNT(*) FROM sessions x WHERE x.user_id = u.id AND x.expires_at > ?) AS devices FROM users u ORDER BY u.created_at')
-      .bind(now()).all();
-    return json({ me: s.id, users: r.results }, 200, h);
+      'SELECT u.id, u.email, u.role, u.status, u.created_at, u.last_login_at, u.daily_limit, ' +
+      '(SELECT COUNT(*) FROM sessions x WHERE x.user_id = u.id AND x.expires_at > ?) AS devices, ' +
+      '(SELECT calls FROM usage g WHERE g.user_id = u.id AND g.day = ?) AS used_today FROM users u ORDER BY u.created_at')
+      .bind(now(), utcDay()).all();
+    // limit: the cap that applies today (null = none, the owner)
+    return json({ me: s.id, users: r.results.map(u => ({ ...u, used_today: u.used_today || 0, limit: limitOf(u) })), default_limit: USER_DAILY, reserve: OWNER_RESERVE }, 200, h);
   }
   if (p === '/admin/invites' && m === 'GET') {
     const r = await env.DB.prepare(
@@ -406,6 +409,13 @@ async function admin(req, env, s, url, h) {
   if ((mm = /^\/admin\/invites\/([A-Za-z0-9_-]{43})$/.exec(p)) && m === 'DELETE') {
     await env.DB.prepare('DELETE FROM invites WHERE id = ? AND used_at IS NULL').bind(mm[1]).run();
     return json({ ok: true }, 200, h);
+  }
+  if ((mm = /^\/admin\/users\/(\d+)\/limit$/.exec(p)) && m === 'POST') {
+    // an account's daily call cap: a whole number from 0 to 1000, or null for the default
+    const v = (await readJson(req)).limit;
+    if (v !== null && !(Number.isInteger(v) && v >= 0 && v <= 1000)) return json({ error: 'param' }, 400, h);
+    const r = await env.DB.prepare("UPDATE users SET daily_limit = ? WHERE id = ? AND role != 'owner'").bind(v, Number(mm[1])).run();
+    return r.meta.changes ? json({ ok: true }, 200, h) : json({ error: 'not_found' }, 404, h);
   }
   if ((mm = /^\/admin\/users\/(\d+)(\/status|\/reset-link)?$/.exec(p))) {
     const uid = Number(mm[1]);
@@ -434,16 +444,41 @@ async function admin(req, env, s, url, h) {
 
 /* ---------- seats.aero relay ---------- */
 
-async function relay(path, env, h, ctx) {
-  const r = await fetch(UPSTREAM + path, {
-    headers: { 'Partner-Authorization': env.SEATS_KEY, accept: 'application/json', 'User-Agent': 'award-search (personal use)' },
-  });
+/* ---------- daily call budget per account ---------- */
+// Every account searches with the owner's key and its 1,000 calls per UTC day, so invited accounts get their own
+// smaller budget, and stop early when the key is nearly used up, keeping the rest for the owner.
+const USER_DAILY = 200;       // calls per UTC day for an invited account (users.daily_limit overrides it)
+const OWNER_RESERVE = 300;    // invited accounts stop when the key has this many calls or fewer left today
+const utcDay = () => new Date().toISOString().slice(0, 10);
+const limitOf = s => (s.role === 'owner' ? null : s.daily_limit ?? USER_DAILY);
+async function usedToday(env, uid) {
+  const r = await env.DB.prepare('SELECT calls FROM usage WHERE user_id = ? AND day = ?').bind(uid, utcDay()).first();
+  return r ? r.calls : 0;
+}
+// null when the call may go ahead, otherwise the refusal to send back
+async function budgetCheck(env, s, h, cost = 1) {
+  if (s.role === 'owner') return null;
+  const lim = limitOf(s), used = await usedToday(env, s.id);
+  if (used + cost > lim) return json({ error: 'user_quota', used, limit: lim }, 429, h);
+  const q = await env.DB.prepare('SELECT remaining, at FROM quota WHERE id = 1').first();
+  const midnight = Math.floor(Date.parse(utcDay() + 'T00:00:00Z') / 1000);
+  if (q && q.at >= midnight && q.remaining - cost < OWNER_RESERVE) return json({ error: 'reserve' }, 429, h);
+  return null;
+}
+// count n real calls (negative for a refund) against the account; runs after the response is sent
+function spend(env, ctx, s, n) {
+  if (!n) return;
+  ctx.waitUntil(env.DB.prepare('INSERT INTO usage (user_id, day, calls) VALUES (?, ?, ?) ON CONFLICT(user_id, day) DO UPDATE SET calls = MAX(0, calls + excluded.calls)')
+    .bind(s.id, utcDay(), n).run().catch(e => console.error('usage', e)));
+}
+
+// headers for the page: CORS, no caching, and seats.aero's rate-limit numbers; also keeps the key's latest
+// remaining count in D1 (not KV: its free plan allows 1,000 writes a day, the same as the call quota)
+function passOn(r, env, h, ctx) {
   const out = new Headers(h);
   out.set('Content-Type', r.headers.get('Content-Type') || 'application/json');
   out.set('Cache-Control', 'no-store');
   for (const [k, v] of r.headers) if (k.toLowerCase().startsWith('x-ratelimit')) out.set(k, v);
-  // Keep the key's latest remaining count, so any device can read today's usage without spending a call.
-  // D1, not KV: KV's free plan allows 1,000 writes a day, the same as the call quota.
   const left = parseInt(r.headers.get('X-RateLimit-Remaining'), 10);
   if (Number.isFinite(left)) {
     const lim = parseInt(r.headers.get('X-RateLimit-Limit'), 10);
@@ -451,17 +486,48 @@ async function relay(path, env, h, ctx) {
       'ON CONFLICT(id) DO UPDATE SET remaining = excluded.remaining, quota_limit = excluded.quota_limit, at = excluded.at')
       .bind(left, Number.isFinite(lim) ? lim : null, now()).run().catch(e => console.error('quota', e)));
   }
-  return new Response(r.body, { status: r.status, headers: out });
+  return out;
 }
 
-function search(url, env, h, ctx) {
+async function relay(path, env, h, ctx, s) {
+  const stop = await budgetCheck(env, s, h);
+  if (stop) return stop;
+  const r = await fetch(UPSTREAM + path, {
+    headers: { 'Partner-Authorization': env.SEATS_KEY, accept: 'application/json', 'User-Agent': 'award-search (personal use)' },
+  });
+  spend(env, ctx, s, 1);
+  return new Response(r.body, { status: r.status, headers: passOn(r, env, h, ctx) });
+}
+
+// 即時核對: ask seats.aero to re-check up to 3 cached rows. Queueing a stale row costs 1 call; sending the same
+// IDs again is how you poll and costs nothing; a failed row is refunded. The answer holds statuses only, so the
+// page re-reads the row afterwards. Only what seats.aero says it charged (queued minus refunded) is counted.
+async function refresh(req, env, h, ctx, s) {
+  const b = await readJson(req);
+  const ids = [...new Set(Array.isArray(b.ids) ? b.ids : [])];
+  if (!ids.length || ids.length > 3 || !ids.every(x => typeof x === 'string' && /^[A-Za-z0-9]{10,40}$/.test(x))) return json({ error: 'param' }, 400, h);
+  const stop = await budgetCheck(env, s, h, b.poll ? 0 : ids.length);   // a poll queues nothing new
+  if (stop) return stop;
+  const r = await fetch(UPSTREAM + '/refresh', {
+    method: 'POST',
+    headers: { 'Partner-Authorization': env.SEATS_KEY, accept: 'application/json', 'content-type': 'application/json', 'User-Agent': 'award-search (personal use)' },
+    body: JSON.stringify({ availability_ids: ids }),
+  });
+  const text = await r.text();
+  let d = null;
+  try { d = JSON.parse(text); } catch {}
+  if (d && Number.isFinite(d.queued)) spend(env, ctx, s, d.queued - (d.refunded || 0));
+  return new Response(text, { status: r.status, headers: passOn(r, env, h, ctx) });
+}
+
+function search(url, env, h, ctx, s) {
   const qs = new URLSearchParams();
   for (const [k, v] of url.searchParams) {
     if (!SEARCH_RULES[k] || !SEARCH_RULES[k].test(v)) return json({ error: 'param', param: k }, 400, h);
     qs.set(k, v);
   }
   if (!qs.has('origin_airport') || !qs.has('destination_airport')) return json({ error: 'param' }, 400, h);
-  return relay('/search?' + qs, env, h, ctx);
+  return relay('/search?' + qs, env, h, ctx, s);
 }
 
 /* ---------- saved searches (收藏) ---------- */
@@ -534,9 +600,11 @@ async function saved(req, env, s, p, m, h) {
 
 // The last remaining count seats.aero reported, and when. The page works out whether the UTC-midnight reset
 // has passed since then. Costs no seats.aero call.
-async function quota(env, h) {
+async function quota(env, s, h) {
   const q = await env.DB.prepare('SELECT remaining, quota_limit, at FROM quota WHERE id = 1').first();
-  return json(q ? { remaining: q.remaining, limit: q.quota_limit || 1000, at: q.at } : { remaining: null, limit: 1000, at: null }, 200, h);
+  // me: this account's own calls today and its cap (null = no cap, the owner)
+  const me = { used: await usedToday(env, s.id), limit: limitOf(s), reserve: s.role === 'owner' ? null : OWNER_RESERVE };
+  return json(q ? { remaining: q.remaining, limit: q.quota_limit || 1000, at: q.at, me } : { remaining: null, limit: 1000, at: null, me }, 200, h);
 }
 
 /* ---------- router ---------- */
@@ -573,9 +641,10 @@ export default {
         await env.DB.prepare('DELETE FROM sessions WHERE id = ? AND user_id = ?').bind(mm[1], s.id).run();
         return json({ ok: true }, 200, h);
       }
-      if (p === '/search' && m === 'GET') return search(url, env, h, ctx);
-      if ((mm = /^\/trips\/([A-Za-z0-9]{10,40})$/.exec(p)) && m === 'GET') return relay('/trips/' + mm[1], env, h, ctx);
-      if (p === '/quota' && m === 'GET') return await quota(env, h);
+      if (p === '/search' && m === 'GET') return search(url, env, h, ctx, s);
+      if ((mm = /^\/trips\/([A-Za-z0-9]{10,40})$/.exec(p)) && m === 'GET') return relay('/trips/' + mm[1], env, h, ctx, s);
+      if (p === '/quota' && m === 'GET') return await quota(env, s, h);
+      if (p === '/refresh' && m === 'POST') return await refresh(req, env, h, ctx, s);
       if (p.startsWith('/me/saved')) { const r = await saved(req, env, s, p, m, h); if (r) return r; }
       if (p.startsWith('/admin/')) {
         if (s.role !== 'owner') return json({ error: 'forbidden' }, 403, h);

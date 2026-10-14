@@ -331,6 +331,11 @@ details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13p
 #tf .chip small{font-size:11px;margin-left:3px;color:var(--ink2)}
 #tf .chip[data-tf=noVia][aria-pressed=true]{background:var(--coral-t);text-decoration:line-through}
 .tfc{margin:6px 0 2px;font-size:13px;padding:1px 12px}
+/* 即時核對 at the top of a card's details */
+.verify{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 0 10px;border-bottom:2px dashed var(--ink);margin-bottom:4px}
+.verify .vage{font-size:14px}
+.verify small{flex-basis:100%;font-size:12px;color:var(--ink2)}
+.verify .btn{font-size:14px;padding:2px 14px;background:var(--yellow-t)}
 .cash{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-top:10px;padding-top:10px;border-top:2px dashed var(--ink)}
 .cpp{display:inline-flex;align-items:center;gap:4px;font-size:14px}
 .cpp input{width:7.5em;box-sizing:border-box;font-size:16px;border:2px solid var(--ink);border-radius:10px;padding:1px 6px;background:var(--paper)}
@@ -724,6 +729,7 @@ const S = {
     pax: 1, wd: [], dep: [], arr: [], maxStops: 9, maxHours: 0, noVia: [], maxMiles: 0 }, load('award-prefs', {})),
   search: null, legs: null, leg: 0,   // the whole search (one or two legs) and which leg is on screen
   saved: [], seen: null, seenAt: 0,   // 收藏, and what the matching one held at the last look
+  verified: {},                       // 即時核對 results by availability ID, for this search
   params: null, rows: null, truncated: false, fetchedAt: 0, demo: false, day: null, shown: 60,
   trips: new Map(),
 };
@@ -1151,9 +1157,12 @@ async function loadAdmin() {
     const self = x.id === u.me;
     const tags = (x.role === 'owner' ? '<span class="tag own">管理員</span>' : '') + (x.status !== 'active' ? '<span class="tag off">已停用</span>' : '') + (self ? '<span class="tag me">你</span>' : '');
     const acts = '<button type="button" class="btn ghost" data-reset="' + x.id + '">產生重設連結</button>' + (self ? '' :
+      '<button type="button" class="btn ghost" data-limit="' + x.id + '" data-cur="' + (x.daily_limit ?? '') + '">改每日上限</button>' +
       '<button type="button" class="btn ghost" data-status="' + x.id + '" data-to="' + (x.status === 'active' ? 'disabled' : 'active') + '">' + (x.status === 'active' ? '停用' : '啟用') + '</button>' +
       '<button type="button" class="btn warn" data-del="' + x.id + '" data-email="' + esc(x.email) + '">刪除</button>');
-    return '<div class="rowi col"><div class="main"><b>' + esc(x.email) + tags + '</b><small><span>註冊：' + fmtDay(x.created_at) + '</span><span>最近登入：' + since(x.last_login_at) + '</span><span>裝置：' + x.devices + ' 台</span></small></div>' +
+    // today's seats.aero calls against the account's cap (the owner has none)
+    const use = '<span>今天用了 ' + x.used_today + ' 次' + (x.limit == null ? '（不限）' : '／上限 ' + x.limit + (x.daily_limit == null ? '（預設）' : '')) + '</span>';
+    return '<div class="rowi col"><div class="main"><b>' + esc(x.email) + tags + '</b><small>' + use + '<span>註冊：' + fmtDay(x.created_at) + '</span><span>最近登入：' + since(x.last_login_at) + '</span><span>裝置：' + x.devices + ' 台</span></small></div>' +
       '<div class="acts">' + acts + '</div><div class="out" id="reset-out-' + x.id + '"></div></div>';
   }).join('');
   box.innerHTML =
@@ -1185,6 +1194,14 @@ $('#admin-body').addEventListener('click', async e => {
     else if (b.dataset.reset) {
       const r = await call('POST', '/admin/users/' + b.dataset.reset + '/reset-link');
       $('#reset-out-' + b.dataset.reset).innerHTML = codeBox(r.url, '把這個連結傳給他。30 分鐘內有效，只能用一次。', true);
+    } else if (b.dataset.limit) {
+      const v = prompt('這個帳號每天最多可以用幾次 seats.aero 額度？\n輸入 0 到 1000；留空 = 預設 200 次。', b.dataset.cur);
+      if (v === null) return;
+      const limit = v.trim() === '' ? null : Number(v.trim());
+      if (limit !== null && !(Number.isInteger(limit) && limit >= 0 && limit <= 1000)) { toast('請輸入 0 到 1000 的整數，或留空'); return; }
+      await call('POST', '/admin/users/' + b.dataset.limit + '/limit', { limit });
+      toast(limit === null ? '已改回預設 200 次' : '每日上限已改成 ' + limit + ' 次');
+      loadAdmin();
     } else if (b.dataset.status) {
       await call('POST', '/admin/users/' + b.dataset.status + '/status', { status: b.dataset.to });
       toast(b.dataset.to === 'disabled' ? '帳號已停用，它的裝置都已登出' : '帳號已重新啟用');
@@ -1200,15 +1217,18 @@ $('#admin-body').addEventListener('click', async e => {
 
 /* ---------- API ---------- */
 class ApiError extends Error { constructor(kind, msg) { super(msg); this.kind = kind; } }
-async function api(path) {
+// GET a relay path, or POST `payload` as JSON (only /refresh does)
+async function api(path, payload) {
   let r;
   try {
-    r = await fetch(RELAY + path, { headers: { Authorization: 'Bearer ' + getToken() } });
+    r = await fetch(RELAY + path, payload === undefined ? { headers: { Authorization: 'Bearer ' + getToken() } }
+      : { method: 'POST', headers: { Authorization: 'Bearer ' + getToken(), 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
   } catch {
     throw new ApiError('network', '連不上中繼站，請檢查網路後再試一次。');
   }
   const q = r.headers.get('X-RateLimit-Remaining');
   if (q !== null && q !== '' && !isNaN(q)) setQuota(Number(q), Number(r.headers.get('X-RateLimit-Limit')) || 1000, Date.now());
+  if (q !== null) meqSoon();   // a real seats.aero call: an invited account's own count changed
   const text = await r.text();
   let body = null;
   try { body = JSON.parse(text); } catch {}
@@ -1218,6 +1238,9 @@ async function api(path) {
   }
   if (body && body.error === 'auth') { logout(ERR.auth, false); throw new ApiError('auth', ERR.auth); }
   if (body && body.error === 'param') throw new ApiError('param', '搜尋條件的格式不對。');
+  // the account's own daily budget, or the reserve kept for the owner (see the Worker's budgetCheck)
+  if (body && body.error === 'user_quota') throw new ApiError('quota', '你今天的 ' + body.limit + ' 次額度用完了，' + resetText() + '重置。');
+  if (body && body.error === 'reserve') throw new ApiError('quota', '今天整個網站的額度快用完了，剩下的先留給管理員，' + resetText() + '重置。');
   const t = text.toLowerCase();
   if (t.includes('subscription_expired')) throw new ApiError('expired', 'seats.aero 的 Pro 訂閱已經過期，續訂之後才查得到。');
   if (r.status === 429) throw new ApiError('quota', '今天的 1,000 次查詢額度用完了，' + resetText() + '重置。');
@@ -1236,13 +1259,28 @@ function setQuota(left, limit, at) {
   save('award-quota2', Q);
   showQuota();
 }
+// An invited account sees its own daily budget instead (MEQ, from GET /quota); the owner sees the whole key.
+let MEQ = null;   // { used, limit, reserve, at: ms of the reading }
+const personal = () => !!(ME && ME.role !== 'owner' && MEQ && MEQ.limit != null);
 function quotaUsed() {
+  if (personal()) return { lim: MEQ.limit, used: MEQ.at < lastReset() ? 0 : MEQ.used };
   const lim = (Q && Q.limit) || 1000;
   return { lim, used: !Q || Q.at < lastReset() ? 0 : Math.max(0, lim - Q.left) };
 }
+async function loadQuota() {
+  try {
+    const q = await api('/quota');
+    if (q.remaining != null) setQuota(q.remaining, q.limit, q.at * 1000);
+    if (q.me) MEQ = Object.assign({}, q.me, { at: Date.now() });
+    showQuota();
+  } catch { /* the meter is extra */ }
+}
+// after a real call by an invited account, re-read its own count (the Worker writes it just after answering)
+let meqTimer = 0;
+const meqSoon = () => { if (ME && ME.role !== 'owner') { clearTimeout(meqTimer); meqTimer = setTimeout(loadQuota, 1500); } };
 function showQuota() {
   const el = $('#quota');
-  if (!Q) { el.hidden = true; return; }
+  if (!Q && !personal()) { el.hidden = true; return; }
   const { lim, used } = quotaUsed(), pct = Math.min(100, used / lim * 100);
   el.querySelector('.qt').innerHTML = '已用 <b>' + used.toLocaleString('en-US') + '</b>/' + lim.toLocaleString('en-US');
   el.querySelector('.qbar i').style.width = (used ? Math.max(pct, 4) : 0) + '%';   // a sliver even for a few calls
@@ -1256,6 +1294,11 @@ function showQuota() {
 }
 $('#quota').addEventListener('click', () => {
   const { lim, used } = quotaUsed();
+  if (personal()) {
+    const site = Q && Q.at >= lastReset() ? '；整個網站今天還剩 ' + Q.left + ' 次，剩 ' + MEQ.reserve + ' 次時會先留給管理員' : '';
+    toast('你今天已用 ' + used + ' 次，上限 ' + lim + ' 次' + site + '，' + resetText() + '重置');
+    return;
+  }
   const seen = Q && Q.at >= lastReset() ? '（' + new Date(Q.at).toLocaleTimeString('zh-TW', { hour: 'numeric', minute: '2-digit' }) + ' 的數字）' : '';
   toast('今天已用 ' + used + ' 次，還剩 ' + (lim - used) + ' 次' + seen + '，' + resetText() + '重置');
 });
@@ -1635,7 +1678,7 @@ async function runSearch(p, demo, scroll) {
   const done = () => { if (scroll && S.search === p) toResults(); };
   S.search = p; S.legs = legsOf(p).map(lp => ({ p: lp, rows: null, truncated: false, fetchedAt: 0, error: '' })); S.leg = 0;
   S.params = S.legs[0].p; S.day = null; S.shown = 60; S.demo = !!demo; S.rows = null; S.truncated = false;
-  S.seen = null; S.seenAt = 0;
+  S.seen = null; S.seenAt = 0; S.verified = {};
   save('award-last', p);
   addRecent(p);
   $('#results').hidden = false;
@@ -2071,7 +2114,7 @@ function cardHtml(o, showDate) {
   const who = t && t.flights.length ? t.flights.map(flightHtml).join(' → ')
     : o.airlines.map(c => '<span class="fl">' + logo(c) + esc(carrierName(c)) + '</span>').join('、');
   return '<article class="offer" data-id="' + esc(o.id) + '" data-src="' + esc(o.src) + '" data-date="' + esc(o.date) + '" data-from="' + esc(o.from) + '" data-to="' + esc(o.to) +
-    '" data-miles="' + o.miles + '" data-tax="' + (o.taxes || 0) + '" data-cur="' + esc(o.cur) + '">' +
+    '" data-miles="' + o.miles + '" data-tax="' + (o.taxes || 0) + '" data-cur="' + esc(o.cur) + '" data-upd="' + esc(o.updated || '') + '">' +
     '<button type="button" class="ohead" aria-expanded="false">' +
       '<span class="o1"><span class="pn">' + esc(p.name) + '</span><span class="pz">' + esc(p.zh) + '</span>' + logo(p.code) + '<span class="al" style="--c:var(--' + p.al + ')">' + al.short + '</span><span class="mi">' + fmtMiles(o.miles) + '<small>哩</small></span></span>' +
       '<span class="o2">' + (showDate ? '<span class="od">' + mdw(o.date) + '</span>' : '') + '<span class="rt">' + esc(o.from) + ' → ' + esc(o.to) + '</span>' + tag + since +
@@ -2118,6 +2161,7 @@ $('#list').addEventListener('click', e => {
   if (more) { S.shown += 60; render(); return; }
   const cab = e.target.closest('[data-cab]');
   if (cab) { S.prefs.cabin = cab.dataset.cab; savePrefs(); render(); return; }
+  if (e.target.closest('[data-verify]')) { runVerify(e.target.closest('.offer')); return; }
   const head = e.target.closest('.ohead');
   if (head) toggleTrips(head.closest('.offer'));
 });
@@ -2137,7 +2181,7 @@ async function toggleTrips(art) {
       res = S.demo ? demoTrips(id, src) : await api('/trips/' + encodeURIComponent(id));
       S.trips.set(id, res);
     }
-    box.innerHTML = tripsHtml(res, src) + cashHtml(art.dataset);
+    box.innerHTML = verifyHtml(art.dataset) + tripsHtml(res, src) + cashHtml(art.dataset);
     box.dataset.loaded = '1';
   } catch (err) {
     box.innerHTML = '<div class="terr">' + esc(err.message) + '</div>';
@@ -2162,6 +2206,82 @@ function tripsHtml(res, src) {
     : (p.url ? '<a class="btn pri" href="' + esc(p.url) + '" target="_blank" rel="noopener">到 ' + esc(p.name) + ' 官網訂位</a>' : '')) + '</div>';
   return h;
 }
+/* ---------- 即時核對 (加強模式): ask seats.aero to re-check this row with the airline, then re-read it ---------- */
+// Measured 2026-10-14: queueing costs 1 call, polling costs nothing, a failure is refunded and the row can be
+// tried again after about 15 minutes, rows updated in the last 3 hours are not re-checked. Re-reading costs 1 call.
+const VERIFY_COOL = 15 * 60 * 1000;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function verifyHtml(d) {
+  if (S.demo) return '';
+  const done = S.verified[d.id];
+  const hrs = (Date.now() - Date.parse(d.upd)) / 36e5;
+  const cool = (load('award-vcool', {})[d.id] || 0) > Date.now();
+  let h = '<div class="verify"><span class="vage">' + esc(done || 'seats.aero 的資料是 ' + ago(d.upd) + '的') + '</span>';
+  if (!done) {
+    if (hrs < 3) h += '<small>3 小時內剛更新過，不用核對</small>';
+    else if (cool) h += '<small>剛才核對沒成功，15 分鐘後可以再試</small>';
+    else h += '<button type="button" class="btn" data-verify="1">即時核對</button><small>請 seats.aero 馬上向航空公司重查一次，約用 2 次額度</small>';
+  }
+  return h + '</div>';
+}
+async function runVerify(art) {
+  const d = art.dataset, id = d.id, box = art.querySelector('.verify');
+  const say = (msg, note) => { box.innerHTML = '<span class="vage">' + esc(msg) + '</span>' + (note ? '<small>' + esc(note) + '</small>' : ''); };
+  say('核對中…', 'seats.aero 正在向航空公司重查，最多等 2 分鐘');
+  let res, st = '';
+  const status = () => ((res.items || []).find(x => x.availability_id === id) || {}).status || '';
+  try {
+    res = await api('/refresh', { ids: [id] });
+    st = status();
+    for (const w of [5, 10, 15, 20, 30, 40]) {   // asking again with the same ID is free
+      if (res.complete || (st !== 'queued' && st !== 'processing')) break;
+      await sleep(w * 1000);
+      res = await api('/refresh', { ids: [id], poll: true });
+      st = status();
+    }
+  } catch (err) { say('沒辦法核對：' + err.message); return; }
+  if (st === 'succeeded') {
+    let msg;
+    try { msg = await reread(d); } catch (err) { say('核對好了，但重新讀取失敗：' + err.message); return; }
+    const when = new Date().toLocaleTimeString('zh-TW', { hour: 'numeric', minute: '2-digit' });
+    S.verified[id] = '剛核對（' + when + '）：' + msg;
+    render();
+    const again = [...$$('#list .offer')].find(a => a.dataset.id === id);
+    if (again) toggleTrips(again); else toast(S.verified[id]);   // a card whose seats are gone has left the list
+    return;
+  }
+  if (st === 'failed') { const c = load('award-vcool', {}); c[id] = Date.now() + VERIFY_COOL; save('award-vcool', c); }
+  const M = {
+    failed: ['這次沒核對成功，額度已退回', 'seats.aero 那邊有時候很忙，15 分鐘後可以再試'],
+    fresh: ['3 小時內剛更新過，不用核對'],
+    skipped_outage: ['這個里程計畫暫時查不到', 'seats.aero 正在處理這個計畫的問題'],
+    not_refreshable: ['這個里程計畫不能即時核對'],
+    not_found: ['seats.aero 找不到這筆，重新搜尋看看'],
+    insufficient_quota: ['今天的額度不夠了', resetText() + '重置'],
+    queued: ['seats.aero 還在排隊，等一下再按一次看看'],
+    processing: ['seats.aero 還在查，等一下再按一次看看'],
+  };
+  const [a, b] = M[st] || ['沒有拿到核對結果（' + (st || '未知') + '）'];
+  say(a, b);
+}
+// read this one row again (same route, day and program), put it in place of the old one, and describe it
+async function reread(d) {
+  const L = S.legs[S.leg], lp = L.p, cab = S.prefs.cabin;
+  const q = new URLSearchParams({ origin_airport: d.from, destination_airport: d.to, start_date: d.date, end_date: d.date, sources: d.src, take: '50', include_trips: 'true' });
+  if (lp.mixed) q.set('min_cabin_pct', '50');
+  if (lp.dyn) q.set('include_filtered', 'true');
+  const got = (await api('/search?' + q)).data || [];
+  const fresh = got.find(r => r.ID === d.id) || got.find(r => (r.Source || '') === d.src && r.Date === d.date && r.Route && r.Route.OriginAirport === d.from && r.Route.DestinationAirport === d.to);
+  const i = L.rows.findIndex(r => r.ID === d.id), old = L.rows[i];
+  if (fresh && i >= 0) L.rows[i] = fresh; else if (fresh) L.rows.push(fresh); else if (i >= 0) L.rows.splice(i, 1);
+  S.rows = L.rows;
+  S.trips.delete(d.id);
+  cacheSet(cacheKey(lp), { t: L.fetchedAt, rows: L.rows, truncated: L.truncated });
+  if (!fresh || !fresh[cab + 'Available']) return CABIN_BY[cab].name + '已經沒有位子了';
+  const m = num(fresh[cab + 'MileageCost']), was = old ? num(old[cab + 'MileageCost']) : m, seats = num(fresh[cab + 'RemainingSeats']);
+  return '還有位子' + (seats ? '（剩 ' + seats + ' 位）' : '') + '，' + fmtMiles(m) + ' 哩' + (was && was !== m ? '（原本 ' + fmtMiles(was) + ' 哩）' : '');
+}
+
 // Cash check: Google Flights opened on the same one-way search (its text query, tested 2026-10-14 for economy,
 // business and first; it doesn't read "premium economy", so that cabin opens as economy), plus value per mile.
 const GF_CABIN = { Y: 'economy', W: 'economy', J: 'business class', F: 'first class' };
@@ -2293,7 +2413,7 @@ function showApp() {
   hh();
   addEventListener('resize', hh);
   showQuota();
-  api('/quota').then(q => { if (q.remaining != null) setQuota(q.remaining, q.limit, q.at * 1000); }).catch(() => {});
+  loadQuota();
   route();
   if (location.hash === '#demo' && S.search) runSearch(S.search, true);
   loadFx().then(fresh => { if (fresh && S.rows) render(); });
