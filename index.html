@@ -326,6 +326,7 @@ details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13p
 .tag{border:2px solid var(--ink);border-radius:999px;padding:0 8px;background:var(--paper);font-size:12px;line-height:20px}
 .tag.d{background:var(--green)}
 .tx{margin-left:auto;white-space:nowrap;font-size:13px;font-variant-numeric:tabular-nums}
+.tx .fx{font-size:11px;color:var(--ink2);margin-left:4px}
 .o3{font-size:12px;color:var(--ink2);margin-top:4px}
 .o3 .ca{flex:1;min-width:0}
 .o3 .fl{white-space:nowrap}
@@ -525,6 +526,7 @@ const PROGRAMS = {
   lufthansa: ['Miles & More', '漢莎航空', 'star', 'https://www.miles-and-more.com'],
   connectmiles: ['ConnectMiles', '巴拿馬航空', 'star', 'https://www.copaair.com'],
   ethiopian: ['ShebaMiles', '衣索比亞航空', 'star', 'https://www.ethiopianairlines.com'],
+  lifemiles: ['LifeMiles', '哥倫比亞航空', 'star', 'https://www.lifemiles.com'],   // seen in real results 2026-10-14
   american: ['American', '美國航空', 'oneworld', 'https://www.aa.com'],
   alaska: ['Alaska', '阿拉斯加航空', 'oneworld', 'https://www.alaskaair.com'],
   qantas: ['Qantas', '澳洲航空', 'oneworld', 'https://www.qantas.com'],
@@ -550,7 +552,7 @@ const PROGRAMS = {
 const NO_TAX = new Set(['qatar', 'turkish', 'singapore']);   // seats.aero has no tax data for these
 // airline code of each program, for its logo
 const PROGRAM_CODE = {
-  united: 'UA', aeroplan: 'AC', turkish: 'TK', singapore: 'SQ', lufthansa: 'LH', connectmiles: 'CM', ethiopian: 'ET',
+  united: 'UA', aeroplan: 'AC', turkish: 'TK', singapore: 'SQ', lufthansa: 'LH', connectmiles: 'CM', ethiopian: 'ET', lifemiles: 'AV',
   american: 'AA', alaska: 'AS', qantas: 'QF', qatar: 'QR', finnair: 'AY', british: 'BA', iberia: 'IB',
   delta: 'DL', flyingblue: 'AF', virginatlantic: 'VS', aeromexico: 'AM', eurobonus: 'SK', saudia: 'SV',
   emirates: 'EK', etihad: 'EY', velocity: 'VA', jetblue: 'B6', azul: 'AD', smiles: 'G3', frontier: 'F9', spirit: 'NK',
@@ -614,7 +616,7 @@ function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch 
 const S = {
   // pax..maxMiles: the 航班條件 in 更多篩選 (maxStops 9 = any number of stops; 0 hours = no limit)
   prefs: Object.assign({ cabin: 'J', off: [], direct: false, carriers: '', sort: 'date',
-    pax: 1, wd: [], dep: [], arr: [], maxStops: 9, maxHours: 0, maxLay: 0, noVia: [], maxMiles: 0 }, load('award-prefs', {})),
+    pax: 1, wd: [], dep: [], arr: [], maxStops: 9, maxHours: 0, noVia: [], maxMiles: 0 }, load('award-prefs', {})),
   params: null, rows: null, truncated: false, fetchedAt: 0, demo: false, day: null, shown: 60,
   trips: new Map(),
 };
@@ -643,6 +645,8 @@ function fmtMan(m) {
 function money(v, cur) {
   if (cur) {
     const d = v >= 100 ? 0 : 2;
+    // zh-TW writes its own currency as a bare "$", which reads as US dollars here
+    if (cur === 'TWD') return 'NT$' + v.toLocaleString('zh-TW', { minimumFractionDigits: d, maximumFractionDigits: d });
     try { return new Intl.NumberFormat('zh-TW', { style: 'currency', currency: cur, minimumFractionDigits: d, maximumFractionDigits: d }).format(v); } catch {}
     return cur + ' ' + v.toFixed(d);
   }
@@ -665,6 +669,23 @@ function dur(min) {
 // seats.aero trip times are each airport's local clock with a trailing Z, so read them as text.
 const hm = ts => (ts || '').slice(11, 16);
 const dayDiff = (a, b) => (a && b) ? daysBetween(a.slice(0, 10), b.slice(0, 10)) : 0;
+// Taxes come in the program's own currency (real results 2026-10-14: USD, TWD, CAD), so sorting and value per
+// mile compare them in USD. Rates: Frankfurter v2 (free, no key, has TWD; its v1 silently drops TWD), once a day.
+let FX = load('award-fx', null);
+async function loadFx() {
+  const day = isoDate(new Date());
+  if (FX && FX.day === day) return false;
+  try {
+    const list = await (await fetch('https://api.frankfurter.dev/v2/rates?base=USD')).json();
+    const rates = { USD: 1 };
+    for (const x of list) if (x.quote && x.rate > 0) rates[x.quote] = x.rate;
+    FX = { day, rates };
+    save('award-fx', FX);
+    return true;
+  } catch { return false; }   // keep the last rates, or none
+}
+// minor units (cents) in cur -> US dollars; null when there is no rate
+const toUSD = (minor, cur) => { const rate = !cur || cur === 'USD' ? 1 : FX && FX.rates[cur]; return rate ? minor / 100 / rate : null; };
 // arrival day against departure day: +1 next day; -1 when flying east over the date line lands the day before
 const dayTag = d => d ? '<sup>' + (d > 0 ? '+' : '') + d + '</sup>' : '';
 const minsBetween = (a, b) => (Date.parse(b) - Date.parse(a)) / 60000;
@@ -1243,13 +1264,14 @@ function filt() {
     direct: p.direct,
     carriers: new Set((p.carriers.toUpperCase().match(/[A-Z0-9]{2}/g) || [])),
     pax: p.pax || 1, wd: new Set(p.wd), maxMiles: p.maxMiles || 0,
-    // conditions on the flight itself, checked against the trips include_trips brings along
-    dep: new Set(p.dep), arr: new Set(p.arr), maxStops: p.maxStops ?? 9, maxHours: p.maxHours || 0, maxLay: p.maxLay || 0, noVia: new Set(p.noVia),
+    // conditions on the flight itself, checked against the trips include_trips brings along. Those trips have
+    // no segments (checked on real data 2026-10-14), so layover length can't be filtered without one call per row.
+    dep: new Set(p.dep), arr: new Set(p.arr), maxStops: p.maxStops ?? 9, maxHours: p.maxHours || 0, noVia: new Set(p.noVia),
   };
 }
 // true when a condition needs flight details, so a row without trips can't be checked and is left out
-const tripRules = f => !!(f.dep.size || f.arr.size || f.maxStops < 9 || f.maxHours || f.maxLay || f.noVia.size);
-const activeConds = () => { const f = filt(); return [f.pax > 1, f.wd.size, f.maxMiles, f.dep.size, f.arr.size, f.maxStops < 9, f.maxHours, f.maxLay, f.noVia.size].filter(Boolean).length; };
+const tripRules = f => !!(f.dep.size || f.arr.size || f.maxStops < 9 || f.maxHours || f.noVia.size);
+const activeConds = () => { const f = filt(); return [f.pax > 1, f.wd.size, f.maxMiles, f.dep.size, f.arr.size, f.maxStops < 9, f.maxHours, f.noVia.size].filter(Boolean).length; };
 const BANDS = [['凌晨', 0, 6], ['上午', 6, 12], ['下午', 12, 18], ['晚上', 18, 24]];
 const bandOf = ts => { const h = parseInt(String(ts || '').slice(11, 13), 10); return Number.isFinite(h) ? BANDS.findIndex(([, a, b]) => h >= a && h < b) : -1; };
 const viaOf = t => (Array.isArray(t.Connections) ? t.Connections : typeof t.Connections === 'string' ? t.Connections.split(/[\s,]+/) : segsOf(t).slice(1).map(s => s.OriginAirport)).filter(Boolean);
@@ -1261,10 +1283,6 @@ function tripOK(t, f) {
   if (f.arr.size && !f.arr.has(bandOf(t.ArrivesAt || (segs[segs.length - 1] || {}).ArrivesAt))) return false;
   if (stopsOf(t) > f.maxStops) return false;
   if (f.maxHours && !(num(t.TotalDuration) > 0 && num(t.TotalDuration) <= f.maxHours * 60)) return false;
-  if (f.maxLay) {
-    if (stopsOf(t) && segs.length < 2) return false;
-    for (let i = 1; i < segs.length; i++) if (minsBetween(segs[i - 1].ArrivesAt, segs[i].DepartsAt) > f.maxLay * 60) return false;
-  }
   if (f.noVia.size && viaOf(t).some(a => f.noVia.has(a))) return false;
   return true;
 }
@@ -1507,7 +1525,6 @@ function renderTripFilters() {
     group('抵達時段', BANDS.map(([x, a, b], i) => chip('arr', i, x + '<small>' + a + '-' + b + ' 點</small>', p.arr.includes(i))).join('')) +
     group('轉機次數', [[9, '不限'], [1, '最多 1 次']].map(([v, x]) => chip('maxStops', v, x, (p.maxStops ?? 9) === v)).join('')) +
     group('總飛行時間', [[0, '不限'], [12, '12 小時內'], [16, '16 小時內'], [20, '20 小時內'], [24, '24 小時內']].map(([v, x]) => chip('maxHours', v, x, (p.maxHours || 0) === v)).join('')) +
-    group('轉機等待', [[0, '不限'], [3, '3 小時內'], [6, '6 小時內'], [12, '12 小時內']].map(([v, x]) => chip('maxLay', v, x, (p.maxLay || 0) === v)).join('')) +
     group('不要經過（點了就排除）', via.length ? via.map(a => chip('noVia', a, esc(a) + (seen.get(a) ? '<small>' + seen.get(a) + '</small>' : ''), p.noVia.includes(a))).join('') : '<span class="note0">這次搜尋沒有轉機機場。</span>');
   $('#tf-clear').hidden = !activeConds();
 }
@@ -1531,7 +1548,7 @@ $('#maxmi').addEventListener('input', e => {
   maxMiTimer = setTimeout(() => { renderAlliances(); render(); }, 300);
 });
 $('#tf-clear').addEventListener('click', () => {
-  Object.assign(S.prefs, { pax: 1, wd: [], dep: [], arr: [], maxStops: 9, maxHours: 0, maxLay: 0, noVia: [], maxMiles: 0 });
+  Object.assign(S.prefs, { pax: 1, wd: [], dep: [], arr: [], maxStops: 9, maxHours: 0, noVia: [], maxMiles: 0 });
   $('#maxmi').value = '';
   savePrefs();
   renderAlliances();
@@ -1594,7 +1611,8 @@ function cardHtml(o, showDate) {
   const tag = o.direct
     ? (o.dmiles && o.dmiles !== o.miles ? '<span class="tag">直飛另價 ' + n(fmtMiles(o.dmiles)) + '</span>' : '<span class="tag d">直飛</span>')
     : '<span class="tag">轉機</span>';
-  const tax = o.taxes ? '+ ' + money(o.taxes / 100, o.cur) : NO_TAX.has(o.src) ? '稅金未提供' : '';
+  const taxUsd = o.taxes && o.cur && o.cur !== 'USD' ? toUSD(o.taxes, o.cur) : null;
+  const tax = o.taxes ? '+ ' + money(o.taxes / 100, o.cur) + (taxUsd != null ? '<small class="fx">≈US$' + Math.round(taxUsd) + '</small>' : '') : NO_TAX.has(o.src) ? '稅金未提供' : '';
   const t = o.trip, plus = t ? dayDiff(t.dep, t.arr) : 0;
   // times, total time and connections of the flight the card describes (only when the search brought flights along)
   const when = t && t.dep && t.arr ? '<span class="o4"><b>' + hm(t.dep) + '</b>→<b>' + hm(t.arr) + '</b>' + dayTag(plus) +
@@ -1621,7 +1639,10 @@ function renderList(offers, counts) {
   else if (sort === 'seats') list.sort((a, b) => (b.seats || 0) - (a.seats || 0) || a.miles - b.miles);
   // unknown duration or taxes go last
   else if (sort === 'dur') list.sort((a, b) => ((a.trip && a.trip.mins) || 1e9) - ((b.trip && b.trip.mins) || 1e9) || a.miles - b.miles);
-  else if (sort === 'tax') list.sort((a, b) => (a.taxes || 1e12) - (b.taxes || 1e12) || a.miles - b.miles);
+  else if (sort === 'tax') {
+    const usd = o => (o.taxes ? toUSD(o.taxes, o.cur) : null) ?? 1e12;   // 0 means the program gave no taxes
+    list.sort((a, b) => usd(a) - usd(b) || a.miles - b.miles);
+  }
   else list.sort((a, b) => a.date.localeCompare(b.date) || a.miles - b.miles);
   if (!list.length) {
     $('#list').innerHTML = emptyHtml(counts);
@@ -1708,9 +1729,9 @@ $('#list').addEventListener('input', e => {
   const art = e.target.closest('.offer'), out = art.querySelector('.cppv'), d = art.dataset;
   const cash = parseFloat(e.target.value.replace(/[^\d.]/g, ''));
   if (!(cash > 0)) { out.textContent = ''; return; }
-  const usd = !d.cur || d.cur === 'USD', tax = usd ? +d.tax / 100 : 0;
-  const cents = (cash - tax) / +d.miles * 100;
-  out.textContent = '每哩約 ' + cents.toFixed(2) + ' 美分' + (usd ? (tax ? '（已扣稅金 US$' + tax.toFixed(0) + '）' : '') : '（稅金不是美元，沒有扣）');
+  const tax = +d.tax ? toUSD(+d.tax, d.cur) : 0;
+  const cents = (cash - (tax || 0)) / +d.miles * 100;
+  out.textContent = '每哩約 ' + cents.toFixed(2) + ' 美分' + (tax ? '（已扣稅金約 US$' + tax.toFixed(0) + '）' : tax === null ? '（查不到 ' + d.cur + ' 匯率，稅金沒有扣）' : '');
 });
 function tripHtml(t) {
   const segs = (t.AvailabilitySegments || []).slice().sort((a, b) => (a.Order || 0) - (b.Order || 0));
@@ -1827,6 +1848,7 @@ function showApp() {
   if (q && q.day === new Date().toISOString().slice(0, 10)) showQuota(q.n);
   route();
   if (location.hash === '#demo' && S.params) runSearch(S.params, true);
+  loadFx().then(fresh => { if (fresh && S.rows) render(); });
 }
 function init() {
   renderMonths();
