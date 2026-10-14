@@ -220,6 +220,12 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
 
 /* recent searches */
 .recent{display:flex;gap:6px;overflow-x:auto;overscroll-behavior-x:contain;margin:-8px -14px 8px;padding:0 14px 4px;scrollbar-width:none}
+/* These rows swipe sideways on a phone. With a mouse there is no swipe and the hidden scrollbar leaves no way
+   across (Gino, 2026-10-14: only half of 6 月 showed), so on a computer the chips wrap onto more lines instead. */
+@media (hover:hover) and (pointer:fine){
+  .months,.recent{flex-wrap:wrap;overflow-x:visible}
+  .recent{margin-left:0;margin-right:0;padding-left:0;padding-right:0}
+}
 .recent::-webkit-scrollbar{display:none}
 .recent button{flex:0 0 auto;border:2px dashed var(--ink);border-radius:999px;background:var(--paper);font-size:13px;padding:2px 12px;white-space:nowrap}
 .recent button:active{background:var(--yellow-t)}
