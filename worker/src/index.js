@@ -84,7 +84,7 @@ function corsHeaders(req, env) {
   const origin = req.headers.get('Origin') || '';
   const allowed = (env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim());
   const h = {
-    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Authorization, Content-Type',
     'Access-Control-Expose-Headers': 'X-RateLimit-Remaining, X-RateLimit-Limit',
     'Access-Control-Max-Age': '86400',
@@ -365,6 +365,7 @@ function removeUser(env, uid) {
   return env.DB.batch([
     env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(uid),
     env.DB.prepare('DELETE FROM reset_links WHERE user_id = ?').bind(uid),
+    env.DB.prepare('DELETE FROM saved_searches WHERE user_id = ?').bind(uid),
     env.DB.prepare('UPDATE invites SET used_by = NULL WHERE used_by = ?').bind(uid),
     env.DB.prepare('DELETE FROM users WHERE id = ?').bind(uid),
   ]);
@@ -463,6 +464,74 @@ function search(url, env, h, ctx) {
   return relay('/search?' + qs, env, h, ctx);
 }
 
+/* ---------- saved searches (收藏) ---------- */
+// A saved search is the search form as JSON, plus "seen": the lowest miles per leg, cabin, date and program from
+// the last look, so the page can mark awards that are new or cheaper since then. Private to each account.
+const SAVED_MAX = 20;
+const SEEN_MAX_BYTES = 400000;   // a 3-month round trip is about 100 KB
+const AIRPORTS = /^[A-Z]{3}(,[A-Z]{3}){0,19}$/, DAY = /^\d{4}-\d{2}-\d{2}$/;
+function cleanSearch(p) {
+  if (!p || typeof p !== 'object' || !AIRPORTS.test(p.o) || !AIRPORTS.test(p.d) || !DAY.test(p.s) || !DAY.test(p.e)) return null;
+  const out = { o: p.o, d: p.d, s: p.s, e: p.e };
+  if (p.rt) {
+    if (!DAY.test(p.rt.s) || !DAY.test(p.rt.e)) return null;
+    out.rt = { s: p.rt.s, e: p.rt.e };
+  }
+  if (p.mixed) out.mixed = 1;
+  if (p.dyn) out.dyn = 1;
+  return out;
+}
+// seen arrives as an object of key -> miles; anything outside that shape is refused, and it is stored as a string
+function cleanSeen(v) {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+  const out = {};
+  for (const [k, n] of Object.entries(v)) {
+    if (!/^[01][YWJF]\d{4}-\d{2}-\d{2}[a-z0-9]{2,20}$/.test(k) || !Number.isFinite(n) || n < 0 || n > 1e7) return null;
+    out[k] = Math.round(n);
+  }
+  const s = JSON.stringify(out);
+  return s.length <= SEEN_MAX_BYTES ? s : null;
+}
+async function readBig(req, max) {
+  const text = await req.text();
+  if (text.length > max) return {};
+  try { const v = JSON.parse(text || '{}'); return v && typeof v === 'object' ? v : {}; } catch { return {}; }
+}
+async function saved(req, env, s, p, m, h) {
+  let mm;
+  if (p === '/me/saved' && m === 'GET') {
+    const r = await env.DB.prepare('SELECT id, params, label, created_at, seen_at FROM saved_searches WHERE user_id = ? ORDER BY created_at DESC').bind(s.id).all();
+    return json({ saved: r.results.map(x => ({ ...x, params: JSON.parse(x.params) })), max: SAVED_MAX }, 200, h);
+  }
+  if (p === '/me/saved' && m === 'POST') {
+    const b = await readBig(req, SEEN_MAX_BYTES + 5000);
+    const params = cleanSearch(b.params);
+    if (!params) return json({ error: 'param' }, 400, h);
+    const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM saved_searches WHERE user_id = ?').bind(s.id).first();
+    if (n.n >= SAVED_MAX) return json({ error: 'too_many' }, 400, h);
+    const seen = b.seen ? cleanSeen(b.seen) : null, t = now();
+    const ins = await env.DB.prepare('INSERT INTO saved_searches (user_id, params, label, created_at, seen_at, seen) VALUES (?, ?, ?, ?, ?, ?)')
+      .bind(s.id, JSON.stringify(params), String(b.label || '').trim().slice(0, 40) || null, t, seen ? t : null, seen).run();
+    return json({ id: ins.meta.last_row_id }, 201, h);
+  }
+  if ((mm = /^\/me\/saved\/(\d{1,12})$/.exec(p)) && m === 'DELETE') {
+    await env.DB.prepare('DELETE FROM saved_searches WHERE id = ? AND user_id = ?').bind(+mm[1], s.id).run();
+    return json({ ok: true }, 200, h);
+  }
+  if ((mm = /^\/me\/saved\/(\d{1,12})\/seen$/.exec(p)) && m === 'GET') {
+    const r = await env.DB.prepare('SELECT seen, seen_at FROM saved_searches WHERE id = ? AND user_id = ?').bind(+mm[1], s.id).first();
+    if (!r) return json({ error: 'not_found' }, 404, h);
+    return json({ seen: r.seen ? JSON.parse(r.seen) : null, seen_at: r.seen_at }, 200, h);
+  }
+  if ((mm = /^\/me\/saved\/(\d{1,12})\/seen$/.exec(p)) && m === 'PUT') {
+    const seen = cleanSeen((await readBig(req, SEEN_MAX_BYTES + 1000)).seen);
+    if (!seen) return json({ error: 'param' }, 400, h);
+    const r = await env.DB.prepare('UPDATE saved_searches SET seen = ?, seen_at = ? WHERE id = ? AND user_id = ?').bind(seen, now(), +mm[1], s.id).run();
+    return r.meta.changes ? json({ ok: true }, 200, h) : json({ error: 'not_found' }, 404, h);
+  }
+  return null;
+}
+
 // The last remaining count seats.aero reported, and when. The page works out whether the UTC-midnight reset
 // has passed since then. Costs no seats.aero call.
 async function quota(env, h) {
@@ -507,6 +576,7 @@ export default {
       if (p === '/search' && m === 'GET') return search(url, env, h, ctx);
       if ((mm = /^\/trips\/([A-Za-z0-9]{10,40})$/.exec(p)) && m === 'GET') return relay('/trips/' + mm[1], env, h, ctx);
       if (p === '/quota' && m === 'GET') return await quota(env, h);
+      if (p.startsWith('/me/saved')) { const r = await saved(req, env, s, p, m, h); if (r) return r; }
       if (p.startsWith('/admin/')) {
         if (s.role !== 'owner') return json({ error: 'forbidden' }, 403, h);
         return await admin(req, env, s, url, h);

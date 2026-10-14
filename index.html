@@ -346,6 +346,18 @@ details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13p
 .o2 .rt{letter-spacing:.5px}
 .tag{border:2px solid var(--ink);border-radius:999px;padding:0 8px;background:var(--paper);font-size:12px;line-height:20px}
 .tag.d{background:var(--green)}
+.tag.nw{background:var(--yellow)}
+.tag.dn{background:var(--coral-t)}
+/* 收藏 on the home page, and the save button under the route */
+.saved{margin:-8px 0 14px}
+.saved h3{font-size:15px;font-weight:normal;margin:0 0 6px}
+.sv{display:flex;gap:6px;margin:0 0 6px}
+.svgo{flex:1;min-width:0;text-align:left;border:var(--line);border-radius:14px;background:var(--paper);padding:5px 12px;font-size:14px;line-height:1.35}
+.svgo small{display:block;font-size:11px;color:var(--ink2)}
+.svx{flex:0 0 38px;border:var(--line);border-radius:14px;background:var(--paper);font-size:15px}
+.saverow{margin:4px 0 6px}
+.saverow .btn{font-size:13px;padding:1px 12px}
+.saverow .btn[aria-pressed=true]{background:var(--yellow)}
 .tx{margin-left:auto;white-space:nowrap;font-size:13px;font-variant-numeric:tabular-nums}
 .tx .fx{font-size:11px;color:var(--ink2);margin-left:4px}
 .o3{font-size:12px;color:var(--ink2);margin-top:4px}
@@ -466,12 +478,14 @@ details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13p
       <button class="go" id="go" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#3E3A39" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6" fill="#FFFCF6"/><path d="M15 15l5 5"/></g></svg><span id="go-t">搜尋</span></button>
     </form>
 
+    <div class="saved" id="saved" hidden></div>
     <div class="recent" id="recent"></div>
 
     <section id="results" hidden>
       <div id="banner"></div>
       <div class="legs" id="legs" hidden></div>
       <div class="route-h" id="route-h"></div>
+      <div class="saverow"><button type="button" class="btn ghost" id="save-btn" hidden>☆ 收藏這個搜尋</button></div>
       <div class="sum" id="sum" aria-live="polite"></div>
       <div class="fresh" id="fresh"></div>
 
@@ -650,6 +664,7 @@ const S = {
   prefs: Object.assign({ cabin: 'J', off: [], direct: false, carriers: '', sort: 'date',
     pax: 1, wd: [], dep: [], arr: [], maxStops: 9, maxHours: 0, noVia: [], maxMiles: 0 }, load('award-prefs', {})),
   search: null, legs: null, leg: 0,   // the whole search (one or two legs) and which leg is on screen
+  saved: [], seen: null, seenAt: 0,   // 收藏, and what the matching one held at the last look
   params: null, rows: null, truncated: false, fetchedAt: 0, demo: false, day: null, shown: 60,
   trips: new Map(),
 };
@@ -751,6 +766,9 @@ const ERR = {
   forbidden: '只有管理員可以做這件事。',
   auth: '請重新登入。',
   server: '伺服器出了問題，請稍後再試。',
+  too_many: '收藏最多 20 個，先刪掉一些再收藏。',
+  not_found: '找不到這筆資料，可能已經刪掉了。',
+  param: '資料的格式不對。',
 };
 const TOKEN_KEY = 'award-session';
 let ME = null;        // { email, role } of the signed-in account
@@ -1455,6 +1473,7 @@ async function runSearch(p, demo, scroll) {
   const done = () => { if (scroll && S.search === p) toResults(); };
   S.search = p; S.legs = legsOf(p).map(lp => ({ p: lp, rows: null, truncated: false, fetchedAt: 0, error: '' })); S.leg = 0;
   S.params = S.legs[0].p; S.day = null; S.shown = 60; S.demo = !!demo; S.rows = null; S.truncated = false;
+  S.seen = null; S.seenAt = 0;
   save('award-last', p);
   addRecent(p);
   $('#results').hidden = false;
@@ -1487,12 +1506,105 @@ async function runSearch(p, demo, scroll) {
       if (S.search !== p) return;
       if (i === 0) { useLeg(0); done(); } else renderLegs();
     }
+    compareSaved(p);
   } catch (err) {
     if (S.search === p) { showError(err); done(); }
   } finally {
     setBusy(false);
   }
 }
+/* ---------- 收藏 (saved searches, kept in D1 so every device has them) ---------- */
+// "seen" = lowest miles per leg + cabin + date + program at the last look; cards compare against it.
+const seenKey = (leg, cab, date, src) => leg + cab + date + src;
+function snapshot(legs) {
+  const out = {};
+  legs.forEach((L, i) => {
+    for (const r of L.rows || []) {
+      const src = r.Source || (r.Route && r.Route.Source) || '';
+      if (!/^[a-z0-9]{2,20}$/.test(src)) continue;
+      for (const c of CABINS) {
+        const m = r[c.k + 'Available'] ? num(r[c.k + 'MileageCost']) : 0;
+        const k = seenKey(i, c.k, r.Date, src);
+        if (m && (!(k in out) || m < out[k])) out[k] = m;
+      }
+    }
+  });
+  return out;
+}
+const savedOf = p => p && S.saved.find(x => searchKey(x.params) === searchKey(p));
+const whenShort = t => { const d = new Date(t * 1000); return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+async function loadSaved() {
+  try { S.saved = (await call('GET', '/me/saved')).saved || []; } catch { S.saved = []; }
+  renderSaved();
+  renderSaveBtn();
+}
+function renderSaved() {
+  const box = $('#saved');
+  if (!S.saved.length) { box.hidden = true; box.innerHTML = ''; return; }
+  box.innerHTML = '<h3>我的收藏</h3>' + S.saved.map(x => {
+    const p = x.params;
+    return '<div class="sv"><button type="button" class="svgo" data-sv="' + x.id + '"><span>' + n(esc(p.o) + (p.rt ? ' ⇄ ' : ' → ') + esc(p.d)) + '　' + md(p.s) + ' 到 ' + md(p.e) +
+      (p.rt ? '，回 ' + md(p.rt.s) + ' 到 ' + md(p.rt.e) : '') + '</span>' + (x.seen_at ? '<small>上次看 ' + whenShort(x.seen_at) + '</small>' : '') + '</button>' +
+      '<button type="button" class="svx" data-svdel="' + x.id + '" aria-label="刪除這個收藏">✕</button></div>';
+  }).join('');
+  box.hidden = false;
+}
+function renderSaveBtn() {
+  const b = $('#save-btn');
+  if (!S.search || !S.legs || !S.legs[0].rows) { b.hidden = true; return; }
+  const x = savedOf(S.search);
+  b.textContent = x ? '★ 已收藏' : '☆ 收藏這個搜尋';
+  b.setAttribute('aria-pressed', String(!!x));
+  b.hidden = false;
+}
+$('#save-btn').addEventListener('click', async () => {
+  const x = savedOf(S.search);
+  try {
+    if (x) {
+      if (!confirm('取消收藏這個搜尋？')) return;
+      await call('DELETE', '/me/saved/' + x.id);
+      toast('已取消收藏');
+    } else {
+      if (S.demo) { toast('示範資料不能收藏，請用真的搜尋'); return; }
+      await call('POST', '/me/saved', { params: S.search, seen: snapshot(S.legs) });
+      toast('已收藏。下次打開會標出新出現和降價的位子');
+    }
+  } catch (err) { toast(err.message); }
+  loadSaved();
+});
+$('#saved').addEventListener('click', async e => {
+  const del = e.target.closest('[data-svdel]');
+  if (del) {
+    if (!confirm('刪除這個收藏？')) return;
+    try { await call('DELETE', '/me/saved/' + del.dataset.svdel); } catch (err) { toast(err.message); }
+    loadSaved();
+    return;
+  }
+  const go = e.target.closest('[data-sv]');
+  const x = go && S.saved.find(y => String(y.id) === go.dataset.sv);
+  if (!x) return;
+  S.prefs.mixed = !!x.params.mixed; S.prefs.dyn = !!x.params.dyn;
+  savePrefs();
+  $('#opt-mixed').checked = S.prefs.mixed; $('#opt-dyn').checked = S.prefs.dyn;
+  fillForm(x.params);
+  const p = readForm();
+  if (p) runSearch(p, false, true);
+});
+// After a 收藏 is searched again: read what it held, show the differences, then store today's results.
+async function compareSaved(p) {
+  const sv = savedOf(p);
+  if (!sv || S.demo || S.legs.some(L => !L.rows || L.error)) return;
+  try {
+    const r = await call('GET', '/me/saved/' + sv.id + '/seen');
+    if (S.search !== p) return;
+    S.seen = r.seen || null; S.seenAt = r.seen_at || 0;
+    render();
+    await call('PUT', '/me/saved/' + sv.id + '/seen', { seen: snapshot(S.legs) });
+    sv.seen_at = Math.floor(Date.now() / 1000);
+    renderSaved();
+  } catch { /* the comparison is extra; the results are already on screen */ }
+}
+
 // Round trip: a tab per direction with its lowest miles (this cabin, these filters), and the two added up.
 function renderLegs() {
   const box = $('#legs');
@@ -1604,7 +1716,7 @@ function offersOf(rows, cab, f) {
     if (bt.drop) { if (bt.noData) out.noData++; continue; }
     out.push({
       id: r.ID, src, date: r.Date, from: r.Route ? r.Route.OriginAirport : '', to: r.Route ? r.Route.DestinationAirport : '',
-      miles, dmiles, direct, taxes: num(pickD('TotalTaxes')), cur: r.TaxesCurrency || '', seats,
+      miles, dmiles, direct, taxes: num(pickD('TotalTaxes')), cur: r.TaxesCurrency || '', seats, base: num(r[cab + 'MileageCost']),
       airlines, updated: r.UpdatedAt, trip: bt.trip, more: bt.more,
     });
   }
@@ -1647,6 +1759,7 @@ function render() {
   if (S.demo) setBanner('<span><b>示範資料</b>數字都是假的</span><div class="acts"><button type="button" class="btn" data-act="exit-demo">結束示範</button></div>', 'demo');
   renderTripFilters();
   renderLegs();
+  renderSaveBtn();
   renderSummary(offers);
   renderCalendar(offers);
   renderSortbar();
@@ -1668,6 +1781,11 @@ function renderSummary(offers) {
   }
   if (S.truncated) fresh += (fresh ? '。' : '') + '結果太多，只拿到前 5,000 筆，請縮短日期。';
   if (offers.noData) fresh += (fresh ? '。' : '') + '另有 ' + offers.noData + ' 筆沒有航班細節，沒辦法檢查航班條件，先不列出';
+  if (S.seen) {
+    const was = o => S.seen[seenKey(S.leg, S.prefs.cabin, o.date, o.src)];
+    const nw = offers.filter(o => was(o) == null).length, dn = offers.filter(o => was(o) != null && o.base < was(o)).length;
+    fresh = '比上次（' + whenShort(S.seenAt) + '）新出現 ' + nw + ' 筆、降價 ' + dn + ' 筆' + (fresh ? '。' + fresh : '');
+  }
   $('#fresh').textContent = fresh;
 }
 
@@ -1776,6 +1894,9 @@ function cardHtml(o, showDate) {
   const tag = o.direct
     ? (o.dmiles && o.dmiles !== o.miles ? '<span class="tag">直飛另價 ' + n(fmtMiles(o.dmiles)) + '</span>' : '<span class="tag d">直飛</span>')
     : '<span class="tag">轉機</span>';
+  // against the 收藏's last look: 新 = not there last time, 降 = cheaper than last time
+  const was = S.seen ? S.seen[seenKey(S.leg, S.prefs.cabin, o.date, o.src)] : undefined;
+  const since = !S.seen ? '' : was == null ? '<span class="tag nw">新</span>' : o.base < was ? '<span class="tag dn">降 ' + fmtMiles(was - o.base) + '</span>' : '';
   const taxUsd = o.taxes && o.cur && o.cur !== 'USD' ? toUSD(o.taxes, o.cur) : null;
   const tax = o.taxes ? '+ ' + money(o.taxes / 100, o.cur) + (taxUsd != null ? '<small class="fx">≈US$' + Math.round(taxUsd) + '</small>' : '') : NO_TAX.has(o.src) ? '稅金未提供' : '';
   const t = o.trip, plus = t ? dayDiff(t.dep, t.arr) : 0;
@@ -1791,7 +1912,7 @@ function cardHtml(o, showDate) {
     '" data-miles="' + o.miles + '" data-tax="' + (o.taxes || 0) + '" data-cur="' + esc(o.cur) + '">' +
     '<button type="button" class="ohead" aria-expanded="false">' +
       '<span class="o1"><span class="pn">' + esc(p.name) + '</span><span class="pz">' + esc(p.zh) + '</span>' + logo(p.code) + '<span class="al" style="--c:var(--' + p.al + ')">' + al.short + '</span><span class="mi">' + fmtMiles(o.miles) + '<small>哩</small></span></span>' +
-      '<span class="o2">' + (showDate ? '<span class="od">' + mdw(o.date) + '</span>' : '') + '<span class="rt">' + esc(o.from) + ' → ' + esc(o.to) + '</span>' + tag +
+      '<span class="o2">' + (showDate ? '<span class="od">' + mdw(o.date) + '</span>' : '') + '<span class="rt">' + esc(o.from) + ' → ' + esc(o.to) + '</span>' + tag + since +
         (o.seats ? '<span>剩 ' + o.seats + ' 位</span>' : '') + '<span class="tx">' + tax + '</span></span>' + when +
       '<span class="o3"><span class="ca">' + (who ? '實際搭乘：' + who : '') + '</span><span class="age">' + ago(o.updated) + '</span>' +
         '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></span>' +
@@ -2014,6 +2135,7 @@ function showApp() {
   route();
   if (location.hash === '#demo' && S.search) runSearch(S.search, true);
   loadFx().then(fresh => { if (fresh && S.rows) render(); });
+  loadSaved();
 }
 function init() {
   renderMonths();
