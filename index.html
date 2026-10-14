@@ -135,6 +135,23 @@ svg{display:block}
 .msg.bad{color:#A33A2A}
 .invnew{display:flex!important;align-items:flex-end;gap:8px}
 .invnew .field{flex:1}
+/* boarding-pass invite card: main part and a torn-off stub with the mascot, punched notches on the tear line */
+.pass{display:flex;border:var(--line);border-radius:18px;background:var(--paper);margin:10px 0 8px;overflow:hidden;position:relative}
+.pass-main{flex:1;min-width:0;padding:0 0 10px}
+.pass-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;background:var(--yellow);border-bottom:var(--line);padding:5px 12px 4px}
+.pass-h b{font-weight:normal;font-size:18px;letter-spacing:2px}
+.pass-h span{font-size:11px;letter-spacing:2px;color:var(--ink2)}
+.pass-row{display:flex;flex-wrap:wrap;gap:4px 16px;padding:8px 12px 0;font-size:15px}
+.pass-row small,.pass-code small{display:block;font-size:11px;color:var(--ink2);letter-spacing:1px}
+.pass-code{padding:8px 12px 0;font-size:24px;letter-spacing:3px;font-variant-numeric:tabular-nums;word-break:break-all}
+.pass-stub{flex:0 0 84px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-left:3px dashed var(--ink);background:var(--water-t);font-size:12px;text-align:center;line-height:1.3;padding:8px 4px}
+.pass-stub svg{width:40px;height:40px}
+.pass::before,.pass::after{content:'';position:absolute;right:73px;width:18px;height:18px;border:var(--line);border-radius:50%;background:var(--yellow-t)}
+.pass::before{top:-12px}
+.pass::after{bottom:-12px}
+.pass-note{font-size:12px;color:var(--ink2);margin:6px 2px 4px}
+.pass-msg{white-space:pre-wrap;word-break:break-word;font:13px/1.6 var(--font);background:var(--paper);border:2px dashed var(--ink);border-radius:14px;padding:8px 12px;margin:0}
+.pass-acts{display:flex;gap:8px;margin:8px 0 4px}
 .codebox{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;border:3px dashed var(--ink);border-radius:18px;padding:10px 12px;background:var(--paper);margin:10px 0}
 .codebox .code{font-size:26px;letter-spacing:3px;font-variant-numeric:tabular-nums}
 .codebox input{flex:1;min-width:0;font-size:16px;border:2px solid var(--ink);border-radius:10px;padding:3px 8px;background:var(--paper)}
@@ -146,7 +163,8 @@ details.danger[open] summary{margin-bottom:8px}
 /* top bar */
 .top{position:sticky;top:0;z-index:20;background:var(--paper);border-top:7px solid var(--water);border-bottom:var(--line)}
 .top .in{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:8px;padding:calc(6px + env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) 6px max(12px,env(safe-area-inset-left))}
-.brand{flex:1;display:flex;align-items:center;gap:8px;font-size:19px;min-width:0;white-space:nowrap}
+.brand{flex:1;display:flex;align-items:center;gap:8px;font-size:19px;min-width:0;white-space:nowrap;color:inherit;text-decoration:none;-webkit-tap-highlight-color:transparent}
+.brand:active .logo{transform:scale(.92)}
 .brand .logo{width:38px;height:38px;flex:0 0 38px}
 /* today's seats.aero calls: 已用 XXX/1000 over a bar (green, yellow from 70%, coral from 90%) */
 .quota{flex:0 0 auto;display:flex;flex-direction:column;align-items:stretch;gap:3px;min-width:92px;border:2px solid var(--ink);border-radius:12px;padding:2px 8px 5px;background:var(--paper);white-space:nowrap;font-size:12px;line-height:1.2;text-align:left;transition:transform .12s ease-out}
@@ -448,10 +466,10 @@ details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13p
 
 <div id="app" hidden>
   <header class="top"><div class="in">
-    <div class="brand">
+    <a class="brand" href="#/" id="home" aria-label="回首頁">
       <svg class="logo float" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g fill="none" stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"><path d="M20 3v6"/><circle cx="20" cy="3" r="1.5" fill="#3E3A39"/><rect x="6" y="9" width="28" height="24" rx="9" fill="#F2A497"/><circle cx="14.5" cy="19" r="4.2" fill="#F6D27A"/><circle cx="25.5" cy="19" r="4.2" fill="#F6D27A"/><path d="M16.5 27q3.5 3 7 0"/><path d="M11 38l3-5M29 38l-3-5"/></g></svg>
       <span>里程機位搜尋</span>
-    </div>
+    </a>
     <button type="button" id="quota" class="quota" hidden><span class="qt"></span><span class="qbar" aria-hidden="true"><i></i></span></button>
     <button id="acct-btn" class="icon-btn" type="button" aria-label="我的帳號" title="我的帳號"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#3E3A39" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M4.5 21c1-4.2 4.1-6.5 7.5-6.5s6.5 2.3 7.5 6.5z" fill="#A8D3E6"/><circle cx="12" cy="8.5" r="4.2" fill="#F6D27A"/></g></svg></button>
   </div></header>
@@ -850,6 +868,7 @@ document.addEventListener('click', e => {   // 顯示 / 隱藏 on any password f
   b.textContent = show ? '隱藏' : '顯示';
   b.setAttribute('aria-pressed', String(show));
 });
+const LSUB = '用 Email 登入。新帳號要有邀請碼。';
 function showLogin(msg) {
   $('#app').hidden = true;
   $('#login').hidden = false;
@@ -857,6 +876,7 @@ function showLogin(msg) {
   $('#rf').hidden = true;
   $('#atabs').hidden = false;
   $('#lsub').hidden = false;
+  $('#lsub').textContent = LSUB;
   $('#lerr').textContent = msg || '';
   $('#pw').value = '';
   setTimeout(() => ($('#em').value ? $('#pw') : $('#em')).focus(), 50);
@@ -884,6 +904,7 @@ $('#af').addEventListener('submit', async e => {
     ME = r.user;
     $('#pw').value = '';
     $('#inv').value = '';
+    if (JOIN.test(location.hash)) clearHash();
     showApp();
     toast(mode === 'up' ? '帳號建立好了，歡迎！' : '歡迎回來');
   } catch (err) {
@@ -894,6 +915,15 @@ $('#af').addEventListener('submit', async e => {
   }
 });
 
+// An invite link (#join=<code>, from 複製邀請) opens the 註冊 tab with the code filled in.
+const JOIN = /^#join=([A-Za-z0-9]{10})$/;
+function startJoin(raw) {
+  const c = raw.toUpperCase();
+  showLogin('');
+  setMode('up');
+  $('#inv').value = c.slice(0, 5) + '-' + c.slice(5);
+  $('#lsub').textContent = INVITER + ' 邀請你加入！填好 Email 和密碼就能註冊 ✈️';
+}
 // A reset link opens the page at #reset=<token>.
 async function startReset(token) {
   RESET_TOKEN = token;
@@ -951,11 +981,20 @@ function route() {
 }
 addEventListener('hashchange', () => {
   // a reset link opened in a tab that already has the site loaded only changes the hash, so catch it here too
-  const reset = /^#reset=([A-Za-z0-9_-]{40,64})$/.exec(location.hash);
+  const reset = /^#reset=([A-Za-z0-9_-]{40,64})$/.exec(location.hash), join = JOIN.exec(location.hash);
   if (reset) startReset(reset[1]);
+  else if (join && $('#app').hidden) startJoin(join[1]);
+  else if (join) { clearHash(); toast('你已經登入了，這個邀請碼可以留給別人用'); route(); }
   else if (!$('#app').hidden) route();
 });
 $('#acct-btn').addEventListener('click', () => { location.hash = '#/account'; });
+// the mascot and title go back to the search page, and to its top if already there
+$('#home').addEventListener('click', e => {
+  e.preventDefault();
+  if (location.hash && location.hash !== '#/') location.hash = '#/';
+  else route();
+  scrollTo({ top: 0, behavior: 'smooth' });
+});
 
 const COUNTRY = { TW: '台灣', US: '美國', CA: '加拿大', JP: '日本', KR: '韓國', HK: '香港', SG: '新加坡', GB: '英國', DK: '丹麥', NO: '挪威', SE: '瑞典' };
 const fmtDay = sec => { const d = new Date(sec * 1000); return d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate(); };
@@ -1034,6 +1073,31 @@ $('#acct-body').addEventListener('submit', async e => {
   }
 });
 
+/* ---------- invite message: what 複製 / 分享 hand to the person being invited ---------- */
+const INVITER = 'Gino';   // the owner's name in invite messages
+// the sign-up link opens the 註冊 tab with the code already filled in
+const joinUrl = code => location.origin + location.pathname + '#join=' + code.replace('-', '');
+function inviteText(code, exp) {
+  return '✈️ ' + INVITER + ' 邀請你一起用「里程機位搜尋」！\n\n' +
+    '用哩程換機票，最難的是找到有位子的那一天。這個小網站一次查二十幾個哩程計畫，月曆一眼看出哪天最便宜 🗓️\n\n' +
+    '👉 點這裡註冊：' + joinUrl(code) + '\n' +
+    '🎟️ 邀請碼：' + code + '（' + fmtDay(exp) + ' 前有效，只能用一次）\n\n' +
+    '註冊好就能開始找位子，祝你搶到好位！🤖';
+}
+const canShare = () => typeof navigator.share === 'function';
+const inviteBtns = (code, exp, cls) => '<button type="button" class="btn ' + cls + '" data-invite="' + esc(code) + '" data-exp="' + exp + '">複製邀請</button>' +
+  (canShare() ? '<button type="button" class="btn ' + (cls === 'pri' ? '' : cls) + '" data-share="' + esc(code) + '" data-exp="' + exp + '">分享</button>' : '');
+// a boarding-pass invite card with the message under it, shown when a code is made
+function passHtml(code, exp) {
+  return '<div class="pass"><div class="pass-main">' +
+      '<div class="pass-h"><b>邀請函</b><span>BOARDING PASS</span></div>' +
+      '<div class="pass-row"><span><small>邀請人</small>' + esc(INVITER) + '</span><span><small>乘客</small>你的朋友</span><span><small>有效到</small>' + fmtDay(exp) + '</span></div>' +
+      '<div class="pass-code"><small>邀請碼</small>' + esc(code) + '</div>' +
+    '</div><div class="pass-stub">' + MASCOT + '<span>里程機位<br>搜尋</span></div></div>' +
+    '<p class="pass-note">按「複製邀請」會複製下面這段，貼到 LINE 或簡訊就可以了：</p>' +
+    '<pre class="pass-msg">' + esc(inviteText(code, exp)) + '</pre>' +
+    '<div class="acts pass-acts">' + inviteBtns(code, exp, 'pri') + '</div>';
+}
 function codeBox(text, note, isUrl) {
   return '<div class="codebox">' + (isUrl ? '<input readonly value="' + esc(text) + '" aria-label="重設連結">' : '<span class="code">' + esc(text) + '</span>') +
     '<button type="button" class="btn" data-copy="' + esc(text) + '">複製</button><small>' + esc(note) + '</small></div>';
@@ -1051,7 +1115,7 @@ async function loadAdmin() {
     const who = i.used_at ? '<span class="who">使用者：' + esc(i.used_by || '已刪除的帳號') + '</span>' : '';
     const state = i.used_at ? '使用：' + fmtDay(i.used_at) : i.expires_at < t ? '已過期' : '還沒用，' + fmtDay(i.expires_at) + ' 前有效';
     return '<div class="rowi"><div class="main"><b>' + code + '</b>' + who + '<small>' + (i.label ? '<span>備註：' + esc(i.label) + '</span>' : '') + '<span>' + state + '</span><span>建立：' + fmtDay(i.created_at) + '</span></small></div>' +
-      (open ? '<div class="acts">' + (i.code ? '<button type="button" class="btn ghost" data-copy="' + esc(i.code) + '">複製</button>' : '') +
+      (open ? '<div class="acts">' + (i.code ? inviteBtns(i.code, i.expires_at, 'ghost') : '') +
         '<button type="button" class="btn ghost" data-revoke="' + esc(i.id) + '">撤銷</button></div>' : '') + '</div>';
   }).join('') || '<p class="note0">還沒有邀請碼。</p>';
   const users = u.users.map(x => {
@@ -1075,7 +1139,7 @@ $('#admin-body').addEventListener('submit', async e => {
   try {
     const r = await call('POST', '/admin/invites', { label: $('#inv-label').value });
     await loadAdmin();
-    $('#inv-out').innerHTML = codeBox(r.code, '把這個碼給要註冊的人，' + fmtDay(r.expires_at) + ' 前有效。下面的清單裡也找得到它。');
+    $('#inv-out').innerHTML = passHtml(r.code, r.expires_at);
   } catch (err) { toast(err.message); }
 });
 $('#admin-body').addEventListener('click', async e => {
@@ -1083,6 +1147,11 @@ $('#admin-body').addEventListener('click', async e => {
   if (!b) return;
   try {
     if (b.dataset.copy) { await navigator.clipboard.writeText(b.dataset.copy); toast('已複製'); }
+    else if (b.dataset.invite) { await navigator.clipboard.writeText(inviteText(b.dataset.invite, +b.dataset.exp)); toast('邀請訊息已複製，貼給朋友就可以了'); }
+    else if (b.dataset.share) {
+      try { await navigator.share({ title: '里程機位搜尋邀請', text: inviteText(b.dataset.share, +b.dataset.exp) }); }
+      catch (err) { if (err.name !== 'AbortError') throw err; }   // closing the share sheet is not an error
+    }
     else if (b.dataset.revoke) { await call('DELETE', '/admin/invites/' + b.dataset.revoke); toast('邀請碼已撤銷'); loadAdmin(); }
     else if (b.dataset.reset) {
       const r = await call('POST', '/admin/users/' + b.dataset.reset + '/reset-link');
@@ -2180,9 +2249,11 @@ function init() {
   }
   showNames($('#from')); showNames($('#to'));
   localStorage.removeItem('award-token');   // the old single-password token no longer works
-  const reset = /^#reset=([A-Za-z0-9_-]{40,64})$/.exec(location.hash);
+  const reset = /^#reset=([A-Za-z0-9_-]{40,64})$/.exec(location.hash), join = JOIN.exec(location.hash);
   if (reset) startReset(reset[1]);
+  else if (join && !getToken()) startJoin(join[1]);
   else if (getToken()) {
+    if (join) { clearHash(); toast('你已經登入了，這個邀請碼可以留給別人用'); }
     // check the saved session is still valid before showing the app
     call('GET', '/me')
       .then(m => { ME = { email: m.email, role: m.role }; showApp(); })
