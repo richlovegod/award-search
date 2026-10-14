@@ -331,6 +331,11 @@ details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13p
 #tf .chip small{font-size:11px;margin-left:3px;color:var(--ink2)}
 #tf .chip[data-tf=noVia][aria-pressed=true]{background:var(--coral-t);text-decoration:line-through}
 .tfc{margin:6px 0 2px;font-size:13px;padding:1px 12px}
+/* 金額 US$ | NT$ */
+.dseg{display:inline-flex;align-items:center;gap:4px;margin-left:auto;font-size:13px}
+.dseg button{border:2px solid var(--ink);border-radius:999px;background:var(--paper);padding:0 9px;font-size:13px;line-height:1.6}
+.dseg button[aria-pressed=true]{background:var(--water)}
+.kv .dseg{margin-left:0}
 /* which bank points reach the program: one line on the card, the points needed in the details */
 .o5{display:block;font-size:12px;color:var(--ink2);margin-top:3px;white-space:normal}
 .o5 .xi{white-space:nowrap}
@@ -814,7 +819,8 @@ function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch 
 const S = {
   // pax..maxMiles: the 航班條件 in 更多篩選 (maxStops 9 = any number of stops; 0 hours = no limit)
   prefs: Object.assign({ cabin: 'J', off: [], direct: false, carriers: '', sort: 'date',
-    pax: 1, wd: [], dep: [], arr: [], maxStops: 9, maxHours: 0, noVia: [], maxMiles: 0, myBanks: [] }, load('award-prefs', {})),
+    pax: 1, wd: [], dep: [], arr: [], maxStops: 9, maxHours: 0, noVia: [], maxMiles: 0, myBanks: [],
+    disp: 'USD' }, load('award-prefs', {})),   // disp: the currency money is shown in (USD or TWD)
   search: null, legs: null, leg: 0,   // the whole search (one or two legs) and which leg is on screen
   saved: [], seen: null, seenAt: 0,   // 收藏, and what the matching one held at the last look
   verified: {},                       // 即時核對 results by availability ID, for this search
@@ -887,6 +893,34 @@ async function loadFx() {
 }
 // minor units (cents) in cur -> US dollars; null when there is no rate
 const toUSD = (minor, cur) => { const rate = !cur || cur === 'USD' ? 1 : FX && FX.rates[cur]; return rate ? minor / 100 / rate : null; };
+// Money in the currency picked under 金額 (US$ or NT$), converted with the same daily rates; a converted amount
+// keeps the original in small print. Without a rate the original is shown as it is.
+const DISP = () => (S.prefs.disp === 'TWD' ? 'TWD' : 'USD');
+function inDisp(minor, cur) {
+  const c = cur || 'USD', d = DISP();
+  if (c === d) return minor / 100;
+  const usd = toUSD(minor, c), rate = d === 'USD' ? 1 : FX && FX.rates[d];
+  return usd == null || !rate ? null : usd * rate;
+}
+function moneyHtml(minor, cur) {
+  const c = cur || 'USD', v = inDisp(minor, c);
+  if (v == null || c === DISP()) return money(minor / 100, c);
+  return money(v, DISP()) + '<small class="fx">' + money(minor / 100, c) + '</small>';
+}
+const moneyText = (minor, cur) => { const v = inDisp(minor, cur); return v == null ? money(minor / 100, cur || 'USD') : money(v, DISP()); };
+const dispSign = () => (DISP() === 'TWD' ? 'NT$' : 'US$');
+// the small 金額 US$ | NT$ switch (results sort bar and the account page)
+const dispSeg = () => '<span class="dseg" role="group" aria-label="金額幣別"><span>金額</span>' +
+  [['USD', 'US$'], ['TWD', 'NT$']].map(([k, x]) => '<button type="button" data-disp="' + k + '" aria-pressed="' + (DISP() === k) + '">' + x + '</button>').join('') + '</span>';
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-disp]');
+  if (!b) return;
+  S.prefs.disp = b.dataset.disp;
+  savePrefs();
+  for (const x of $$('[data-disp]')) x.setAttribute('aria-pressed', String(x.dataset.disp === DISP()));
+  if (S.rows) render();
+  toast('金額改用 ' + dispSign() + (FX ? '（' + md(FX.day) + ' 的匯率）' : ''));
+});
 // arrival day against departure day: +1 next day; -1 when flying east over the date line lands the day before
 const dayTag = d => d ? '<sup>' + (d > 0 ? '+' : '') + d + '</sup>' : '';
 const minsBetween = (a, b) => (Date.parse(b) - Date.parse(a)) / 60000;
@@ -1147,6 +1181,7 @@ async function loadAccount() {
       '<div class="kv"><span>身分</span><b>' + (m.role === 'owner' ? '管理員' : '一般帳號') + '</b></div>' +
       '<div class="kv"><span>註冊日期</span><b>' + fmtDay(m.created_at) + '</b></div>' +
       (m.role === 'owner' ? '<a class="btn pri" href="#/admin">到管理頁</a>' : '') + '</div>' +
+    '<div class="acard w" id="prefs-card"><h3>顯示</h3><div class="kv"><span>金額幣別</span>' + dispSeg() + '</div><p class="note0">稅金、每哩價值和 Google Flights 都會用這個幣別，匯率每天更新一次。</p></div>' +
     '<form class="acard" id="pwform" novalidate><h3>改密碼</h3>' +
       '<input type="email" class="sr" autocomplete="username" value="' + esc(m.email) + '" tabindex="-1" aria-hidden="true">' +
       pwField('pw-cur', '目前的密碼', 'current-password') + pwField('pw-new', '新密碼（至少 10 個字）', 'new-password') +
@@ -2174,7 +2209,7 @@ $('#cal').addEventListener('click', e => {
 function renderSortbar() {
   const opts = [['date', '依日期'], ['miles', '最少里程'], ['dur', '最短時間'], ['tax', '最低稅金'], ['seats', '最多座位']];
   $('#sortbar').innerHTML = '排序' + opts.map(([k, x]) => '<button type="button" class="chip" data-sort="' + k + '" aria-pressed="' + (S.prefs.sort === k) + '">' + x + '</button>').join('') +
-    (S.day ? '<button type="button" class="chip dayf" data-clear="1">只看 ' + md(S.day) + '　✕</button>' : '');
+    (S.day ? '<button type="button" class="chip dayf" data-clear="1">只看 ' + md(S.day) + '　✕</button>' : '') + dispSeg();
 }
 $('#sortbar').addEventListener('click', e => {
   const b = e.target.closest('.chip');
@@ -2192,8 +2227,7 @@ function cardHtml(o, showDate) {
   // against the 收藏's last look: 新 = not there last time, 降 = cheaper than last time
   const was = S.seen ? S.seen[seenKey(S.leg, S.prefs.cabin, o.date, o.src)] : undefined;
   const since = !S.seen ? '' : was == null ? '<span class="tag nw">新</span>' : o.base < was ? '<span class="tag dn">降 ' + fmtMiles(was - o.base) + '</span>' : '';
-  const taxUsd = o.taxes && o.cur && o.cur !== 'USD' ? toUSD(o.taxes, o.cur) : null;
-  const tax = o.taxes ? '+ ' + money(o.taxes / 100, o.cur) + (taxUsd != null ? '<small class="fx">≈US$' + Math.round(taxUsd) + '</small>' : '') : NO_TAX.has(o.src) ? '稅金未提供' : '';
+  const tax = o.taxes ? '+ ' + moneyHtml(o.taxes, o.cur) : NO_TAX.has(o.src) ? '稅金未提供' : '';
   const t = o.trip, plus = t ? dayDiff(t.dep, t.arr) : 0;
   // times, total time and connections of the flight the card describes (only when the search brought flights along)
   const when = t && t.dep && t.arr ? '<span class="o4"><b>' + hm(t.dep) + '</b>→<b>' + hm(t.arr) + '</b>' + dayTag(plus) +
@@ -2378,9 +2412,9 @@ async function reread(d) {
 const GF_CABIN = { Y: 'economy', W: 'economy', J: 'business class', F: 'first class' };
 function cashHtml(d) {
   const q = 'Flights to ' + d.to + ' from ' + d.from + ' on ' + d.date + ' oneway ' + GF_CABIN[S.prefs.cabin];
-  const url = 'https://www.google.com/travel/flights?q=' + encodeURIComponent(q) + '&curr=USD&hl=zh-TW';
+  const url = 'https://www.google.com/travel/flights?q=' + encodeURIComponent(q) + '&curr=' + DISP() + '&hl=zh-TW';
   return '<div class="cash"><a class="btn" href="' + esc(url) + '" target="_blank" rel="noopener">Google Flights 看現金價' + (S.prefs.cabin === 'W' ? '（打開後改成豪經）' : '') + '</a>' +
-    '<label class="cpp">現金票價 US$<input inputmode="decimal" placeholder="例：2400" data-cpp="1" aria-label="現金票價（美元）"></label><span class="cppv"></span></div>';
+    '<label class="cpp">現金票價 ' + dispSign() + '<input inputmode="decimal" placeholder="例：' + (DISP() === 'TWD' ? '75000' : '2400') + '" data-cpp="1" aria-label="現金票價（' + (DISP() === 'TWD' ? '台幣' : '美元') + '）"></label><span class="cppv"></span></div>';
 }
 // value per mile = (cash fare minus the award's taxes) / miles, in US cents
 $('#list').addEventListener('input', e => {
@@ -2388,9 +2422,10 @@ $('#list').addEventListener('input', e => {
   const art = e.target.closest('.offer'), out = art.querySelector('.cppv'), d = art.dataset;
   const cash = parseFloat(e.target.value.replace(/[^\d.]/g, ''));
   if (!(cash > 0)) { out.textContent = ''; return; }
-  const tax = +d.tax ? toUSD(+d.tax, d.cur) : 0;
-  const cents = (cash - (tax || 0)) / +d.miles * 100;
-  out.textContent = '每哩約 ' + cents.toFixed(2) + ' 美分' + (tax ? '（已扣稅金約 US$' + tax.toFixed(0) + '）' : tax === null ? '（查不到 ' + d.cur + ' 匯率，稅金沒有扣）' : '');
+  // in the display currency: US cents per mile, or NT$ per mile
+  const tax = +d.tax ? inDisp(+d.tax, d.cur) : 0, per = (cash - (tax || 0)) / +d.miles;
+  const value = DISP() === 'TWD' ? 'NT$' + per.toFixed(2) : (per * 100).toFixed(2) + ' 美分';
+  out.textContent = '每哩約 ' + value + (tax ? '（已扣稅金約 ' + dispSign() + Math.round(tax).toLocaleString('en-US') + '）' : tax === null ? '（查不到 ' + d.cur + ' 匯率，稅金沒有扣）' : '');
 });
 function tripHtml(t) {
   const segs = (t.AvailabilitySegments || []).slice().sort((a, b) => (a.Order || 0) - (b.Order || 0));
@@ -2400,7 +2435,7 @@ function tripHtml(t) {
   const stops = segs.length ? segs.length - 1 : num(t.Stops);
   const miles = num(t.MileageCost);
   let h = '<div class="trip"><div class="t1"><b>' + hm(dep) + '</b><span class="ap3">' + esc(first.OriginAirport || '') + '</span> → <b>' + hm(arr) + '</b><span class="ap3">' + esc(last.DestinationAirport || '') + '</span>' +
-    dayTag(plus) + '<span class="t-mi">' + (miles ? fmtMiles(miles) + ' 哩' : '') + (t.TotalTaxes ? ' + ' + money(t.TotalTaxes / 100, t.TaxesCurrency) : '') + '</span></div>';
+    dayTag(plus) + '<span class="t-mi">' + (miles ? fmtMiles(miles) + ' 哩' : '') + (t.TotalTaxes ? ' + ' + moneyText(t.TotalTaxes, t.TaxesCurrency) : '') + '</span></div>';
   const bits = ['<span class="fn">' + esc(t.FlightNumbers || '') + '</span>', dur(t.TotalDuration), stops ? '轉機 ' + stops + ' 次' : '直飛'];
   if (num(t.RemainingSeats)) bits.push('剩 ' + num(t.RemainingSeats) + ' 位');
   if (t.MixedCabinPct) bits.push('有 ' + Math.round(t.MixedCabinPct) + '% 航程是較低艙等');
