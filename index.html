@@ -168,8 +168,21 @@ details.danger[open] summary{margin-bottom:8px}
 .ap input{font-size:clamp(18px,5.6vw,24px);line-height:1.3;text-transform:uppercase;letter-spacing:.5px}
 .ap input::placeholder{font-size:16px;letter-spacing:0;text-transform:none;color:#A39C98}
 .names{font-size:12px;color:var(--ink2);height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-/* one-way only, so the middle column is a plain arrow, not a button */
+/* the middle column is a plain arrow, not a button: one way, or both ways when 來回 is on */
 .dir{align-self:center;display:grid;place-items:center}
+.tt{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;max-width:220px;margin:0 auto 10px}
+.tt button{border:var(--line);border-radius:999px;background:var(--paper);font-size:15px;padding:2px 0;transition:transform .12s ease-out}
+.tt button:active{transform:scale(.95)}
+.tt button[aria-checked=true]{background:var(--yellow)}
+/* round trip: one tab per direction, with each direction's lowest miles */
+.legs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:4px 0 6px}
+.legs button{border:var(--line);border-radius:16px;background:var(--paper);text-align:left;padding:5px 10px 6px;line-height:1.3;min-width:0}
+.legs button[aria-selected=true]{background:var(--water)}
+.legs button b{display:block;font-size:15px;font-weight:normal;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.legs small{display:block;font-size:12px;color:var(--ink2)}
+.legs .sum2{grid-column:1/-1;font-size:14px;margin:0 2px}
+.switch.opt{margin:6px 0}
+.switch.opt small{display:block;font-size:11px;color:var(--ink2)}
 .sugg{position:absolute;left:0;right:0;top:calc(100% + 6px);background:var(--paper);border:var(--line);border-radius:18px;z-index:15;max-height:300px;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;animation:pop .3s var(--pop)}
 .sugg button{display:flex;width:100%;gap:10px;align-items:baseline;text-align:left;border:0;background:none;padding:9px 14px;border-bottom:2px dashed var(--ink)}
 .sugg button:last-child{border-bottom:0}
@@ -423,6 +436,7 @@ details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13p
     <div id="view-search">
     <form id="sf" class="card" autocomplete="off" novalidate>
       <div class="hero" aria-hidden="true"><svg viewBox="0 0 320 96" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"><circle cx="284" cy="24" r="11" fill="#F6D27A"/><g class="drift"><path d="M92 36h26a8 8 0 0 0-3-15 10 10 0 0 0-19-2 7 7 0 0 0-4 17z" fill="#FFFCF6"/></g><g class="drift d2"><path d="M222 45h20a6 6 0 0 0-2-11 8 8 0 0 0-15-2 6 6 0 0 0-3 13z" fill="#FFFCF6"/></g><path class="flow" d="M60 66Q150 -8 262 74" stroke-width="2.5"/><path d="M0 84q40-14 80-4t80 2 80-6 80 4v16H0z" fill="#B9DAA5"/><g transform="translate(250 56)"><path d="M12 26V4"/><g class="sway"><path d="M12 4h12l-3 5 3 5H12z" fill="#F2A497"/></g></g><g transform="translate(130 2)"><g class="float"><path d="M24 30l38-12c4-1 6 3 2 5L32 38z" fill="#FFFCF6"/><path d="M40 24l-6-12h7l11 9" fill="#F2A497"/><path d="M42 32l-2 12h7l7-14" fill="#F2A497"/><path d="M26 31l-4-7"/></g></g><g transform="translate(22 40)"><g class="float"><path d="M20 3v6"/><circle cx="20" cy="3" r="1.5" fill="#3E3A39"/><rect x="6" y="9" width="28" height="24" rx="9" fill="#F2A497"/><circle cx="14.5" cy="19" r="4.2" fill="#F6D27A"/><circle cx="25.5" cy="19" r="4.2" fill="#F6D27A"/><path d="M16.5 27q3.5 3 7 0"/><path d="M11 38l3-5M29 38l-3-5"/></g></g></g></svg></div>
+      <div class="tt" id="tt" role="radiogroup" aria-label="單程或來回"><button type="button" role="radio" data-tt="ow" aria-checked="true">單程</button><button type="button" role="radio" data-tt="rt" aria-checked="false">來回</button></div>
       <div class="route" id="route">
         <div class="field ap">
           <label for="from">出發</label>
@@ -442,6 +456,11 @@ details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13p
         <span class="to" aria-hidden="true">到</span>
         <div class="field df"><label for="d2">最晚出發<small id="d2y"></small></label><span class="dv" id="d2v"></span><input type="date" id="d2"></div>
       </div>
+      <div class="dates" id="rdates" hidden>
+        <div class="field df"><label for="r1">回程最早<small id="r1y"></small></label><span class="dv" id="r1v"></span><input type="date" id="r1"></div>
+        <span class="to" aria-hidden="true">到</span>
+        <div class="field df"><label for="r2">回程最晚<small id="r2y"></small></label><span class="dv" id="r2v"></span><input type="date" id="r2"></div>
+      </div>
       <div class="months" id="months"></div>
       <p class="ferr" id="ferr" role="alert"></p>
       <button class="go" id="go" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#3E3A39" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6" fill="#FFFCF6"/><path d="M15 15l5 5"/></g></svg><span id="go-t">搜尋</span></button>
@@ -451,6 +470,7 @@ details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13p
 
     <section id="results" hidden>
       <div id="banner"></div>
+      <div class="legs" id="legs" hidden></div>
       <div class="route-h" id="route-h"></div>
       <div class="sum" id="sum" aria-live="polite"></div>
       <div class="fresh" id="fresh"></div>
@@ -469,6 +489,10 @@ details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13p
             <div id="tf"></div>
             <div class="field"><label for="maxmi">最多里程</label><input id="maxmi" inputmode="numeric" placeholder="不限，例：80000" autocomplete="off" enterkeyhint="done"></div>
             <button type="button" class="btn ghost tfc" id="tf-clear" hidden>清除航班條件</button>
+            <div class="tfh">搜尋選項（改了要重新搜尋）</div>
+            <label class="switch opt"><input type="checkbox" id="opt-mixed"><span class="tr"></span><span>包含混艙<small>至少一半航程在這個艙等</small></span></label>
+            <label class="switch opt"><input type="checkbox" id="opt-dyn"><span class="tr"></span><span>包含動態高價位子<small>seats.aero 預設會藏起來</small></span></label>
+            <button type="button" class="btn ghost tfc" id="opt-rerun" hidden>用新選項重新搜尋</button>
             <div class="tfh">航空公司和里程計畫</div>
             <div class="field"><label for="carriers">實際搭乘的航空公司（代碼）</label><input id="carriers" placeholder="不限，例：BR,DL" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="done"></div>
             <div id="prog-list"></div>
@@ -625,6 +649,7 @@ const S = {
   // pax..maxMiles: the 航班條件 in 更多篩選 (maxStops 9 = any number of stops; 0 hours = no limit)
   prefs: Object.assign({ cabin: 'J', off: [], direct: false, carriers: '', sort: 'date',
     pax: 1, wd: [], dep: [], arr: [], maxStops: 9, maxHours: 0, noVia: [], maxMiles: 0 }, load('award-prefs', {})),
+  search: null, legs: null, leg: 0,   // the whole search (one or two legs) and which leg is on screen
   params: null, rows: null, truncated: false, fetchedAt: 0, demo: false, day: null, shown: 60,
   trips: new Map(),
 };
@@ -1148,7 +1173,8 @@ function suggest(input) {
   items = items.slice(0, q ? 8 : 12);
   const box = $('#sugg');
   if (!items.length) { box.hidden = true; return; }
-  box.innerHTML = items.map(p => '<button type="button" data-codes="' + p.codes.join(',') + '"><b>' + p.codes.join(',') + '</b><span>' + esc(p.zh) + '　' + esc(p.en) + '</span></button>').join('');
+  // a big group (美西 has 8 airports) shows its first two codes and a count, so the row stays readable
+  box.innerHTML = items.map(p => '<button type="button" data-codes="' + p.codes.join(',') + '"><b>' + (p.codes.length > 3 ? p.codes.slice(0, 2).join(',') + ' 等 ' + p.codes.length + ' 個' : p.codes.join(',')) + '</b><span>' + esc(p.zh) + '　' + esc(p.en) + '</span></button>').join('');
   box.hidden = false;
 }
 function pick(codes) {
@@ -1175,6 +1201,26 @@ $('#sugg').addEventListener('pointerdown', e => {
   e.preventDefault();
   pick(b.dataset.codes);
 });
+/* ---------- one way or round trip ---------- */
+// Award seats are booked one direction at a time, so a round trip is two one-way searches (twice the calls).
+let TRIP = 'ow';
+const ARROW_ONE = '<svg width="26" height="26" viewBox="0 0 24 24"><path d="M3.5 12h16M13.5 6l6 6-6 6" fill="none" stroke="#3E3A39" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ARROW_BOTH = '<svg width="26" height="26" viewBox="0 0 24 24"><path d="M4 8.5h15M15 4.5l4 4-4 4M20 15.5H5M9 11.5l-4 4 4 4" fill="none" stroke="#3E3A39" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function setTrip(t) {
+  TRIP = t;
+  for (const b of $$('#tt button')) b.setAttribute('aria-checked', String(b.dataset.tt === t));
+  $('#rdates').hidden = t !== 'rt';
+  $('#dir').innerHTML = t === 'rt' ? ARROW_BOTH : ARROW_ONE;
+  // first time on 來回: start the return two weeks after the outbound range
+  if (t === 'rt' && !$('#r1').value && $('#d1').value && $('#d2').value) {
+    const plus = (v, k) => { const d = parseDate(v); d.setDate(d.getDate() + k); return isoDate(d); };
+    $('#r1').value = plus($('#d1').value, 14);
+    $('#r2').value = plus($('#d2').value, 14);
+  }
+  markMonths();
+}
+$('#tt').addEventListener('click', e => { const b = e.target.closest('[data-tt]'); if (b) setTrip(b.dataset.tt); });
+
 /* ---------- dates ---------- */
 const shortDay = v => { const d = parseDate(v); return (d.getMonth() + 1) + '/' + d.getDate() + ' (' + WD[d.getDay()] + ')'; };
 function setRange(s, e) {
@@ -1198,15 +1244,18 @@ function monthRange(y, m) {
   return [s < today ? today : s, isoDate(new Date(y, m, 0))];
 }
 function showDates() {
-  for (const id of ['d1', 'd2']) {
+  for (const id of ['d1', 'd2', 'r1', 'r2']) {
     const v = $('#' + id).value;
     $('#' + id + 'v').textContent = v ? shortDay(v) : '選日期';
     $('#' + id + 'y').textContent = v ? parseDate(v).getFullYear() : '';
   }
-  // the pickers grey out days that can't be chosen: nothing before today, and 最晚 never before 最早
-  const today = isoDate(new Date());
+  // the pickers grey out days that can't be chosen: nothing before today, 最晚 never before 最早,
+  // and the return never before the first outbound day
+  const today = isoDate(new Date()), later = (a, b) => (a > b ? a : b);
   $('#d1').min = today;
-  $('#d2').min = $('#d1').value > today ? $('#d1').value : today;
+  $('#d2').min = later($('#d1').value, today);
+  $('#r1').min = later($('#d1').value, today);
+  $('#r2').min = later($('#r1').value, $('#r1').min);
 }
 function markMonths() {
   showDates();
@@ -1220,15 +1269,28 @@ $('#months').addEventListener('click', e => {
   if (b) setRange(...monthRange(+b.dataset.y, +b.dataset.m));
 });
 // A picker that ignores min (or a typed date) can still give 最晚 before 最早: move 最晚 up to 最早 and say so.
-for (const id of ['d1', 'd2']) $('#' + id).addEventListener('change', () => {
+// The return dates follow the same rule, and never start before the first outbound day.
+for (const id of ['d1', 'd2', 'r1', 'r2']) $('#' + id).addEventListener('change', () => {
   const s = $('#d1').value, e = $('#d2').value;
+  const said = [];
   if (s && e && e < s) {
     $('#d2').value = s;
-    toast(id === 'd1' ? '最晚出發已跟著改成 ' + shortDay(s) : '最晚出發不能早於最早出發，已改成 ' + shortDay(s));
+    said.push(id === 'd1' ? '最晚出發已跟著改成 ' + shortDay(s) : '最晚出發不能早於最早出發，已改成 ' + shortDay(s));
   }
+  const r1 = $('#r1').value;
+  if (TRIP === 'rt' && s && r1 && r1 < s) {
+    $('#r1').value = s;
+    said.push(id === 'r1' ? '回程不能早於去程，已改成 ' + shortDay(s) : '回程最早已跟著改成 ' + shortDay(s));
+  }
+  const ra = $('#r1').value, rb = $('#r2').value;
+  if (TRIP === 'rt' && ra && rb && rb < ra) {
+    $('#r2').value = ra;
+    said.push(id === 'r2' ? '回程最晚不能早於回程最早，已改成 ' + shortDay(ra) : '回程最晚已跟著改成 ' + shortDay(ra));
+  }
+  if (said.length) toast(said.join('；'));
   markMonths();
 });
-for (const id of ['d1', 'd2']) $('#' + id).addEventListener('click', e => { try { e.target.showPicker(); } catch {} });
+for (const id of ['d1', 'd2', 'r1', 'r2']) $('#' + id).addEventListener('click', e => { try { e.target.showPicker(); } catch {} });
 
 /* ---------- filters ---------- */
 function renderCabins(counts) {
@@ -1333,23 +1395,72 @@ function readForm() {
   if (e < today) return formErr('這些日期已經過了。');
   if (s < today) s = today;
   if (daysBetween(s, e) > MAX_DAYS) return formErr('日期範圍最多 3 個月，請縮短一點。');
+  const p = { o: o.codes.join(','), d: d.codes.join(','), s, e };
+  if (TRIP === 'rt') {
+    let rs = $('#r1').value;
+    const re = $('#r2').value;
+    if (!rs || !re) return formErr('請選回程日期的範圍。');
+    if (re < rs) return formErr('回程最晚不能早於回程最早。');
+    if (rs < s) return formErr('回程不能早於去程。');
+    if (rs < today) rs = today;
+    if (daysBetween(rs, re) > MAX_DAYS) return formErr('回程日期範圍最多 3 個月，請縮短一點。');
+    p.rt = { s: rs, e: re };
+  }
+  // pre-search options: seats.aero applies them on its side, so they are part of the search (and its cache)
+  if (S.prefs.mixed) p.mixed = 1;
+  if (S.prefs.dyn) p.dyn = 1;
   formErr('');
-  return { o: o.codes.join(','), d: d.codes.join(','), s, e };
+  return p;
 }
+// a search is one or two one-way legs; each leg is searched (and cached) on its own
+const legsOf = p => [{ o: p.o, d: p.d, s: p.s, e: p.e, mixed: p.mixed, dyn: p.dyn }]
+  .concat(p.rt ? [{ o: p.d, d: p.o, s: p.rt.s, e: p.rt.e, mixed: p.mixed, dyn: p.dyn, back: 1 }] : []);
+const searchKey = p => JSON.stringify([p.o, p.d, p.s, p.e, p.rt ? [p.rt.s, p.rt.e] : 0, p.mixed ? 1 : 0, p.dyn ? 1 : 0]);
 function setBusy(on) {
   $('#go').disabled = on;
   $('#go-t').textContent = on ? '搜尋中…' : '搜尋';
 }
-const cacheKey = p => 'award-c:' + [p.o, p.d, p.s, p.e].join('|');
+const cacheKey = lp => 'award-c:' + [lp.o, lp.d, lp.s, lp.e].join('|') + (lp.mixed ? '|m' : '') + (lp.dyn ? '|f' : '');
 const toResults = () => $('#results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+// One leg: from the 15-minute cache, or from seats.aero (up to MAX_PAGES calls).
+async function fetchLeg(lp) {
+  const hit = cacheGet(cacheKey(lp));
+  if (hit) return { rows: hit.rows, truncated: hit.truncated, fetchedAt: hit.t };
+  const rows = [];
+  let cursor = null, more = false, pages = 0;
+  do {
+    // include_trips brings each row's flights along, so cards can show times without one more call per card
+    const q = new URLSearchParams({ origin_airport: lp.o, destination_airport: lp.d, start_date: lp.s, end_date: lp.e, take: '1000', include_trips: 'true' });
+    if (lp.mixed) q.set('min_cabin_pct', '50');      // default 100 hides mixed-cabin itineraries
+    if (lp.dyn) q.set('include_filtered', 'true');    // seats.aero hides expensive dynamic awards unless asked
+    if (cursor != null) { q.set('cursor', cursor); q.set('skip', rows.length); }
+    const res = await api('/search?' + q);
+    rows.push(...(res.data || []));
+    more = !!res.hasMore && res.cursor != null;
+    cursor = res.cursor;
+    pages++;
+  } while (more && pages < MAX_PAGES);
+  const t = Date.now();
+  cacheSet(cacheKey(lp), { t, rows, truncated: more });
+  return { rows, truncated: more, fetchedAt: t };
+}
+// Show one leg's results; the filters, calendar and list all read S.params / S.rows.
+function useLeg(i) {
+  const L = S.legs[i];
+  S.leg = i; S.params = L.p; S.rows = L.rows; S.truncated = L.truncated; S.fetchedAt = L.fetchedAt;
+  S.day = null; S.shown = 60;
+  render();
+}
 async function runSearch(p, demo, scroll) {
-  const done = () => { if (scroll && S.params === p) toResults(); };
-  S.params = p; S.day = null; S.shown = 60; S.demo = !!demo; S.rows = null; S.truncated = false;
+  const done = () => { if (scroll && S.search === p) toResults(); };
+  S.search = p; S.legs = legsOf(p).map(lp => ({ p: lp, rows: null, truncated: false, fetchedAt: 0, error: '' })); S.leg = 0;
+  S.params = S.legs[0].p; S.day = null; S.shown = 60; S.demo = !!demo; S.rows = null; S.truncated = false;
   save('award-last', p);
   addRecent(p);
   $('#results').hidden = false;
   setBanner('');
-  renderRoute(p);
+  renderLegs();
+  renderRoute(S.params);
   $('#sum').textContent = '搜尋中…';
   $('#fresh').textContent = '';
   $('#filters').hidden = true;
@@ -1357,43 +1468,56 @@ async function runSearch(p, demo, scroll) {
   $('#legend').hidden = true;
   $('#sortbar').innerHTML = '';
   $('#list').innerHTML = '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
+  $('#opt-rerun').hidden = true;
   if (demo) {
-    S.rows = demoRows(p);
-    S.fetchedAt = Date.now();
-    render();
-    return done();
-  }
-  const hit = cacheGet(cacheKey(p));
-  if (hit) {
-    S.rows = hit.rows; S.truncated = hit.truncated; S.fetchedAt = hit.t;
-    render();
+    for (const L of S.legs) { L.rows = demoRows(L.p); L.fetchedAt = Date.now(); }
+    useLeg(0);
     return done();
   }
   setBusy(true);
   try {
-    const rows = [];
-    let cursor = null, more = false, pages = 0;
-    do {
-      // include_trips brings each row's flights along, so cards can show times without one more call per card
-      const q = new URLSearchParams({ origin_airport: p.o, destination_airport: p.d, start_date: p.s, end_date: p.e, take: '1000', include_trips: 'true' });
-      if (cursor != null) { q.set('cursor', cursor); q.set('skip', rows.length); }
-      const res = await api('/search?' + q);
-      rows.push(...(res.data || []));
-      more = !!res.hasMore && res.cursor != null;
-      cursor = res.cursor;
-      pages++;
-    } while (more && pages < MAX_PAGES);
-    if (S.params !== p) return;
-    S.rows = rows; S.truncated = more; S.fetchedAt = Date.now();
-    cacheSet(cacheKey(p), { t: S.fetchedAt, rows, truncated: more });
-    render();
-    done();
+    for (let i = 0; i < S.legs.length; i++) {
+      const L = S.legs[i];
+      try {
+        Object.assign(L, await fetchLeg(L.p));
+      } catch (err) {
+        if (i === 0) throw err;
+        L.error = err.message;   // the outbound is still worth showing
+      }
+      if (S.search !== p) return;
+      if (i === 0) { useLeg(0); done(); } else renderLegs();
+    }
   } catch (err) {
-    if (S.params === p) { showError(err); done(); }
+    if (S.search === p) { showError(err); done(); }
   } finally {
     setBusy(false);
   }
 }
+// Round trip: a tab per direction with its lowest miles (this cabin, these filters), and the two added up.
+function renderLegs() {
+  const box = $('#legs');
+  if (!S.legs || S.legs.length < 2) { box.hidden = true; box.innerHTML = ''; return; }
+  const f = filt(), cab = S.prefs.cabin;
+  const low = L => { if (!L.rows) return null; const m = offersOf(L.rows, cab, f).map(o => o.miles); return m.length ? Math.min(...m) : 0; };
+  const lows = S.legs.map(low);
+  box.innerHTML = S.legs.map((L, i) => '<button type="button" role="tab" data-leg="' + i + '" aria-selected="' + (S.leg === i) + '"' + (L.rows ? '' : ' disabled') + '>' +
+    '<small>' + (i ? '回程' : '去程') + '　' + md(L.p.s) + ' 到 ' + md(L.p.e) + '</small><b>' + esc(L.p.o) + ' → ' + esc(L.p.d) + '</b>' +
+    '<small>' + (L.error ? '查不到：' + esc(L.error) : !L.rows ? '讀取中…' : lows[i] ? CABIN_BY[cab].name + '最低 ' + fmtMiles(lows[i]) + ' 哩' : CABIN_BY[cab].name + '沒有位子') + '</small></button>').join('') +
+    (lows[0] && lows[1] ? '<p class="sum2">來回最低合計 <b>' + fmtMiles(lows[0] + lows[1]) + '</b> 哩（' + CABIN_BY[cab].name + '，兩段可以用不同計畫）</p>' : '');
+  box.hidden = false;
+}
+$('#legs').addEventListener('click', e => {
+  const b = e.target.closest('[data-leg]');
+  if (b && !b.disabled && +b.dataset.leg !== S.leg) { useLeg(+b.dataset.leg); toResults(); }
+});
+// pre-search options: remember them, and offer to search again with them
+for (const [id, k] of [['opt-mixed', 'mixed'], ['opt-dyn', 'dyn']]) $('#' + id).addEventListener('change', e => {
+  S.prefs[k] = e.target.checked;
+  savePrefs();
+  const cur = S.search || {};
+  $('#opt-rerun').hidden = !S.search || (!!cur.mixed === !!S.prefs.mixed && !!cur.dyn === !!S.prefs.dyn);
+});
+$('#opt-rerun').addEventListener('click', () => { const p = readForm(); if (p) runSearch(p, false, true); });
 $('#sf').addEventListener('submit', e => {
   e.preventDefault();
   $('#sugg').hidden = true;
@@ -1418,32 +1542,39 @@ function showError(err) {
 }
 $('#banner').addEventListener('click', e => {
   const b = e.target.closest('[data-act]');
-  if (!b || !S.params) return;
-  if (b.dataset.act === 'retry') runSearch(S.params, false, true);
-  if (b.dataset.act === 'demo') runSearch(S.params, true, true);
-  if (b.dataset.act === 'exit-demo') { S.demo = false; S.rows = null; $('#results').hidden = true; }
+  if (!b || !S.search) return;
+  if (b.dataset.act === 'retry') runSearch(S.search, false, true);
+  if (b.dataset.act === 'demo') runSearch(S.search, true, true);
+  if (b.dataset.act === 'exit-demo') { S.demo = false; S.rows = null; S.legs = null; $('#results').hidden = true; }
 });
 
 /* ---------- recent searches ---------- */
 function addRecent(p) {
-  const k = cacheKey(p);
-  const list = load('award-recent', []).filter(x => cacheKey(x) !== k);
+  const k = searchKey(p);
+  const list = load('award-recent', []).filter(x => searchKey(x) !== k);
   list.unshift(p);
   save('award-recent', list.slice(0, 6));
   renderRecent();
 }
 function renderRecent() {
   const list = load('award-recent', []);
-  $('#recent').innerHTML = list.map((p, i) => '<button type="button" data-i="' + i + '">' + n(esc(p.o) + ' → ' + esc(p.d)) + '　' + md(p.s) + ' 到 ' + md(p.e) + '</button>').join('');
+  $('#recent').innerHTML = list.map((p, i) => '<button type="button" data-i="' + i + '">' + n(esc(p.o) + (p.rt ? ' ⇄ ' : ' → ') + esc(p.d)) + '　' + md(p.s) + ' 到 ' + md(p.e) +
+    (p.rt ? '，回 ' + md(p.rt.s) + ' 到 ' + md(p.rt.e) : '') + '</button>').join('');
+}
+// put a saved search (recent, last, or a 收藏) back into the form
+function fillForm(p) {
+  $('#from').value = p.o; $('#to').value = p.d;
+  showNames($('#from')); showNames($('#to'));
+  setRange(p.s, p.e);
+  if (p.rt) { $('#r1').value = p.rt.s; $('#r2').value = p.rt.e; }
+  setTrip(p.rt ? 'rt' : 'ow');
 }
 $('#recent').addEventListener('click', e => {
   const b = e.target.closest('button[data-i]');
   if (!b) return;
   const p = load('award-recent', [])[+b.dataset.i];
   if (!p) return;
-  $('#from').value = p.o; $('#to').value = p.d;
-  showNames($('#from')); showNames($('#to'));
-  setRange(p.s, p.e);
+  fillForm(p);
   const q = readForm();
   if (q) runSearch(q, false, true);
 });
@@ -1515,6 +1646,7 @@ function render() {
   for (const em of $$('#prog-list em')) em.textContent = per[em.dataset.c] ? per[em.dataset.c] : '';
   if (S.demo) setBanner('<span><b>示範資料</b>數字都是假的</span><div class="acts"><button type="button" class="btn" data-act="exit-demo">結束示範</button></div>', 'demo');
   renderTripFilters();
+  renderLegs();
   renderSummary(offers);
   renderCalendar(offers);
   renderSortbar();
@@ -1880,7 +2012,7 @@ function showApp() {
   showQuota();
   api('/quota').then(q => { if (q.remaining != null) setQuota(q.remaining, q.limit, q.at * 1000); }).catch(() => {});
   route();
-  if (location.hash === '#demo' && S.params) runSearch(S.params, true);
+  if (location.hash === '#demo' && S.search) runSearch(S.search, true);
   loadFx().then(fresh => { if (fresh && S.rows) render(); });
 }
 function init() {
@@ -1892,19 +2024,25 @@ function init() {
   $('#direct').checked = S.prefs.direct;
   $('#carriers').value = S.prefs.carriers;
   $('#maxmi').value = S.prefs.maxMiles || '';
+  $('#opt-mixed').checked = !!S.prefs.mixed;
+  $('#opt-dyn').checked = !!S.prefs.dyn;
   const today = isoDate(new Date());
   const last = load('award-last', null);
   if (last && last.e >= today) {
-    $('#from').value = last.o; $('#to').value = last.d;
-    setRange(last.s < today ? today : last.s, last.e);
-    S.params = { o: last.o, d: last.d, s: $('#d1').value, e: last.e };
-    const hit = cacheGet(cacheKey(S.params));
-    if (hit) { S.rows = hit.rows; S.truncated = hit.truncated; S.fetchedAt = hit.t; $('#results').hidden = false; render(); }
+    fillForm(Object.assign({}, last, { s: last.s < today ? today : last.s }));
+    const p = readForm();
+    if (p) {
+      // show the last results again if they are still in the 15-minute cache (no API call)
+      S.search = p; S.legs = legsOf(p).map(lp => ({ p: lp, rows: null, truncated: false, fetchedAt: 0, error: '' })); S.leg = 0;
+      S.params = S.legs[0].p;
+      for (const L of S.legs) { const hit = cacheGet(cacheKey(L.p)); if (hit) Object.assign(L, { rows: hit.rows, truncated: hit.truncated, fetchedAt: hit.t }); }
+      if (S.legs[0].rows) { $('#results').hidden = false; useLeg(0); }
+    }
   } else {
     $('#from').value = 'TPE'; $('#to').value = 'SEA';
     const d = new Date();
     setRange(...monthRange(d.getMonth() === 11 ? d.getFullYear() + 1 : d.getFullYear(), (d.getMonth() + 1) % 12 + 1));
-    S.params = readForm();
+    S.search = S.params = readForm();
   }
   showNames($('#from')); showNames($('#to'));
   localStorage.removeItem('award-token');   // the old single-password token no longer works
