@@ -7,7 +7,10 @@
 //                and also kept AES-GCM encrypted (key: INVITE_KEY) so the admin page can show it again
 //   reset_links  the owner makes one-time links for anyone who forgot a password
 // Every account searches with the owner's seats.aero key (SEATS_KEY), so the site is for the owner's own accounts only.
-// Bindings: DB (D1 award-auth; also the quota row), KV (lockout counters). Secrets: SEATS_KEY, INVITE_KEY. Vars: ALLOWED_ORIGINS, SITE_URL.
+// Bindings: DB (D1 award-auth; also the quota row), KV (lockout counters), ALERT_MAIL (send_email, alert emails).
+// Secrets: SEATS_KEY, INVITE_KEY, CF_API_TOKEN (Email Routing Addresses: Edit, to add alert recipients).
+// Vars: ALLOWED_ORIGINS, SITE_URL, CF_ACCOUNT, MAIL_FROM. A cron trigger runs the alerts (see "email alerts").
+import { EmailMessage } from 'cloudflare:email';
 
 const UPSTREAM = 'https://seats.aero/partnerapi';
 const PBKDF2_ITER = 100000;        // the most Workers allows; measured 19 to 26 ms CPU per hash (2026-10-13)
@@ -16,7 +19,7 @@ const SESSION_SHORT = 86400;
 const INVITE_DAYS = 30;
 const RESET_MINUTES = 30;
 // [allowed failures, window in seconds]
-const LIMITS = { email: [5, 900], ip: [20, 900], register: [10, 3600], reset: [10, 3600] };
+const LIMITS = { email: [5, 900], ip: [20, 900], register: [10, 3600], reset: [10, 3600], mail: [3, 3600] };
 // Checked against when an email has no account, so a wrong email takes as long as a wrong password.
 const DUMMY_HASH = 'pbkdf2-sha256$100000$uG1ixDccdr0X91w8RTnQpQ$LVfysNSOW-IeDeMSAr5DjWO12wIAeX0didLnbIFSWig';
 const INVITE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   // no 0/O or 1/I, so codes read aloud cleanly
@@ -366,6 +369,7 @@ function removeUser(env, uid) {
     env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(uid),
     env.DB.prepare('DELETE FROM reset_links WHERE user_id = ?').bind(uid),
     env.DB.prepare('DELETE FROM saved_searches WHERE user_id = ?').bind(uid),
+    env.DB.prepare('DELETE FROM alerts WHERE user_id = ?').bind(uid),
     env.DB.prepare('DELETE FROM usage WHERE user_id = ?').bind(uid),
     env.DB.prepare('UPDATE invites SET used_by = NULL WHERE used_by = ?').bind(uid),
     env.DB.prepare('DELETE FROM users WHERE id = ?').bind(uid),
@@ -379,17 +383,34 @@ function inviteCode() {
   return s.slice(0, 5) + '-' + s.slice(5);
 }
 
-async function admin(req, env, s, url, h) {
+async function admin(req, env, s, url, h, ctx) {
   const p = url.pathname, m = req.method;
   let mm;
   if (p === '/admin/users' && m === 'GET') {
     const r = await env.DB.prepare(
-      'SELECT u.id, u.email, u.role, u.status, u.created_at, u.last_login_at, u.daily_limit, ' +
+      'SELECT u.id, u.email, u.role, u.status, u.created_at, u.last_login_at, u.daily_limit, u.alerts_ok, u.mail_verified_at, ' +
       '(SELECT COUNT(*) FROM sessions x WHERE x.user_id = u.id AND x.expires_at > ?) AS devices, ' +
+      "(SELECT COUNT(*) FROM alerts a WHERE a.user_id = u.id AND a.status != 'ended') AS alerts, " +
       '(SELECT calls FROM usage g WHERE g.user_id = u.id AND g.day = ?) AS used_today FROM users u ORDER BY u.created_at')
       .bind(now(), utcDay()).all();
     // limit: the cap that applies today (null = none, the owner)
     return json({ me: s.id, users: r.results.map(u => ({ ...u, used_today: u.used_today || 0, limit: limitOf(u) })), default_limit: USER_DAILY, reserve: OWNER_RESERVE }, 200, h);
+  }
+  if ((mm = /^\/admin\/users\/(\d+)\/alerts$/.exec(p)) && m === 'POST') {
+    // the switch for an invited account's alerts (the owner's are always on); off = its alerts are skipped
+    const ok = (await readJson(req)).ok;
+    if (typeof ok !== 'boolean') return json({ error: 'param' }, 400, h);
+    const r = await env.DB.prepare("UPDATE users SET alerts_ok = ? WHERE id = ? AND role != 'owner'").bind(ok ? 1 : 0, Number(mm[1])).run();
+    return r.meta.changes ? json({ ok: true }, 200, h) : json({ error: 'not_found' }, 404, h);
+  }
+  if (p === '/admin/alerts' && m === 'GET') {
+    const r = await env.DB.prepare('SELECT a.id, a.o, a.d, a.s, a.e, a.cabin, a.max_miles, a.status, a.checked_at, a.check_note, a.found, a.sent_at, a.sent_count, u.email ' +
+      'FROM alerts a JOIN users u ON u.id = a.user_id ORDER BY a.created_at DESC LIMIT 200').all();
+    return json({ alerts: r.results }, 200, h);
+  }
+  if (p === '/admin/alerts/run' && m === 'POST') {
+    // run the cron's work once now (staging has no cron); answers what it checked
+    return json({ ran: await runAlerts(env, ctx) }, 200, h);
   }
   if (p === '/admin/invites' && m === 'GET') {
     const r = await env.DB.prepare(
@@ -598,6 +619,340 @@ async function saved(req, env, s, p, m, h) {
   return null;
 }
 
+/* ---------- email alerts (提醒) ---------- */
+// Gino 2026-10-14: an alert is a fixed search (route, dates, cabin, programs) with a miles ceiling. About every
+// 3 hours the Worker re-runs it and emails the account when an award at or under the ceiling is new, or cheaper
+// than what was last emailed; the first email lists what is there already. The cron runs every 10 minutes and
+// checks only the most overdue alert, so one run parses one seats.aero reply (the free plan allows 10 ms CPU a
+// run). A check is one seats.aero call, counted against the account like a search, so an invited account's
+// alerts stop at its daily cap or the owner's reserve. Mail goes out through Cloudflare Email Routing, which
+// delivers only to addresses that clicked Cloudflare's verification email: an account verifies its sign-in email
+// once (/me/mail), and its alerts are checked only after that.
+const ALERTS_MAX = 10;          // per account; paused ones count, ended ones don't
+const ALERT_EVERY = 3 * 3600;   // seconds between two checks of one alert
+const ALERTS_PER_RUN = 1;
+const ALERT_DAYS_MAX = 92;      // the longest date range
+const SENT_KEYS_MAX = 3000;
+const CABIN_API = { Y: 'economy', W: 'premium', J: 'business', F: 'first' };
+// the names the page shows (its PROGRAMS table)
+const PROGRAM_NAME = {
+  united: 'United', aeroplan: 'Aeroplan', turkish: 'Turkish', singapore: 'KrisFlyer', lufthansa: 'Miles & More',
+  connectmiles: 'ConnectMiles', ethiopian: 'ShebaMiles', lifemiles: 'LifeMiles', american: 'American', alaska: 'Alaska',
+  qantas: 'Qantas', qatar: 'Qatar', finnair: 'Finnair', british: 'British Airways', iberia: 'Iberia', delta: 'Delta',
+  flyingblue: 'Flying Blue', virginatlantic: 'Virgin Atlantic', aeromexico: 'Aeromexico', eurobonus: 'EuroBonus',
+  saudia: 'Saudia', emirates: 'Emirates', etihad: 'Etihad', velocity: 'Velocity', jetblue: 'JetBlue', azul: 'Azul',
+  smiles: 'Smiles', frontier: 'Frontier', spirit: 'Spirit',
+};
+const NO_TAX = new Set(['qatar', 'turkish', 'singapore']);   // seats.aero has no tax data for these
+const MAIL_WORDS = {
+  zh: {
+    from: '里程機位搜尋', cabin: { Y: '經濟艙', W: '豪華經濟艙', J: '商務艙', F: '頭等艙' }, wd: '日一二三四五六',
+    subject: (route, cab, n, min) => `✈️ ${route} ${cab}：${n} 筆新的位子，最低 ${min} 哩`,
+    intro: (name, cab, max, n) => `你設的提醒「${name}」找到 ${n} 筆新的或更便宜的位子（${cab}，${max} 哩以下）：`,
+    day: (md, w) => `${md}（${w}）`, miles: x => `${x} 哩`, seats: n => `剩 ${n} 位`, direct: '直飛', was: x => `降價，原本 ${x} 哩`,
+    more: n => `另外還有 ${n} 筆，到網站看。`, open: '打開網站看全部結果', manage: '暫停或刪除這個提醒',
+    note: '資料是 seats.aero 的快取，可能是幾小時前的。訂位前請到航空公司網站確認。',
+  },
+  en: {
+    from: 'Award Search', cabin: { Y: 'economy', W: 'premium economy', J: 'business', F: 'first' }, wd: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    subject: (route, cab, n, min) => `✈️ ${route} ${cab}: ${n} new award${n === 1 ? '' : 's'} from ${min} miles`,
+    intro: (name, cab, max, n) => `Your alert "${name}" found ${n} new or cheaper award${n === 1 ? '' : 's'} (${cab}, up to ${max} miles):`,
+    day: (md, w) => `${w} ${md}`, miles: x => `${x} miles`, seats: n => `${n} seat${n === 1 ? '' : 's'} left`, direct: 'nonstop', was: x => `was ${x}`,
+    more: n => `${n} more on the site.`, open: 'See all results on the site', manage: 'Pause or delete this alert',
+    note: "From seats.aero's cache, which can be a few hours old. Check with the airline before you book.",
+  },
+};
+const num = v => (typeof v === 'number' ? v : parseInt(v, 10)) || 0;
+const fmtN = n => Number(n).toLocaleString('en-US');
+const daysBetween = (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000);
+const escHtml = v => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const routeText = a => a.o.split(',').join('/') + ' → ' + a.d.split(',').join('/');
+
+function cleanAlert(b) {
+  const today = utcDay();
+  const o = String(b.o || '').toUpperCase(), d = String(b.d || '').toUpperCase();
+  if (!AIRPORTS.test(o) || !AIRPORTS.test(d) || !DAY.test(b.s) || !DAY.test(b.e)) return null;
+  if (b.e < b.s || b.e < today || daysBetween(b.s, b.e) > ALERT_DAYS_MAX || daysBetween(today, b.s) > 400) return null;
+  if (!CABIN_API[b.cabin]) return null;
+  let sources = null;
+  if (Array.isArray(b.sources) && b.sources.length) {
+    if (b.sources.length > 40 || !b.sources.every(x => typeof x === 'string' && /^[a-z0-9]{2,20}$/.test(x))) return null;
+    sources = [...new Set(b.sources)].join(',');
+  }
+  const seats = b.seats == null ? 1 : b.seats;
+  if (!Number.isInteger(b.max_miles) || b.max_miles < 1000 || b.max_miles > 2000000 || !Number.isInteger(seats) || seats < 1 || seats > 9) return null;
+  return { o, d, s: b.s, e: b.e, cabin: b.cabin, sources, max_miles: b.max_miles, direct: b.direct ? 1 : 0, seats,
+    label: String(b.label || '').trim().slice(0, 40) || null, lang: b.lang === 'en' ? 'en' : 'zh' };
+}
+const alertOut = a => ({
+  id: a.id, o: a.o, d: a.d, s: a.s, e: a.e, cabin: a.cabin, sources: a.sources ? a.sources.split(',') : null, max_miles: a.max_miles,
+  direct: !!a.direct, seats: a.seats, label: a.label, lang: a.lang, status: a.status, created_at: a.created_at,
+  checked_at: a.checked_at, check_note: a.check_note, found: a.found, sent_at: a.sent_at, sent_count: a.sent_count,
+});
+
+// the awards in one seats.aero reply that meet an alert, read the way the page reads a card (offersOf)
+function alertHits(rows, a, from) {
+  const C = a.cabin, srcs = a.sources ? new Set(a.sources.split(',')) : null, out = [];
+  for (const r of rows) {
+    if (!r[C + 'Available'] || r.Date < from || r.Date > a.e) continue;
+    const src = r.Source || (r.Route && r.Route.Source);
+    if (srcs && !srcs.has(src)) continue;
+    const direct = !!r[C + 'Direct'];
+    if (a.direct && !direct) continue;
+    const dmiles = num(r[C + 'DirectMileageCost']), useD = a.direct && dmiles > 0;
+    const miles = useD ? dmiles : num(r[C + 'MileageCost']);
+    if (!miles || miles > a.max_miles) continue;
+    const pick = k => (useD && r[C + 'Direct' + k] != null ? r[C + 'Direct' + k] : r[C + k]);
+    const seats = num(pick('RemainingSeats'));
+    if (a.seats > 1 && seats && seats < a.seats) continue;   // 0: the program gives no count, kept as the page does
+    const from_ = r.Route ? r.Route.OriginAirport : '', to = r.Route ? r.Route.DestinationAirport : '';
+    out.push({ k: r.Date + src + from_ + to, date: r.Date, src, from: from_, to, miles, seats, direct, tax: num(pick('TotalTaxes')), cur: r.TaxesCurrency || '',
+      air: String(pick('Airlines') || '').split(/[\s,]+/).filter(Boolean).slice(0, 4).join(', ') });
+  }
+  return out.sort((x, y) => x.miles - y.miles || (x.date < y.date ? -1 : x.date > y.date ? 1 : 0));
+}
+
+function taxText(x) {
+  if (NO_TAX.has(x.src) || !x.tax) return '';
+  const v = x.tax / 100, cur = x.cur || 'USD';
+  if (cur === 'TWD') return 'NT$' + fmtN(Math.round(v));
+  return (cur === 'USD' ? 'US$' : cur + ' ') + (Number.isInteger(v) ? fmtN(v) : v.toFixed(2));
+}
+
+// base64 of UTF-8 text, and RFC 2047 words of at most 45 bytes so each stays under 75 characters
+function b64utf8(s) {
+  const bytes = enc.encode(s);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 8192) bin += String.fromCharCode(...bytes.subarray(i, i + 8192));
+  return btoa(bin);
+}
+function mimeWords(s) {
+  const words = [];
+  let cur = '';
+  for (const ch of s) {
+    if (cur && enc.encode(cur + ch).length > 45) { words.push(cur); cur = ''; }
+    cur += ch;
+  }
+  if (cur) words.push(cur);
+  return words.map(w => '=?UTF-8?B?' + b64utf8(w) + '?=').join('\r\n ');
+}
+async function sendMail(env, to, fromName, subject, text, html) {
+  const from = env.MAIL_FROM || 'alerts@ginochang.com', b = 'b_' + randomToken(12);
+  const part = (type, body) => ['--' + b, 'Content-Type: ' + type + '; charset=utf-8', 'Content-Transfer-Encoding: base64', '', b64utf8(body).replace(/.{76}/g, '$&\r\n')];
+  const raw = [
+    'From: ' + mimeWords(fromName) + ' <' + from + '>', 'To: <' + to + '>', 'Subject: ' + mimeWords(subject),
+    'Date: ' + new Date().toUTCString(), 'Message-ID: <' + randomToken(18) + '@' + from.split('@')[1] + '>',
+    'Auto-Submitted: auto-generated', 'MIME-Version: 1.0', 'Content-Type: multipart/alternative; boundary="' + b + '"', '',
+    ...part('text/plain', text), ...part('text/html', html), '--' + b + '--', '',
+  ].join('\r\n');
+  await env.ALERT_MAIL.send(new EmailMessage(from, to, raw));
+}
+
+// one email for the new or cheaper awards of an alert (sent: what earlier emails said, for the "was" price)
+async function sendAlertMail(env, a, fresh, sent) {
+  const L = MAIL_WORDS[a.lang] || MAIL_WORDS.zh, cab = L.cabin[a.cabin], route = routeText(a);
+  const site = env.SITE_URL || 'https://award.ginochang.com/';
+  const many = a.o.includes(',') || a.d.includes(',');   // a multi-airport alert names each row's airports
+  const shown = fresh.slice(0, 25);
+  const rows = shown.map(x => {
+    const day = L.day(+x.date.slice(5, 7) + '/' + +x.date.slice(8, 10), L.wd[new Date(x.date + 'T00:00:00Z').getUTCDay()]);
+    const info = [taxText(x) ? '+ ' + taxText(x) : '', many ? x.from + '→' + x.to : '', x.seats ? L.seats(x.seats) : '', x.direct ? L.direct : '', x.air].filter(Boolean);
+    return { day, prog: PROGRAM_NAME[x.src] || x.src, miles: L.miles(fmtN(x.miles)), info, was: x.k in sent ? L.was(fmtN(sent[x.k])) : '' };
+  });
+  const intro = L.intro(a.label || route, cab, fmtN(a.max_miles), fresh.length);
+  const more = fresh.length > shown.length ? L.more(fresh.length - shown.length) : '';
+  const openUrl = site + '#/alert/' + a.id, manageUrl = site + '#/alerts';
+  const text = [intro, '', ...rows.map(r => [r.day, r.prog, r.miles, ...r.info, r.was].filter(Boolean).join('  ')), ...(more ? ['', more] : []), '',
+    L.open + ': ' + openUrl, L.manage + ': ' + manageUrl, '', L.note].join('\n');
+  const ink = '#3E3A39', soft = '#6B6461';
+  // each award in two lines (date, program and miles; then taxes and details), so a phone keeps every line whole
+  const cell = 'padding:8px 4px 0;border-top:1px dashed ' + ink + ';vertical-align:top';
+  const rowHtml = r => '<tr><td style="' + cell + '"><b style="white-space:nowrap">' + escHtml(r.day) + '</b> <span style="white-space:nowrap">' + escHtml(r.prog) + '</span></td>' +
+    '<td style="' + cell + ';text-align:right;white-space:nowrap"><b>' + escHtml(r.miles) + '</b></td></tr>' +
+    '<tr><td colspan="2" style="padding:2px 4px 8px;color:' + soft + ';font-size:13px">' + escHtml(r.info.join(' · ')) +
+    (r.was ? (r.info.length ? ' · ' : '') + '<b style="color:#A33A2A;white-space:nowrap">' + escHtml(r.was) + '</b>' : '') + '</td></tr>';
+  const html = '<div style="background:#FFFCF6;padding:16px;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,\'PingFang TC\',\'Noto Sans TC\',sans-serif;color:' + ink + '">' +
+    '<div style="max-width:560px;margin:0 auto;background:#FFFFFF;border:3px solid ' + ink + ';border-radius:18px;padding:18px 18px 14px">' +
+    '<div style="font-size:20px;font-weight:bold;margin:0 0 6px">✈️ ' + escHtml(route) + ' ' + escHtml(cab) + '</div>' +
+    '<p style="margin:0 0 10px;font-size:15px;line-height:1.5">' + escHtml(intro) + '</p>' +
+    '<table role="presentation" style="width:100%;border-collapse:collapse;font-size:14px;line-height:1.45">' +
+    rows.map(rowHtml).join('') +
+    '</table>' + (more ? '<p style="margin:8px 0 0;font-size:14px">' + escHtml(more) + '</p>' : '') +
+    '<p style="margin:16px 0 10px"><a href="' + escHtml(openUrl) + '" style="display:inline-block;background:#F2A497;color:' + ink + ';border:3px solid ' + ink + ';border-radius:999px;padding:8px 18px;text-decoration:none;font-weight:bold">' + escHtml(L.open) + '</a></p>' +
+    '<p style="margin:0;font-size:12px;line-height:1.5;color:' + soft + '">' + escHtml(L.note) + '<br><a href="' + escHtml(manageUrl) + '" style="color:' + ink + '">' + escHtml(L.manage) + '</a></p>' +
+    '</div></div>';
+  await sendMail(env, a.email, L.from, L.subject(route, cab, fresh.length, fmtN(fresh[0].miles)), text, html);
+}
+
+// One check of one alert: a narrow search, the awards that meet it, and an email when any are new or cheaper
+// (send = false only for an address not verified yet). a = an alerts row plus the account's email, role, daily_limit.
+async function checkAlert(env, ctx, a, send) {
+  const s = { id: a.user_id, role: a.role, daily_limit: a.daily_limit }, t = now(), today = utcDay();
+  const from = a.s > today ? a.s : today;
+  const stopAt = async why => {
+    await env.DB.prepare('UPDATE alerts SET checked_at = ?, check_note = ? WHERE id = ?').bind(t, why, a.id).run();
+    return { id: a.id, note: why };
+  };
+  const stop = await budgetCheck(env, s, {}, 1);
+  if (stop) return stopAt((await stop.json()).error);
+  // cheapest first, so a reply cut at 1,000 rows (a wide alert: 92 days, several airports) keeps the awards that matter
+  const qs = new URLSearchParams({ origin_airport: a.o, destination_airport: a.d, start_date: from, end_date: a.e, cabins: CABIN_API[a.cabin], take: '1000', order_by: 'lowest_mileage' });
+  if (a.sources) qs.set('sources', a.sources);
+  const r = await fetch(UPSTREAM + '/search?' + qs, {
+    headers: { 'Partner-Authorization': env.SEATS_KEY, accept: 'application/json', 'User-Agent': 'award-search (personal use)' },
+  });
+  spend(env, ctx, s, 1);
+  passOn(r, env, {}, ctx);   // keeps the key's remaining count, as a search does
+  if (!r.ok) return stopAt('upstream_' + r.status);
+  const body = await r.json();
+  const hits = alertHits(body.data || [], a, from);
+  const sent = a.sent ? JSON.parse(a.sent) : {};
+  const fresh = hits.filter(x => !(x.k in sent) || x.miles < sent[x.k]);
+  let mailed = false;
+  if (fresh.length && send) {
+    try { await sendAlertMail(env, a, fresh, sent); } catch (e) { console.error('alert mail', e && e.message); return stopAt('mail_failed'); }
+    mailed = true;
+    for (const x of fresh) sent[x.k] = x.miles;
+  }
+  const keep = Object.entries(sent).filter(([k]) => k.slice(0, 10) >= today).slice(-SENT_KEYS_MAX);   // past dates go
+  await env.DB.prepare('UPDATE alerts SET checked_at = ?, check_note = ?, found = ?, sent = ?' + (mailed ? ', sent_at = ?, sent_count = sent_count + 1' : '') + ' WHERE id = ?')
+    .bind(t, body.hasMore ? 'more' : null, hits.length, JSON.stringify(Object.fromEntries(keep)), ...(mailed ? [t] : []), a.id).run();
+  return { id: a.id, found: hits.length, fresh: fresh.length, mailed, top: hits.slice(0, 20).map(({ k, ...x }) => x) };
+}
+
+// the cron's work: end alerts whose dates have passed, then check the most overdue one(s)
+async function runAlerts(env, ctx) {
+  const t = now();
+  await env.DB.prepare("UPDATE alerts SET status = 'ended' WHERE status != 'ended' AND e < ?").bind(utcDay()).run();
+  const due = await env.DB.prepare(
+    'SELECT a.*, u.email, u.role, u.daily_limit FROM alerts a JOIN users u ON u.id = a.user_id ' +
+    "WHERE a.status = 'active' AND (a.checked_at IS NULL OR a.checked_at <= ?) AND u.status = 'active' " +
+    "AND u.mail_verified_at IS NOT NULL AND (u.alerts_ok = 1 OR u.role = 'owner') " +
+    'ORDER BY a.checked_at IS NOT NULL, a.checked_at LIMIT ?').bind(t - ALERT_EVERY + 300, ALERTS_PER_RUN).all();
+  const out = [];
+  for (const a of due.results) out.push(await checkAlert(env, ctx, a, true));
+  return out;
+}
+
+async function alerts(req, env, ctx, s, p, m, h) {
+  let mm;
+  const u = await env.DB.prepare('SELECT email, alerts_ok, mail_id, mail_verified_at, mail_asked_at FROM users WHERE id = ?').bind(s.id).first();
+  const allowed = s.role === 'owner' || u.alerts_ok === 1;
+  if (p === '/me/alerts' && m === 'GET') {
+    const r = await env.DB.prepare('SELECT * FROM alerts WHERE user_id = ? ORDER BY created_at DESC').bind(s.id).all();
+    return json({ alerts: r.results.map(alertOut), max: ALERTS_MAX, every: ALERT_EVERY, allowed, mail: mailInfo(env, u) }, 200, h);
+  }
+  if (!allowed) return json({ error: 'alerts_off' }, 403, h);
+  if (p === '/me/alerts' && m === 'POST') {
+    const a = cleanAlert(await readJson(req));
+    if (!a) return json({ error: 'param' }, 400, h);
+    const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM alerts WHERE user_id = ? AND status != 'ended'").bind(s.id).first();
+    if (n.n >= ALERTS_MAX) return json({ error: 'too_many', max: ALERTS_MAX }, 400, h);
+    const ins = await env.DB.prepare('INSERT INTO alerts (user_id, o, d, s, e, cabin, sources, max_miles, direct, seats, label, lang, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .bind(s.id, a.o, a.d, a.s, a.e, a.cabin, a.sources, a.max_miles, a.direct, a.seats, a.label, a.lang, now()).run();
+    return json({ id: ins.meta.last_row_id }, 201, h);
+  }
+  if ((mm = /^\/me\/alerts\/(\d{1,12})$/.exec(p)) && m === 'PUT') {
+    // pause or resume, a new miles ceiling, or the email's language
+    const b = await readJson(req), sets = [], vals = [];
+    if (b.status !== undefined) {
+      if (b.status !== 'active' && b.status !== 'paused') return json({ error: 'param' }, 400, h);
+      sets.push('status = ?'); vals.push(b.status);
+    }
+    if (b.max_miles !== undefined) {
+      if (!Number.isInteger(b.max_miles) || b.max_miles < 1000 || b.max_miles > 2000000) return json({ error: 'param' }, 400, h);
+      sets.push('max_miles = ?'); vals.push(b.max_miles);
+    }
+    if (b.lang !== undefined) { sets.push('lang = ?'); vals.push(b.lang === 'en' ? 'en' : 'zh'); }
+    if (!sets.length) return json({ error: 'param' }, 400, h);
+    const r = await env.DB.prepare('UPDATE alerts SET ' + sets.join(', ') + " WHERE id = ? AND user_id = ? AND status != 'ended'").bind(...vals, +mm[1], s.id).run();
+    return r.meta.changes ? json({ ok: true }, 200, h) : json({ error: 'not_found' }, 404, h);
+  }
+  if ((mm = /^\/me\/alerts\/(\d{1,12})$/.exec(p)) && m === 'DELETE') {
+    await env.DB.prepare('DELETE FROM alerts WHERE id = ? AND user_id = ?').bind(+mm[1], s.id).run();
+    return json({ ok: true }, 200, h);
+  }
+  if ((mm = /^\/me\/alerts\/(\d{1,12})\/run$/.exec(p)) && m === 'POST') {
+    // 立即檢查: the cron's check, now; it emails only once the address is verified; at most every 2 minutes
+    const a = await env.DB.prepare('SELECT * FROM alerts WHERE id = ? AND user_id = ?').bind(+mm[1], s.id).first();
+    if (!a) return json({ error: 'not_found' }, 404, h);
+    if (a.status === 'ended') return json({ error: 'ended' }, 400, h);
+    if (a.checked_at && now() - a.checked_at < 120) return json({ error: 'too_soon' }, 429, h);
+    return json(await checkAlert(env, ctx, { ...a, email: u.email, role: s.role, daily_limit: s.daily_limit }, !!u.mail_verified_at), 200, h);
+  }
+  return null;
+}
+
+/* ---------- the account's email as an alert recipient ---------- */
+// Cloudflare Email Routing destination addresses, through its API (CF_API_TOKEN: Email Routing Addresses: Edit).
+// Adding an address makes Cloudflare send it a verification email; after its link is clicked, alert mail can
+// reach it. A person needs no Cloudflare account for this, only that click.
+const CF_API = 'https://api.cloudflare.com/client/v4';
+async function cfAddr(env, method, path, body) {
+  try {
+    const r = await fetch(CF_API + '/accounts/' + env.CF_ACCOUNT + '/email/routing/addresses' + path, {
+      method, headers: { Authorization: 'Bearer ' + env.CF_API_TOKEN, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined,
+    });
+    const d = await r.json().catch(() => null);
+    return { ok: !!(r.ok && d && d.success), status: r.status, result: d ? d.result : null };
+  } catch {
+    return { ok: false, status: 0, result: null };
+  }
+}
+async function findAddr(env, email) {
+  for (let page = 1; page <= 5; page++) {
+    const r = await cfAddr(env, 'GET', '?per_page=50&page=' + page);
+    if (!r.ok || !Array.isArray(r.result)) return null;
+    const hit = r.result.find(x => String(x.email).toLowerCase() === email);
+    if (hit || r.result.length < 50) return hit || null;
+  }
+  return null;
+}
+const mailInfo = (env, u) => ({ email: u.email, state: u.mail_verified_at ? 'verified' : u.mail_id ? 'pending' : 'none', asked_at: u.mail_asked_at || null, ready: !!env.CF_API_TOKEN });
+const mailRow = (env, s) => env.DB.prepare('SELECT email, mail_id, mail_verified_at, mail_asked_at FROM users WHERE id = ?').bind(s.id).first();
+
+// GET /me/mail: the address's state; while it waits for its click, ask Cloudflare whether it has been clicked
+async function mailCheck(env, s, h) {
+  const u = await mailRow(env, s);
+  if (u.mail_id && !u.mail_verified_at && env.CF_API_TOKEN) {
+    const r = await cfAddr(env, 'GET', '/' + u.mail_id);
+    if (r.ok && r.result && r.result.verified) {
+      u.mail_verified_at = now();
+      await env.DB.prepare('UPDATE users SET mail_verified_at = ? WHERE id = ?').bind(u.mail_verified_at, s.id).run();
+    } else if (r.status === 404) {   // removed on Cloudflare's side
+      u.mail_id = null;
+      await env.DB.prepare('UPDATE users SET mail_id = NULL WHERE id = ?').bind(s.id).run();
+    }
+  }
+  return json(mailInfo(env, u), 200, h);
+}
+
+// POST /me/mail: have Cloudflare send its verification email to the sign-in address (3 an hour). An address
+// already verified there (Gino's forwarding address, say) is only recorded. One still waiting for its click is
+// removed and added again, which sends a fresh email; an unverified address receives nothing, so nothing is lost.
+async function mailVerify(env, s, h) {
+  if (!env.CF_API_TOKEN || !env.CF_ACCOUNT) return json({ error: 'mail_off' }, 503, h);
+  let u = await mailRow(env, s);
+  if (u.mail_verified_at) return json(mailInfo(env, u), 200, h);
+  const key = 'rl:mail:' + s.id;
+  if (await tooMany(env, key, LIMITS.mail)) return json({ error: 'rate' }, 429, h);
+  await bump(env, key, LIMITS.mail);
+  let r = await cfAddr(env, 'POST', '', { email: u.email });
+  if (!r.ok) {
+    const found = await findAddr(env, u.email);
+    if (found && found.verified) r = { ok: true, result: found };
+    else if (found) {
+      await cfAddr(env, 'DELETE', '/' + (found.id || found.tag));
+      r = await cfAddr(env, 'POST', '', { email: u.email });
+    }
+  }
+  if (!r.ok || !r.result) return json({ error: 'mail_cf' }, 502, h);
+  const t = now();
+  u = { ...u, mail_id: r.result.id || r.result.tag, mail_verified_at: r.result.verified ? t : null, mail_asked_at: t };
+  await env.DB.prepare('UPDATE users SET mail_id = ?, mail_verified_at = ?, mail_asked_at = ? WHERE id = ?').bind(u.mail_id, u.mail_verified_at, t, s.id).run();
+  return json(mailInfo(env, u), 200, h);
+}
+
 // The last remaining count seats.aero reported, and when. The page works out whether the UTC-midnight reset
 // has passed since then. Costs no seats.aero call.
 async function quota(env, s, h) {
@@ -646,14 +1001,21 @@ export default {
       if (p === '/quota' && m === 'GET') return await quota(env, s, h);
       if (p === '/refresh' && m === 'POST') return await refresh(req, env, h, ctx, s);
       if (p.startsWith('/me/saved')) { const r = await saved(req, env, s, p, m, h); if (r) return r; }
+      if (p.startsWith('/me/alerts')) { const r = await alerts(req, env, ctx, s, p, m, h); if (r) return r; }
+      if (p === '/me/mail' && m === 'GET') return await mailCheck(env, s, h);
+      if (p === '/me/mail' && m === 'POST') return await mailVerify(env, s, h);
       if (p.startsWith('/admin/')) {
         if (s.role !== 'owner') return json({ error: 'forbidden' }, 403, h);
-        return await admin(req, env, s, url, h);
+        return await admin(req, env, s, url, h, ctx);
       }
       return json({ error: 'not_found' }, 404, h);
     } catch (e) {
       console.error(e && e.stack || e);   // visible in `wrangler tail`; never holds a password
       return json({ error: 'server' }, 500, h);
     }
+  },
+  // the cron trigger (wrangler.toml): the most overdue alert gets its check
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runAlerts(env, ctx).catch(e => console.error('alerts', e && e.stack || e)));
   },
 };

@@ -7,6 +7,16 @@ preview_urls = false
 [vars]
 ALLOWED_ORIGINS = "https://award.ginochang.com"
 SITE_URL = "https://award.ginochang.com/"
+CF_ACCOUNT = "3d209c3949176c3d440c5428d97f4d27"
+MAIL_FROM = "alerts@ginochang.com"
+
+# email alerts: every 10 minutes the most overdue alert is checked, so each alert about every 3 hours
+[triggers]
+crons = ["*/10 * * * *"]
+
+# alert emails, through Cloudflare Email Routing (only to verified destination addresses)
+[[send_email]]
+name = "ALERT_MAIL"
 
 # lockout and rate-limit counters (short-lived, so KV is enough)
 [[kv_namespaces]]
@@ -30,6 +40,15 @@ preview_urls = false
 [env.staging.vars]
 ALLOWED_ORIGINS = "http://127.0.0.1:8766"
 SITE_URL = "http://127.0.0.1:8766/index.html"
+CF_ACCOUNT = "3d209c3949176c3d440c5428d97f4d27"
+MAIL_FROM = "alerts@ginochang.com"
+
+# no cron on staging (alerts there run from POST /admin/alerts/run)
+[env.staging.triggers]
+crons = []
+
+[[env.staging.send_email]]
+name = "ALERT_MAIL"
 
 [[env.staging.kv_namespaces]]
 binding = "KV"

@@ -156,6 +156,31 @@ svg{display:block}
 .codebox .code{font-size:26px;letter-spacing:3px;font-variant-numeric:tabular-nums}
 .codebox input{flex:1;min-width:0;font-size:16px;border:2px solid var(--ink);border-radius:10px;padding:3px 8px;background:var(--paper)}
 .codebox small{flex-basis:100%;font-size:12px;color:var(--ink2)}
+/* 提醒: the form under the results, and the 我的提醒 page */
+.alertf{display:grid;gap:10px}
+.alertf h3,.alertf .note0{margin:0}
+.alertf .af2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.alertf .field input[type=date]{font-size:16px}
+.alertf .field select{display:block;border:0;outline:0;width:100%;background:transparent;font:inherit;font-size:17px;padding:0;-webkit-appearance:none;appearance:none;color:inherit}
+.alertf .lblx{font-size:12px;color:var(--ink2);margin:0 0 -4px}
+.alertf .acts{display:flex;gap:8px}
+.seg.two{grid-template-columns:1fr 1fr}
+.seg.two button{font-size:14px;padding:4px 6px}
+.seg.cab5 button{font-size:15px;padding:4px 0;min-height:36px}
+html[lang=en] .seg.cab5 button{font-size:clamp(11px,3.4vw,15px)}
+.mstate{font-size:15px;margin:0 0 10px}
+.mstate.ok{color:#2F6B2F}
+#mail-card .acts{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+details.guide{margin-top:8px;border-top:2px dashed var(--ink);padding-top:8px}
+details.guide summary{cursor:pointer;font-size:14px}
+details.guide ol{margin:8px 0;padding-left:22px;font-size:14px;line-height:1.6}
+.arow .main small span+span::before{content:'・'}
+.arow .main small{gap:0!important}
+.arow .st{display:block;font-size:12px;color:var(--ink2);margin-top:2px}
+.arun{flex-basis:100%;border:2px dashed var(--ink);border-radius:14px;background:var(--paper);padding:6px 10px;font-size:13px}
+.arun p{margin:0}
+.arun ul{margin:4px 0 0;padding-left:18px}
+.tag.pause{background:var(--yellow-t)}
 details.danger summary{cursor:pointer;list-style:none;font-size:17px}
 details.danger summary::-webkit-details-marker{display:none}
 details.danger[open] summary{margin-bottom:8px}
@@ -582,7 +607,9 @@ html[lang=en] .brand{font-size:18px}
       <div id="banner"></div>
       <div class="legs" id="legs" hidden></div>
       <div class="route-h" id="route-h"></div>
-      <div class="saverow"><button type="button" class="btn ghost" id="save-btn" hidden>☆ 收藏這個搜尋</button></div>
+      <div class="saverow"><button type="button" class="btn ghost" id="save-btn" hidden>☆ 收藏這個搜尋</button>
+        <button type="button" class="btn ghost" id="alert-btn" hidden>🔔 設定提醒</button></div>
+      <form class="acard y alertf" id="alert-form" novalidate hidden></form>
       <div class="sum" id="sum" aria-live="polite"></div>
       <div class="fresh" id="fresh"></div>
 
@@ -624,6 +651,11 @@ html[lang=en] .brand{font-size:18px}
       <div id="acct-body"></div>
     </section>
 
+    <section id="view-alerts" class="page" hidden>
+      <div class="vhead"><a class="back" href="#/">← 回搜尋</a><h2>我的提醒</h2></div>
+      <div id="alerts-body"></div>
+    </section>
+
     <section id="view-admin" class="page" hidden>
       <div class="vhead"><a class="back" href="#/account">← 我的帳號</a><h2>管理</h2></div>
       <div id="admin-body"></div>
@@ -640,6 +672,102 @@ html[lang=en] .brand{font-size:18px}
 let LANG = localStorage.getItem('award-lang') === 'en' ? 'en' : 'zh';
 const LOC = () => (LANG === 'en' ? 'en-US' : 'zh-TW');
 const EN = {
+  "最早日期": "Earliest",
+  "最晚日期": "Latest",
+  "還不能寄信：要等管理員在 Cloudflare 設定好。": "Emails can't go out yet: the admin has to finish the Cloudflare setup.",
+  "🔔 設定提醒": "🔔 Set an alert",
+  "我的提醒": "My alerts",
+  "🔔 我的提醒": "🔔 My alerts",
+  "有位子時寄信通知你。": "Get an email when seats open up.",
+  "管理提醒": "Manage alerts",
+  "提醒已關": "Alerts off",
+  "關閉提醒": "Turn alerts off",
+  "開啟提醒": "Turn alerts on",
+  "提醒：{0} 個": "Alerts: {0}",
+  "（Email 已驗證）": " (email verified)",
+  "這個帳號的提醒已開啟": "Alerts turned on for this account",
+  "這個帳號的提醒已關閉": "Alerts turned off for this account",
+  "提醒最多 {0} 個，先刪掉一些再建立。": "Up to {0} alerts. Delete one first.",
+  "管理員關閉了這個帳號的提醒功能。": "The admin turned alerts off for this account.",
+  "剛剛才檢查過，等 2 分鐘再試。": "Just checked. Try again in 2 minutes.",
+  "這個提醒的日期已經過了。": "This alert's dates have passed.",
+  "Email 通知還沒開通，要等管理員設定好 Cloudflare。": "Email alerts are not switched on yet: the admin has to finish the Cloudflare setup.",
+  "Cloudflare 沒有接受這個 Email，等一下再試。": "Cloudflare did not accept this email. Try again later.",
+  "驗證信一小時最多寄 3 次，請晚一點再試。": "Up to 3 verification emails an hour. Try again later.",
+  "🔔 有位子時寄信通知我": "🔔 Email me when seats open up",
+  "最多幾哩": "Max miles",
+  "例：80000": "e.g. 80000",
+  "要檢查的計畫": "Programs to check",
+  "目前勾選的 {0} 個": "The {0} ticked now",
+  "所有計畫": "All programs",
+  "所有計畫都會檢查。只想看某些計畫的話，先在「更多篩選」取消勾選其他的。": "Every program is checked. To watch only some, untick the others in More filters first.",
+  "只要直飛": "Nonstop only",
+  "至少幾個位子": "Seats at least",
+  "名稱（選填）": "Name (optional)",
+  "例：東京賞櫻": "e.g. Tokyo in spring",
+  "大約每 3 小時檢查一次，每次用 1 次額度。第一封信會列出現在就有的位子，之後只寄新出現或更便宜的。": "Checked about every 3 hours, 1 call each time. The first email lists what is open now; after that, only new or cheaper awards.",
+  "建立提醒": "Create alert",
+  "取消": "Cancel",
+  "請選日期。": "Pick the dates.",
+  "最晚出發不能早於最早出發。": "The latest date can't be before the earliest.",
+  "請輸入最多幾哩，例如 80000。": "Enter the most miles you would pay, e.g. 80000.",
+  "提醒建好了，大約每 3 小時檢查一次": "Alert created. It is checked about every 3 hours",
+  "提醒建好了。還要驗證 Email 才會寄信，到「我的提醒」完成": "Alert created. Verify your email so it can send: see My alerts",
+  "暫停中": "Paused",
+  "日期已過，不再檢查": "Dates passed, no longer checked",
+  "還沒檢查，10 分鐘內會開始": "Not checked yet; starts within 10 minutes",
+  "驗證 Email 之後才會開始檢查": "Checks start once your email is verified",
+  "今天的額度用完了，明天會繼續": "Today's quota is used up; it continues tomorrow",
+  "網站今天的額度快用完了，先停一下": "The site's quota for today is nearly used up; paused for now",
+  "寄信失敗，下次再試": "The email failed; it tries again next time",
+  "結果很多，只看了最便宜的 1,000 筆": "Many results: only the cheapest 1,000 were checked",
+  "seats.aero 暫時有問題，下次再試": "seats.aero had a problem; it tries again next time",
+  "上次檢查：{0}": "Last checked: {0}",
+  "，找到 {0} 筆": ", {0} found",
+  "{0} 哩以下": "up to {0} miles",
+  "{0} 個計畫": "{0} programs",
+  "至少 {0} 位": "at least {0} seats",
+  "已結束": "Ended",
+  "已寄 {0} 封，最近一次 {1}": "{0} emails sent, last {1}",
+  "還沒寄過信": "No email yet",
+  "看結果": "See results",
+  "立即檢查": "Check now",
+  "檢查中…": "Checking…",
+  "暫停": "Pause",
+  "恢復": "Resume",
+  "為什麼要驗證？怎麼做？": "Why verify, and how?",
+  "按「寄驗證信」。": "Tap \"Send verification email\".",
+  "信箱會收到一封 Cloudflare 寄來的英文信，找不到就看垃圾郵件匣。": "An email from Cloudflare arrives. If you cannot find it, check spam.",
+  "點信裡的「Verify email address」。不用註冊 Cloudflare，也不用登入。": "Click \"Verify email address\" in it. No Cloudflare account or sign-in needed.",
+  "回到這裡按「我點好了」。之後提醒會從 alerts@ginochang.com 寄給你。": "Come back and tap \"I clicked it\". Alerts then come from alerts@ginochang.com.",
+  "這個網站用 Cloudflare 免費的寄信服務，它只寄給點過驗證信的地址，這樣就沒辦法被拿去亂寄信。每個 Email 只要驗證一次。": "This site sends through Cloudflare's free email service, which only delivers to addresses that clicked its verification email, so nobody can use it to spam. Each address is verified once.",
+  "✅ 提醒會寄到 {0}": "✅ Alerts go to {0}",
+  "管理員：建立一個 Cloudflare API token（權限 Email Routing Addresses: Edit），存到 Worker 的 CF_API_TOKEN。": "Admin: create a Cloudflare API token (permission Email Routing Addresses: Edit) and store it as the Worker's CF_API_TOKEN.",
+  "📬 驗證信已寄到 {0}（{1}）。點信裡的 Verify email address，再回來按「我點好了」。": "📬 Verification email sent to {0} ({1}). Click Verify email address in it, then come back and tap \"I clicked it\".",
+  "我點好了": "I clicked it",
+  "重寄驗證信": "Send it again",
+  "提醒信要寄到你的登入 Email：{0}。先驗證一次這個地址。": "Alerts go to your sign-in email, {0}. Verify it once first.",
+  "寄驗證信": "Send verification email",
+  "Email 通知": "Email alerts",
+  "提醒（{0}/{1}）": "Alerts ({0}/{1})",
+  "還沒有提醒。搜尋之後，在結果上方按「🔔 設定提醒」。": "No alerts yet. After a search, tap \"🔔 Set an alert\" above the results.",
+  "每個提醒大約每 3 小時檢查一次，每次用 1 次額度，一個提醒一天大約 8 次。": "Each alert is checked about every 3 hours, 1 call each time: about 8 calls a day per alert.",
+  "現在沒有符合的位子，有了會寄信通知你": "Nothing matches right now. You will get an email when something does",
+  "找到 {0} 筆符合的位子": "{0} matching awards",
+  "，有 {0} 筆是新的，已寄信": ", {0} new: email sent",
+  "（Email 還沒驗證，所以沒寄信）": " (no email: your address is not verified yet)",
+  "，沒有新的，所以沒寄信": ", none new, so no email",
+  "這個 Email 已經驗證過了": "This email is already verified",
+  "驗證信寄出了，去信箱找 Cloudflare 的信": "Sent. Look for the email from Cloudflare",
+  "驗證好了！之後的提醒會寄到這裡": "Verified! Alerts will come here",
+  "Cloudflare 說還沒點，請再看一下信箱（也看看垃圾郵件匣）": "Cloudflare says it has not been clicked yet. Check your inbox again (and spam)",
+  "提醒已暫停": "Alert paused",
+  "提醒已恢復": "Alert resumed",
+  "刪除這個提醒？": "Delete this alert?",
+  "提醒已刪除": "Alert deleted",
+  "找不到這個提醒，可能已經刪掉了": "Alert not found. It may have been deleted",
+  "這個提醒的日期已經過了": "This alert's dates have passed",
+  "已套用提醒的條件：{0}，{1} 哩以下": "Applied the alert's filters: {0}, up to {1} miles",
   "1 週": "1 wk",
   "2 週": "2 wk",
   "3 小時內剛更新過，不用核對": "Updated in the last 3 hours, no need to check",
@@ -1375,6 +1503,8 @@ function setLang(l) {
   if (!$('#app').hidden) route();
   for (const a of $$('.offer')) if (open.includes(a.dataset.id)) toggleTrips(a);   // open cards stay open (no new call)
   if (!$('#sugg').hidden && suggFor) suggest(suggFor);   // an open airport list, in the new language
+  if (!$('#alert-form').hidden) openAlertForm();
+  $('#toast').hidden = true;   // a toast still up is in the old language
   if (LSUB_NOW) $('#lsub').textContent = t(...LSUB_NOW);
   for (const b of $$('.eye')) b.textContent = b.getAttribute('aria-pressed') === 'true' ? t('隱藏') : t('顯示');
   setBusy($('#go').disabled);
@@ -1680,11 +1810,15 @@ $('#rback').addEventListener('click', () => { clearHash(); if (getToken()) showA
 /* ---------- pages: search, my account, admin ---------- */
 function route() {
   const h = location.hash;
-  const page = h === '#/account' ? 'account' : h === '#/admin' && ME && ME.role === 'owner' ? 'admin' : 'search';
+  const al = /^#\/alert\/(\d{1,12})$/.exec(h);
+  if (al) { openAlertSearch(+al[1]); return; }   // a link in an alert email
+  const page = h === '#/account' ? 'account' : h === '#/alerts' ? 'alerts' : h === '#/admin' && ME && ME.role === 'owner' ? 'admin' : 'search';
   $('#view-search').hidden = page !== 'search';
   $('#view-account').hidden = page !== 'account';
+  $('#view-alerts').hidden = page !== 'alerts';
   $('#view-admin').hidden = page !== 'admin';
   if (page === 'account') loadAccount();
+  if (page === 'alerts') loadAlerts();
   if (page === 'admin') loadAdmin();
   if (page !== 'search') scrollTo(0, 0);
 }
@@ -1733,6 +1867,7 @@ async function loadAccount() {
       '<div class="kv"><span>' + t('身分') + '</span><b>' + (m.role === 'owner' ? t('管理員') : t('一般帳號')) + '</b></div>' +
       '<div class="kv"><span>' + t('註冊日期') + '</span><b>' + fmtDay(m.created_at) + '</b></div>' +
       (m.role === 'owner' ? '<a class="btn pri" href="#/admin">' + t('到管理頁') + '</a>' : '') + '</div>' +
+    '<div class="acard"><h3>' + t('🔔 我的提醒') + '</h3><p class="note0">' + t('有位子時寄信通知你。') + '</p><a class="btn pri" href="#/alerts">' + t('管理提醒') + '</a></div>' +
     '<div class="acard w" id="prefs-card"><h3>' + t('顯示設定') + '</h3><div class="kv"><span>' + t('語言') + '</span>' + langSeg() + '</div><div class="kv"><span>' + t('金額幣別') + '</span>' + dispSeg() + '</div><p class="note0">' + t('稅金、每哩價值和 Google Flights 都會用這個幣別，匯率每天更新一次。') + '</p></div>' +
     '<form class="acard" id="pwform" novalidate><h3>' + t('改密碼') + '</h3>' +
       '<input type="email" class="sr" autocomplete="username" value="' + esc(m.email) + '" tabindex="-1" aria-hidden="true">' +
@@ -1830,14 +1965,17 @@ async function loadAdmin() {
   }).join('') || '<p class="note0">' + t('還沒有邀請碼。') + '</p>';
   const users = u.users.map(x => {
     const self = x.id === u.me;
-    const tags = (x.role === 'owner' ? '<span class="tag own">' + t('管理員') + '</span>' : '') + (x.status !== 'active' ? '<span class="tag off">' + t('已停用') + '</span>' : '') + (self ? '<span class="tag me">' + t('你') + '</span>' : '');
+    const tags = (x.role === 'owner' ? '<span class="tag own">' + t('管理員') + '</span>' : '') + (x.status !== 'active' ? '<span class="tag off">' + t('已停用') + '</span>' : '') + (self ? '<span class="tag me">' + t('你') + '</span>' : '') +
+      (x.role !== 'owner' && !x.alerts_ok ? '<span class="tag off">' + t('提醒已關') + '</span>' : '');
     const acts = '<button type="button" class="btn ghost" data-reset="' + x.id + '">' + t('產生重設連結') + '</button>' + (self ? '' :
       '<button type="button" class="btn ghost" data-limit="' + x.id + '" data-cur="' + (x.daily_limit ?? '') + '">' + t('改每日上限') + '</button>' +
+      (x.role === 'owner' ? '' : '<button type="button" class="btn ghost" data-alerts="' + x.id + '" data-to="' + (x.alerts_ok ? 0 : 1) + '">' + (x.alerts_ok ? t('關閉提醒') : t('開啟提醒')) + '</button>') +
       '<button type="button" class="btn ghost" data-status="' + x.id + '" data-to="' + (x.status === 'active' ? 'disabled' : 'active') + '">' + (x.status === 'active' ? t('停用') : t('啟用')) + '</button>' +
       '<button type="button" class="btn warn" data-del="' + x.id + '" data-email="' + esc(x.email) + '">' + t('刪除') + '</button>');
     // today's seats.aero calls against the account's cap (the owner has none)
     const use = '<span>' + (x.limit == null ? t('今天用了 {0} 次（不限）', x.used_today) : x.daily_limit == null ? t('今天用了 {0} 次／上限 {1}（預設）', x.used_today, x.limit) : t('今天用了 {0} 次／上限 {1}', x.used_today, x.limit)) + '</span>';
-    return '<div class="rowi col"><div class="main"><b>' + esc(x.email) + tags + '</b><small>' + use + '<span>' + t('註冊：{0}', fmtDay(x.created_at)) + '</span><span>' + t('最近登入：{0}', since(x.last_login_at)) + '</span><span>' + t('裝置：{0} 台', x.devices) + '</span></small></div>' +
+    const al = '<span>' + t('提醒：{0} 個', x.alerts || 0) + (x.mail_verified_at ? t('（Email 已驗證）') : '') + '</span>';
+    return '<div class="rowi col"><div class="main"><b>' + esc(x.email) + tags + '</b><small>' + use + al + '<span>' + t('註冊：{0}', fmtDay(x.created_at)) + '</span><span>' + t('最近登入：{0}', since(x.last_login_at)) + '</span><span>' + t('裝置：{0} 台', x.devices) + '</span></small></div>' +
       '<div class="acts">' + acts + '</div><div class="out" id="reset-out-' + x.id + '"></div></div>';
   }).join('');
   box.innerHTML =
@@ -1877,6 +2015,10 @@ $('#admin-body').addEventListener('click', async e => {
       await call('POST', '/admin/users/' + b.dataset.limit + '/limit', { limit });
       toast(limit === null ? t('已改回預設 200 次') : t('每日上限已改成 {0} 次', limit));
       loadAdmin();
+    } else if (b.dataset.alerts) {
+      await call('POST', '/admin/users/' + b.dataset.alerts + '/alerts', { ok: b.dataset.to === '1' });
+      toast(b.dataset.to === '1' ? t('這個帳號的提醒已開啟') : t('這個帳號的提醒已關閉'));
+      loadAdmin();
     } else if (b.dataset.status) {
       await call('POST', '/admin/users/' + b.dataset.status + '/status', { status: b.dataset.to });
       toast(b.dataset.to === 'disabled' ? t('帳號已停用，它的裝置都已登出') : t('帳號已重新啟用'));
@@ -1889,6 +2031,223 @@ $('#admin-body').addEventListener('click', async e => {
     }
   } catch (err) { toast(err.message); }
 });
+
+/* ---------- 提醒 (email alerts; the Worker checks each one about every 3 hours) ---------- */
+// An alert is one direction of a search (the leg on screen), a cabin, programs and a miles ceiling. The Worker
+// re-runs it and emails the account when an award at or under the ceiling is new, or cheaper than last emailed.
+// The account's email is verified once with Cloudflare (one click in Cloudflare's email); 我的提醒 walks through it.
+let ALERTS = null;   // the last GET /me/alerts: { alerts, max, every, allowed, mail }
+const ALERT_ERR = {
+  too_many: '提醒最多 {0} 個，先刪掉一些再建立。',
+  alerts_off: '管理員關閉了這個帳號的提醒功能。',
+  too_soon: '剛剛才檢查過，等 2 分鐘再試。',
+  ended: '這個提醒的日期已經過了。',
+  mail_off: 'Email 通知還沒開通，要等管理員設定好 Cloudflare。',
+  mail_cf: 'Cloudflare 沒有接受這個 Email，等一下再試。',
+  rate: '驗證信一小時最多寄 3 次，請晚一點再試。',
+};
+const alertErr = err => (ALERT_ERR[err.kind] ? t(ALERT_ERR[err.kind], ALERTS ? ALERTS.max : 10) : err.message);
+const alertsState = async () => (ALERTS = await call('GET', '/me/alerts'));
+const cabName = k => (CABINS.find(c => c.k === k) || { name: k }).name;
+const dayW = iso => t('{0}（{1}）', md(iso), WD[parseDate(iso).getDay()]);
+function renderAlertBtn() {
+  $('#alert-btn').hidden = !S.search || !S.legs || !S.legs[0].rows || S.demo;
+}
+$('#alert-btn').addEventListener('click', () => {
+  if ($('#alert-form').hidden) openAlertForm(); else $('#alert-form').hidden = true;
+});
+// the form, filled from the search on screen: its direction and dates, the cabin, the programs left ticked, the
+// cheapest award now as the ceiling (or the 最多里程 filter), nonstop and seats from the filters
+function openAlertForm() {
+  const L = S.legs[S.leg] || S.legs[0], f = filt(), today = isoDate(new Date());
+  const low = Math.min(...offersOf(S.rows || [], S.prefs.cabin, f).map(o => o.miles));
+  const max = f.maxMiles || (isFinite(low) ? low : '');
+  const kept = Object.keys(PROGRAMS).filter(k => !f.off.has(k));
+  const seg = (id, label, items) => '<div class="seg ' + (items.length === 2 ? 'two' : 'cab5') + '" id="' + id + '" role="radiogroup" aria-label="' + label + '">' +
+    items.map(([v, x, on]) => '<button type="button" role="radio" data-v="' + v + '" aria-checked="' + on + '">' + x + '</button>').join('') + '</div>';
+  $('#alert-form').innerHTML =
+    '<h3>' + t('🔔 有位子時寄信通知我') + '</h3>' +
+    '<p class="note0">' + n(esc(L.p.o.split(',').join('/')) + ' → ' + esc(L.p.d.split(',').join('/'))) + (S.legs.length > 1 ? '　' + (L.p.back ? t('回程') : t('去程')) : '') + '</p>' +
+    '<div class="af2"><div class="field"><label for="af-s">' + t('最早日期') + '</label><input type="date" id="af-s" value="' + L.p.s + '" min="' + today + '"></div>' +
+    '<div class="field"><label for="af-e">' + t('最晚日期') + '</label><input type="date" id="af-e" value="' + L.p.e + '" min="' + today + '"></div></div>' +
+    seg('af-cab', t('艙等'), CABINS.map(c => [c.k, c.name, c.k === S.prefs.cabin])) +
+    '<div class="field"><label for="af-max">' + t('最多幾哩') + '</label><input id="af-max" inputmode="numeric" autocomplete="off" enterkeyhint="done" value="' + max + '" placeholder="' + t('例：80000') + '"></div>' +
+    (f.off.size ? '<p class="lblx">' + t('要檢查的計畫') + '</p>' + seg('af-src', t('要檢查的計畫'), [['kept', t('目前勾選的 {0} 個', kept.length), true], ['all', t('所有計畫'), false]])
+      : '<p class="note0">' + t('所有計畫都會檢查。只想看某些計畫的話，先在「更多篩選」取消勾選其他的。') + '</p>') +
+    '<label class="check"><input type="checkbox" id="af-direct"' + (f.direct ? ' checked' : '') + '><span class="box"></span>' + t('只要直飛') + '</label>' +
+    '<div class="af2"><div class="field"><label for="af-seats">' + t('至少幾個位子') + '</label><select id="af-seats">' +
+      [1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => '<option' + (i === f.pax ? ' selected' : '') + '>' + i + '</option>').join('') + '</select></div>' +
+    '<div class="field"><label for="af-label">' + t('名稱（選填）') + '</label><input id="af-label" maxlength="40" placeholder="' + t('例：東京賞櫻') + '"></div></div>' +
+    '<p class="note0">' + t('大約每 3 小時檢查一次，每次用 1 次額度。第一封信會列出現在就有的位子，之後只寄新出現或更便宜的。') + '</p>' +
+    '<div class="acts"><button class="btn pri" type="submit">' + t('建立提醒') + '</button><button type="button" class="btn ghost" id="af-cancel">' + t('取消') + '</button></div>' +
+    '<p class="msg" id="af-msg" role="status"></p>';
+  $('#alert-form').hidden = false;
+  $('#alert-form').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+$('#alert-form').addEventListener('click', e => {
+  const r = e.target.closest('[role=radio]');
+  if (r) { for (const x of r.parentNode.children) x.setAttribute('aria-checked', String(x === r)); return; }
+  if (e.target.closest('#af-cancel')) $('#alert-form').hidden = true;
+});
+$('#alert-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const today = isoDate(new Date()), e2 = $('#af-e').value;
+  let s1 = $('#af-s').value;
+  const max = parseInt($('#af-max').value.replace(/[^\d]/g, ''), 10);
+  const msg = x => setMsg('af-msg', x);
+  if (!s1 || !e2) return msg(t('請選日期。'));
+  if (e2 < s1) return msg(t('最晚出發不能早於最早出發。'));
+  if (e2 < today) return msg(t('這些日期已經過了。'));
+  if (s1 < today) s1 = today;
+  if (daysBetween(s1, e2) > MAX_DAYS) return msg(t('日期範圍最多 3 個月，請縮短一點。'));
+  if (!(max >= 1000 && max <= 2000000)) return msg(t('請輸入最多幾哩，例如 80000。'));
+  const src = $('#af-src [aria-checked=true]'), off = new Set(S.prefs.off);
+  const L = S.legs[S.leg] || S.legs[0];
+  const body = {
+    o: L.p.o, d: L.p.d, s: s1, e: e2, cabin: $('#af-cab [aria-checked=true]').dataset.v, max_miles: max,
+    sources: src && src.dataset.v === 'kept' ? Object.keys(PROGRAMS).filter(k => !off.has(k)) : null,
+    direct: $('#af-direct').checked, seats: +$('#af-seats').value, label: $('#af-label').value.trim(), lang: LANG,
+  };
+  const go = e.target.querySelector('[type=submit]');
+  go.disabled = true;
+  try {
+    await call('POST', '/me/alerts', body);
+    $('#alert-form').hidden = true;
+    const st = await alertsState();
+    if (st.mail.state === 'verified') toast(t('提醒建好了，大約每 3 小時檢查一次'));
+    else { toast(t('提醒建好了。還要驗證 Email 才會寄信，到「我的提醒」完成')); location.hash = '#/alerts'; }
+  } catch (err) { msg(alertErr(err)); }
+  finally { go.disabled = false; }
+});
+
+// what the last check of an alert says
+function alertState(a) {
+  if (a.status === 'paused') return t('暫停中');
+  if (a.status === 'ended') return t('日期已過，不再檢查');
+  if (!a.checked_at) return ALERTS.mail.state === 'verified' ? t('還沒檢查，10 分鐘內會開始') : t('驗證 Email 之後才會開始檢查');
+  const NOTE = {
+    user_quota: '今天的額度用完了，明天會繼續', reserve: '網站今天的額度快用完了，先停一下', mail_failed: '寄信失敗，下次再試',
+    more: '結果很多，只看了最便宜的 1,000 筆',
+  };
+  const note = a.check_note ? '　' + t(NOTE[a.check_note] || 'seats.aero 暫時有問題，下次再試') : '';
+  return t('上次檢查：{0}', since(a.checked_at)) + (a.found != null && !a.check_note ? t('，找到 {0} 筆', a.found) : '') + note;
+}
+function alertRow(a) {
+  const bits = [a.label ? n(esc(a.o.split(',').join('/')) + ' → ' + esc(a.d.split(',').join('/'))) : '', t('{0} 到 {1}', md(a.s), md(a.e)), esc(cabName(a.cabin)),
+    t('{0} 哩以下', fmtMiles(a.max_miles)), a.sources ? t('{0} 個計畫', a.sources.length) : t('所有計畫'), a.direct ? t('只要直飛') : '', a.seats > 1 ? t('至少 {0} 位', a.seats) : ''];
+  const tag = a.status === 'paused' ? '<span class="tag pause">' + t('暫停中') + '</span>' : a.status === 'ended' ? '<span class="tag off">' + t('已結束') + '</span>' : '';
+  const sent = a.sent_count ? t('已寄 {0} 封，最近一次 {1}', a.sent_count, whenShort(a.sent_at)) : t('還沒寄過信');
+  const live = a.status !== 'ended';
+  return '<div class="rowi col arow"><div class="main"><b>' + esc(a.label || '') + (a.label ? '' : n(esc(a.o.split(',').join('/')) + ' → ' + esc(a.d.split(',').join('/')))) + tag + '</b>' +
+    '<small>' + bits.filter(Boolean).map(x => '<span>' + x + '</span>').join('') + '</small>' +
+    '<span class="st">' + alertState(a) + '</span><span class="st">' + sent + '</span></div>' +
+    '<div class="acts">' + (live ? '<button type="button" class="btn ghost" data-agoto="' + a.id + '">' + t('看結果') + '</button>' +
+      (a.status === 'active' ? '<button type="button" class="btn ghost" data-arun="' + a.id + '">' + t('立即檢查') + '</button>' : '') +
+      '<button type="button" class="btn ghost" data-apause="' + a.id + '" data-to="' + (a.status === 'active' ? 'paused' : 'active') + '">' + (a.status === 'active' ? t('暫停') : t('恢復')) + '</button>' : '') +
+      '<button type="button" class="btn warn" data-adel="' + a.id + '">' + t('刪除') + '</button></div>' +
+    '<div class="out" id="arun-' + a.id + '"></div></div>';
+}
+// the Email card: verified, waiting for the click, never asked, or not set up on the Worker yet
+function mailCard(m) {
+  const guide = '<details class="guide"><summary>' + t('為什麼要驗證？怎麼做？') + '</summary><ol>' +
+    '<li>' + t('按「寄驗證信」。') + '</li>' +
+    '<li>' + t('信箱會收到一封 Cloudflare 寄來的英文信，找不到就看垃圾郵件匣。') + '</li>' +
+    '<li>' + t('點信裡的「Verify email address」。不用註冊 Cloudflare，也不用登入。') + '</li>' +
+    '<li>' + t('回到這裡按「我點好了」。之後提醒會從 alerts@ginochang.com 寄給你。') + '</li></ol>' +
+    '<p class="note0">' + t('這個網站用 Cloudflare 免費的寄信服務，它只寄給點過驗證信的地址，這樣就沒辦法被拿去亂寄信。每個 Email 只要驗證一次。') + '</p></details>';
+  let body;
+  if (m.state === 'verified') body = '<p class="mstate ok">' + t('✅ 提醒會寄到 {0}', esc(m.email)) + '</p>';
+  else if (!m.ready) body = '<p class="mstate">' + t('還不能寄信：要等管理員在 Cloudflare 設定好。') + '</p>' +
+    (ME && ME.role === 'owner' ? '<p class="note0">' + t('管理員：建立一個 Cloudflare API token（權限 Email Routing Addresses: Edit），存到 Worker 的 CF_API_TOKEN。') + '</p>' : '');
+  else if (m.state === 'pending') body = '<p class="mstate">' + t('📬 驗證信已寄到 {0}（{1}）。點信裡的 Verify email address，再回來按「我點好了」。', esc(m.email), since(m.asked_at)) + '</p>' +
+    '<div class="acts"><button type="button" class="btn pri" id="mail-check">' + t('我點好了') + '</button><button type="button" class="btn ghost" id="mail-send">' + t('重寄驗證信') + '</button></div>';
+  else body = '<p class="mstate">' + t('提醒信要寄到你的登入 Email：{0}。先驗證一次這個地址。', esc(m.email)) + '</p>' +
+    '<div class="acts"><button type="button" class="btn pri" id="mail-send">' + t('寄驗證信') + '</button></div>';
+  return '<div class="acard w" id="mail-card"><h3>' + t('Email 通知') + '</h3>' + body + '<p class="msg" id="mail-msg" role="status"></p>' + (m.state === 'verified' || !m.ready ? '' : guide) + '</div>';
+}
+function renderAlerts() {
+  const A = ALERTS, box = $('#alerts-body');
+  if (!A.allowed) { box.innerHTML = '<div class="acard c"><p class="note0">' + t(ALERT_ERR.alerts_off) + '</p></div>'; return; }
+  const live = A.alerts.filter(a => a.status !== 'ended').length;
+  box.innerHTML = mailCard(A.mail) +
+    '<div class="acard"><h3>' + t('提醒（{0}/{1}）', live, A.max) + '</h3>' +
+    (A.alerts.map(alertRow).join('') || '<p class="note0">' + t('還沒有提醒。搜尋之後，在結果上方按「🔔 設定提醒」。') + '</p>') +
+    '<p class="note0">' + t('每個提醒大約每 3 小時檢查一次，每次用 1 次額度，一個提醒一天大約 8 次。') + '</p></div>';
+}
+async function loadAlerts() {
+  const box = $('#alerts-body');
+  if (!ALERTS) box.innerHTML = '<div class="skel"></div>';
+  try { await alertsState(); } catch (err) { box.innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; return; }
+  renderAlerts();
+}
+// 立即檢查's answer, under its alert
+function runHtml(r) {
+  if (r.note) return '<div class="arun"><p>' + alertState({ status: 'active', checked_at: Date.now() / 1000, check_note: r.note }) + '</p></div>';
+  const head = !r.found ? t('現在沒有符合的位子，有了會寄信通知你')
+    : t('找到 {0} 筆符合的位子', r.found) + (r.mailed ? t('，有 {0} 筆是新的，已寄信', r.fresh) : r.fresh ? t('（Email 還沒驗證，所以沒寄信）') : t('，沒有新的，所以沒寄信'));
+  const rows = (r.top || []).slice(0, 5).map(x => '<li>' + dayW(x.date) + '　' + esc((PROGRAMS[x.src] || [x.src])[0]) + '　' + t('{0} 哩', fmtMiles(x.miles)) + '</li>').join('');
+  return '<div class="arun"><p>' + head + '</p>' + (rows ? '<ul>' + rows + '</ul>' : '') + '</div>';
+}
+$('#alerts-body').addEventListener('click', async e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  const mail = b.id === 'mail-send' || b.id === 'mail-check';
+  try {
+    if (b.id === 'mail-send') {
+      b.disabled = true;
+      ALERTS.mail = await call('POST', '/me/mail');
+      renderAlerts();
+      setMsg('mail-msg', ALERTS.mail.state === 'verified' ? t('這個 Email 已經驗證過了') : t('驗證信寄出了，去信箱找 Cloudflare 的信'), true);
+    } else if (b.id === 'mail-check') {
+      b.disabled = true;
+      ALERTS.mail = await call('GET', '/me/mail');
+      renderAlerts();
+      const ok = ALERTS.mail.state === 'verified';
+      setMsg('mail-msg', ok ? t('驗證好了！之後的提醒會寄到這裡') : t('Cloudflare 說還沒點，請再看一下信箱（也看看垃圾郵件匣）'), ok);
+    } else if (b.dataset.arun) {
+      b.disabled = true;
+      b.textContent = t('檢查中…');
+      const r = await call('POST', '/me/alerts/' + b.dataset.arun + '/run');
+      await alertsState();
+      renderAlerts();
+      $('#arun-' + b.dataset.arun).innerHTML = runHtml(r);
+      loadQuota();
+    } else if (b.dataset.apause) {
+      await call('PUT', '/me/alerts/' + b.dataset.apause, { status: b.dataset.to });
+      toast(b.dataset.to === 'paused' ? t('提醒已暫停') : t('提醒已恢復'));
+      loadAlerts();
+    } else if (b.dataset.adel) {
+      if (!confirm(t('刪除這個提醒？'))) return;
+      await call('DELETE', '/me/alerts/' + b.dataset.adel);
+      toast(t('提醒已刪除'));
+      loadAlerts();
+    } else if (b.dataset.agoto) openAlertSearch(+b.dataset.agoto);
+  } catch (err) {
+    b.disabled = false;
+    if (b.dataset.arun) b.textContent = t('立即檢查');
+    if (mail && $('#mail-msg')) setMsg('mail-msg', alertErr(err)); else toast(alertErr(err));
+  }
+});
+// 看結果, or a link in an alert email: search the alert with its cabin, nonstop, programs and ceiling applied
+async function openAlertSearch(id) {
+  try { if (!ALERTS || !ALERTS.alerts.some(x => x.id === id)) await alertsState(); } catch (err) { toast(err.message); return; }
+  const a = ALERTS.alerts.find(x => x.id === id), today = isoDate(new Date());
+  history.replaceState(null, '', location.pathname + location.search + (a && a.e < today ? '#/alerts' : '#/'));
+  route();
+  if (!a) { toast(t('找不到這個提醒，可能已經刪掉了')); return; }
+  if (a.e < today) { toast(t('這個提醒的日期已經過了')); return; }
+  Object.assign(S.prefs, { cabin: a.cabin, direct: a.direct, maxMiles: a.max_miles, pax: a.seats > 1 ? Math.min(a.seats, 6) : 1,
+    off: a.sources ? Object.keys(PROGRAMS).filter(k => !a.sources.includes(k)) : [] });
+  savePrefs();
+  $('#direct').checked = S.prefs.direct;
+  $('#maxmi').value = S.prefs.maxMiles;
+  renderProgramList();
+  fillForm({ o: a.o, d: a.d, s: a.s < today ? today : a.s, e: a.e });
+  const p = readForm();
+  if (!p) return;
+  toast(t('已套用提醒的條件：{0}，{1} 哩以下', cabName(a.cabin), fmtMiles(a.max_miles)));
+  runSearch(p, false, true);
+}
 
 /* ---------- API ---------- */
 class ApiError extends Error { constructor(kind, msg) { super(msg); this.kind = kind; } }
@@ -2347,6 +2706,7 @@ function useLeg(i) {
   const L = S.legs[i];
   S.leg = i; S.params = L.p; S.rows = L.rows; S.truncated = L.truncated; S.fetchedAt = L.fetchedAt;
   S.day = null; S.shown = 60;
+  $('#alert-form').hidden = true;   // it was filled for the other direction
   render();
 }
 async function runSearch(p, demo, scroll) {
@@ -2436,6 +2796,7 @@ function renderSaveBtn() {
   b.textContent = x ? t('★ 已收藏') : t('☆ 收藏這個搜尋');
   b.setAttribute('aria-pressed', String(!!x));
   b.hidden = false;
+  renderAlertBtn();
 }
 $('#save-btn').addEventListener('click', async () => {
   const x = savedOf(S.search);
