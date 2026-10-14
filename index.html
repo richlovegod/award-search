@@ -331,6 +331,19 @@ details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13p
 #tf .chip small{font-size:11px;margin-left:3px;color:var(--ink2)}
 #tf .chip[data-tf=noVia][aria-pressed=true]{background:var(--coral-t);text-decoration:line-through}
 .tfc{margin:6px 0 2px;font-size:13px;padding:1px 12px}
+/* which bank points reach the program: one line on the card, the points needed in the details */
+.o5{display:block;font-size:12px;color:var(--ink2);margin-top:3px;white-space:normal}
+.o5 .xi{white-space:nowrap}
+.xfer{margin-top:10px;padding-top:10px;border-top:2px dashed var(--ink)}
+.xfer>b{font-weight:normal;font-size:15px}
+.xfer ul{list-style:none;margin:6px 0 4px;padding:0}
+.xfer li{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 10px;padding:3px 0}
+.xfer .xb{min-width:88px;font-size:14px}
+.xfer .xn{font-size:16px;font-variant-numeric:tabular-nums}
+.xfer .xr{font-size:12px;color:var(--ink2)}
+.xfer li small{flex-basis:100%;font-size:11px;color:var(--ink2);padding-left:98px}
+@media (max-width:359px){.xfer li small{padding-left:0}}
+.xfer .note0{font-size:11px;margin:4px 0 0}
 /* 即時核對 at the top of a card's details */
 .verify{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 0 10px;border-bottom:2px dashed var(--ink);margin-bottom:4px}
 .verify .vage{font-size:14px}
@@ -668,6 +681,81 @@ const PROGRAM_CODE = {
   emirates: 'EK', etihad: 'EY', velocity: 'VA', jetblue: 'B6', azul: 'AD', smiles: 'G3', frontier: 'F9', spirit: 'NK',
 };
 
+// Bank and hotel points that reach each program (Gino's five, checked 2026-10-14 against each issuer's own page,
+// every row confirmed by a second independent source; research in .claude/tmp/award-search/transfers-merged.json).
+// [bank points, program miles, note, via] where via names the Avios programme(s) the points pass through first
+// (moves between Avios programmes are 1:1, free and instant). Ratios change: recheck about every six months.
+const TRANSFER_AS_OF = '2026/10/14';
+const BANKS = [['amex', 'Amex'], ['chase', 'Chase'], ['citi', 'Citi'], ['capitalone', 'Capital One'], ['marriott', '萬豪']];
+const BANK_NAME = Object.fromEntries(BANKS);
+const AVIOS_ZH = { british: '英航', qatar: '卡達', iberia: '伊比利亞', finnair: '芬航' };
+const TRANSFERS = {
+  united: { chase: [1, 1, null], marriott: [3, 1, "每次轉滿 6 萬點加送 1 萬哩"] },
+  aeroplan: { amex: [1, 1, null], chase: [1, 1, null], capitalone: [1, 1, null], marriott: [3, 1, "每次轉滿 6 萬點加送 5,000 哩"] },
+  turkish: { citi: [1, 1, "Strata Premier／Elite／Prestige 的比例；其他 Citi 卡是七折"], capitalone: [1, 1, null], marriott: [3, 1, "每次轉滿 6 萬點加送 5,000 哩"] },
+  singapore: { amex: [1, 1, null], chase: [1, 1, null], citi: [1, 1, "Strata Premier／Elite／Prestige 的比例；其他 Citi 卡是七折"], capitalone: [1, 1, null], marriott: [3, 1, "每次轉滿 6 萬點加送 5,000 哩"] },
+  connectmiles: { marriott: [3, 1, "每次轉滿 6 萬點加送 5,000 哩"] },
+  ethiopian: { marriott: [3, 1, "每次轉滿 6 萬點加送 5,000 哩"] },
+  lifemiles: { amex: [1, 1, null], citi: [1, 1, "Strata Premier／Elite／Prestige 的比例；其他 Citi 卡是七折"], capitalone: [1, 1, null], marriott: [3, 1, "沒有 6 萬點加送"] },
+  american: { citi: [1, 1, "限 Strata Premier／Elite／Prestige（ThankYou Preferred、Strata、Double Cash、Custom Cash 是七折）"], marriott: [3, 1, "沒有 6 萬點加送"] },
+  alaska: { marriott: [3, 1, "每次轉滿 6 萬點加送 5,000 哩"] },
+  qantas: { amex: [1, 1, "以 500 點為單位"], citi: [1, 1, "Strata Premier／Elite／Prestige 的比例；其他 Citi 卡是七折"], capitalone: [1, 1, null], marriott: [3, 1, "每次轉滿 6 萬點加送 5,000 哩"] },
+  qatar: { amex: [1, 1, null], chase: [1, 1, null, 'british'], citi: [1, 1, "Strata Premier／Elite／Prestige 的比例；其他 Citi 卡是七折"], capitalone: [1, 1, null], marriott: [3, 1, "每次轉滿 6 萬點加送 5,000 哩"] },
+  finnair: { amex: [1, 1, null, 'british'], chase: [1, 1, null, 'british'], citi: [1, 1, "Strata Premier／Elite／Prestige 的比例；其他 Citi 卡是七折", 'qatar,british'], capitalone: [1, 1, null], marriott: [3, 1, "每次轉滿 6 萬點加送 5,000 哩", 'british'] },
+  british: { amex: [1, 1, null], chase: [1, 1, null], citi: [1, 1, "Strata Premier／Elite／Prestige 的比例；其他 Citi 卡是七折", 'qatar'], capitalone: [1, 1, null], marriott: [3, 1, "每次轉滿 6 萬點加送 5,000 哩"] },
+  iberia: { amex: [1, 1, null], chase: [1, 1, null], citi: [1, 1, "Strata Premier／Elite／Prestige 的比例；其他 Citi 卡是七折", 'qatar,british'], capitalone: [1, 1, null, 'british'], marriott: [3, 1, "每次轉滿 6 萬點加送 5,000 哩"] },
+  delta: { amex: [1, 1, "轉美國航空公司要付消費稅補貼費：每 1,000 點 0.6 美元，最多 99 美元"], marriott: [3, 1, "沒有 6 萬點加送"] },
+  flyingblue: { amex: [1, 1, null], chase: [1, 1, null], citi: [1, 1, "Strata Premier／Elite／Prestige 的比例；其他 Citi 卡是七折"], capitalone: [1, 1, null], marriott: [3, 1, "每次轉滿 6 萬點加送 5,000 哩"] },
+  virginatlantic: { amex: [1, 1, null], chase: [1, 1, null], citi: [1, 1, "Strata Premier／Elite／Prestige 的比例；其他 Citi 卡是七折"], capitalone: [1, 1, "轉到 Virgin Red，跟 Flying Club 綁定後就能用"], marriott: [3, 1, "每次轉滿 6 萬點加送 5,000 哩"] },
+  aeromexico: { amex: [5, 8, null], capitalone: [1, 1, null], marriott: [3, 1, "每次轉滿 6 萬點加送 5,000 哩"] },
+  saudia: { marriott: [3, 1, "每次轉滿 6 萬點加送 5,000 哩"] },
+  emirates: { amex: [5, 4, null], citi: [5, 4, "Strata Premier／Elite／Prestige 的比例；其他 Citi 卡是七折"], capitalone: [4, 3, null], marriott: [3, 1, "每次轉滿 6 萬點加送 5,000 哩"] },
+  etihad: { citi: [1, 1, "Strata Premier／Elite／Prestige 的比例；其他 Citi 卡是七折"], capitalone: [1, 1, null], marriott: [3, 1, "每次轉滿 6 萬點加送 5,000 哩"] },
+  velocity: { marriott: [3, 1, "每次轉滿 6 萬點加送 5,000 哩"] },
+  jetblue: { amex: [5, 4, "以 250 點為單位；要付消費稅補貼費：每 1,000 點 0.6 美元，最多 99 美元"], chase: [1, 1, null], citi: [1, 1, "ThankYou Mastercard 從 2026/9/20 起不能轉"], capitalone: [5, 3, null] },
+  frontier: { marriott: [3, 1, "每次轉滿 6 萬點加送 5,000 哩"] },
+};
+const routesTo = src => TRANSFERS[src] || {};
+// points needed for `miles`: banks move 1,000 at a time (Amex: 250 for JetBlue, 500 for Qantas); Marriott moves
+// 3,000 at a time and adds its bonus for every 60,000 in one transfer
+function pointsFor(miles, bank, src, r) {
+  const [b, m] = r;
+  if (bank === 'marriott') {
+    const bonus = src === 'united' ? 10000 : ['american', 'delta', 'lifemiles'].includes(src) ? 0 : 5000;
+    for (let p = 3000; p <= 6000000; p += 3000) if (Math.floor(p * m / b) + Math.floor(p / 60000) * bonus >= miles) return p;
+    return null;
+  }
+  const inc = bank === 'amex' && src === 'jetblue' ? 250 : bank === 'amex' && src === 'qantas' ? 500 : 1000;
+  return Math.ceil(miles * b / m / inc) * inc;
+}
+// the short line on a card: banks at 1:1 by name only, other ratios spelled out, Avios routes marked 經
+function transferLine(src) {
+  const t = routesTo(src);
+  const bits = BANKS.filter(([k]) => t[k]).map(([k, name]) => { const [b, m, , via] = t[k];
+    return name + (b === 1 && m === 1 ? '' : ' ' + b + ':' + m) + (via ? '（經' + via.split(',').map(v => AVIOS_ZH[v]).join('、') + '）' : ''); });
+  return bits.length ? '可轉：' + bits.join('・') : '這五家點數都轉不過去';
+}
+// the same line for a card, each bank kept on one line (萬豪 3:1 must not break between 萬豪 and 3:1)
+function transferLineHtml(src) {
+  const t = transferLine(src), head = t.startsWith('可轉：') ? '可轉：' : '';
+  return esc(head) + t.slice(head.length).split('・').map(x => '<span class="xi">' + esc(x) + '</span>').join('・');
+}
+// the 用點數換 block in a card's details
+function transferHtml(src, miles) {
+  const t = routesTo(src), rows = BANKS.filter(([k]) => t[k]);
+  if (!rows.length) return '<div class="xfer"><b>用點數換</b><p class="note0">Amex、Chase、Citi、Capital One、萬豪的點數都轉不過去這個計畫。</p></div>';
+  let viaUsed = false;
+  const lines = rows.map(([k, name]) => {
+    const [b, m, note, via] = t[k], need = pointsFor(miles, k, src, [b, m]);
+    if (via) viaUsed = true;
+    return '<li><span class="xb">' + esc(name) + '</span><span class="xn">' + (need ? fmtMiles(need) + ' 點' : '') + '</span><span class="xr">' + b + ':' + m +
+      (via ? '，先轉到' + via.split(',').map(v => AVIOS_ZH[v]).join('再到') + '，再移過去' : '') + '</span>' + (note ? '<small>' + esc(note) + '</small>' : '') + '</li>';
+  }).join('');
+  return '<div class="xfer"><b>用點數換（' + fmtMiles(miles) + ' 哩要準備多少）</b><ul>' + lines + '</ul>' +
+    (viaUsed ? '<p class="note0">Avios 在英航、伊比利亞、芬航、卡達之間 1:1 免費互轉，但帳戶要開滿 30 天，名字和 Email 要一致；卡達只能跟英航互轉。</p>' : '') +
+    '<p class="note0">比例是 ' + TRANSFER_AS_OF + ' 查證的，常會調整，轉點前先到銀行網站確認。轉出去就不能退回。</p></div>';
+}
+
 const CARRIERS = {
   BR: '長榮', CI: '華航', JX: '星宇', AE: '華信', B7: '立榮', IT: '台灣虎航',
   UA: '聯合', AA: '美航', DL: '達美', AS: '阿拉斯加', HA: '夏威夷', B6: '捷藍', WN: '西南', F9: '邊疆', NK: '精神',
@@ -726,7 +814,7 @@ function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch 
 const S = {
   // pax..maxMiles: the 航班條件 in 更多篩選 (maxStops 9 = any number of stops; 0 hours = no limit)
   prefs: Object.assign({ cabin: 'J', off: [], direct: false, carriers: '', sort: 'date',
-    pax: 1, wd: [], dep: [], arr: [], maxStops: 9, maxHours: 0, noVia: [], maxMiles: 0 }, load('award-prefs', {})),
+    pax: 1, wd: [], dep: [], arr: [], maxStops: 9, maxHours: 0, noVia: [], maxMiles: 0, myBanks: [] }, load('award-prefs', {})),
   search: null, legs: null, leg: 0,   // the whole search (one or two legs) and which leg is on screen
   saved: [], seen: null, seenAt: 0,   // 收藏, and what the matching one held at the last look
   verified: {},                       // 即時核對 results by availability ID, for this search
@@ -1581,7 +1669,7 @@ function filt() {
     off: new Set(p.off),
     direct: p.direct,
     carriers: new Set((p.carriers.toUpperCase().match(/[A-Z0-9]{2}/g) || [])),
-    pax: p.pax || 1, wd: new Set(p.wd), maxMiles: p.maxMiles || 0,
+    pax: p.pax || 1, wd: new Set(p.wd), maxMiles: p.maxMiles || 0, myBanks: new Set(p.myBanks || []),
     // conditions on the flight itself, checked against the trips include_trips brings along. Those trips have
     // no segments (checked on real data 2026-10-14), so layover length can't be filtered without one call per row.
     dep: new Set(p.dep), arr: new Set(p.arr), maxStops: p.maxStops ?? 9, maxHours: p.maxHours || 0, noVia: new Set(p.noVia),
@@ -1589,7 +1677,7 @@ function filt() {
 }
 // true when a condition needs flight details, so a row without trips can't be checked and is left out
 const tripRules = f => !!(f.dep.size || f.arr.size || f.maxStops < 9 || f.maxHours || f.noVia.size);
-const activeConds = () => { const f = filt(); return [f.pax > 1, f.wd.size, f.maxMiles, f.dep.size, f.arr.size, f.maxStops < 9, f.maxHours, f.noVia.size].filter(Boolean).length; };
+const activeConds = () => { const f = filt(); return [f.pax > 1, f.wd.size, f.maxMiles, f.dep.size, f.arr.size, f.maxStops < 9, f.maxHours, f.noVia.size, f.myBanks.size].filter(Boolean).length; };
 const BANDS = [['凌晨', 0, 6], ['上午', 6, 12], ['下午', 12, 18], ['晚上', 18, 24]];
 const bandOf = ts => { const h = parseInt(String(ts || '').slice(11, 13), 10); return Number.isFinite(h) ? BANDS.findIndex(([, a, b]) => h >= a && h < b) : -1; };
 const viaOf = t => (Array.isArray(t.Connections) ? t.Connections : typeof t.Connections === 'string' ? t.Connections.split(/[\s,]+/) : segsOf(t).slice(1).map(s => s.OriginAirport)).filter(Boolean);
@@ -1914,6 +2002,7 @@ function offersOf(rows, cab, f) {
     const airlines = String(pickD('Airlines') || '').split(/[\s,]+/).filter(Boolean);
     if (f.carriers.size && !airlines.some(a => f.carriers.has(a))) continue;
     if (f.maxMiles && miles > f.maxMiles) continue;
+    if (f.myBanks.size && !Object.keys(routesTo(src)).some(b => f.myBanks.has(b))) continue;   // 我的點數 can't reach it
     if (f.wd.size && !f.wd.has(parseDate(r.Date).getDay())) continue;
     const seats = num(pickD('RemainingSeats'));
     if (f.pax > 1 && seats && seats < f.pax) continue;   // 0 means the program doesn't say, so keep it
@@ -2007,6 +2096,7 @@ function renderTripFilters() {
   }
   const via = [...new Set([...seen.keys(), ...p.noVia])].sort((a, b) => (seen.get(b) || 0) - (seen.get(a) || 0)).slice(0, 16);
   $('#tf').innerHTML =
+    group('我的點數（只看轉得過去的計畫）', BANKS.map(([k, name]) => chip('myBanks', k, esc(name), (p.myBanks || []).includes(k))).join('')) +
     group('人數（座位至少要有幾個）', [1, 2, 3, 4, 5, 6].map(x => chip('pax', x, x + ' 人', (p.pax || 1) === x)).join('')) +
     group('出發星期', [...WD].map((w, i) => chip('wd', i, w, p.wd.includes(i))).join('')) +
     group('起飛時段', BANDS.map(([x, a, b], i) => chip('dep', i, x + '<small>' + a + '-' + b + ' 點</small>', p.dep.includes(i))).join('')) +
@@ -2019,7 +2109,7 @@ function renderTripFilters() {
 $('#tf').addEventListener('click', e => {
   const b = e.target.closest('[data-tf]');
   if (!b) return;
-  const g = b.dataset.tf, v = g === 'noVia' ? b.dataset.v : Number(b.dataset.v);
+  const g = b.dataset.tf, v = g === 'noVia' || g === 'myBanks' ? b.dataset.v : Number(b.dataset.v);
   if (Array.isArray(S.prefs[g])) {
     const i = S.prefs[g].indexOf(v);
     if (i < 0) S.prefs[g].push(v); else S.prefs[g].splice(i, 1);
@@ -2036,7 +2126,7 @@ $('#maxmi').addEventListener('input', e => {
   maxMiTimer = setTimeout(() => { renderAlliances(); render(); }, 300);
 });
 $('#tf-clear').addEventListener('click', () => {
-  Object.assign(S.prefs, { pax: 1, wd: [], dep: [], arr: [], maxStops: 9, maxHours: 0, noVia: [], maxMiles: 0 });
+  Object.assign(S.prefs, { pax: 1, wd: [], dep: [], arr: [], maxStops: 9, maxHours: 0, noVia: [], maxMiles: 0, myBanks: [] });
   $('#maxmi').value = '';
   savePrefs();
   renderAlliances();
@@ -2121,6 +2211,7 @@ function cardHtml(o, showDate) {
         (o.seats ? '<span>剩 ' + o.seats + ' 位</span>' : '') + '<span class="tx">' + tax + '</span></span>' + when +
       '<span class="o3"><span class="ca">' + (who ? '實際搭乘：' + who : '') + '</span><span class="age">' + ago(o.updated) + '</span>' +
         '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></span>' +
+      '<span class="o5">' + transferLineHtml(o.src) + '</span>' +
     '</button><div class="trips" hidden></div></article>';
 }
 function renderList(offers, counts) {
@@ -2181,7 +2272,7 @@ async function toggleTrips(art) {
       res = S.demo ? demoTrips(id, src) : await api('/trips/' + encodeURIComponent(id));
       S.trips.set(id, res);
     }
-    box.innerHTML = verifyHtml(art.dataset) + tripsHtml(res, src) + cashHtml(art.dataset);
+    box.innerHTML = verifyHtml(art.dataset) + tripsHtml(res, src) + transferHtml(src, +art.dataset.miles) + cashHtml(art.dataset);
     box.dataset.loaded = '1';
   } catch (err) {
     box.innerHTML = '<div class="terr">' + esc(err.message) + '</div>';
