@@ -7,7 +7,7 @@
 //                and also kept AES-GCM encrypted (key: INVITE_KEY) so the admin page can show it again
 //   reset_links  the owner makes one-time links for anyone who forgot a password
 // Every account searches with the owner's seats.aero key (SEATS_KEY), so the site is for the owner's own accounts only.
-// Bindings: DB (D1 award-auth), KV (lockout counters). Secrets: SEATS_KEY, INVITE_KEY. Vars: ALLOWED_ORIGINS, SITE_URL.
+// Bindings: DB (D1 award-auth; also the quota row), KV (lockout counters). Secrets: SEATS_KEY, INVITE_KEY. Vars: ALLOWED_ORIGINS, SITE_URL.
 
 const UPSTREAM = 'https://seats.aero/partnerapi';
 const PBKDF2_ITER = 100000;        // the most Workers allows; measured 19 to 26 ms CPU per hash (2026-10-13)
@@ -433,7 +433,7 @@ async function admin(req, env, s, url, h) {
 
 /* ---------- seats.aero relay ---------- */
 
-async function relay(path, env, h) {
+async function relay(path, env, h, ctx) {
   const r = await fetch(UPSTREAM + path, {
     headers: { 'Partner-Authorization': env.SEATS_KEY, accept: 'application/json', 'User-Agent': 'award-search (personal use)' },
   });
@@ -441,23 +441,39 @@ async function relay(path, env, h) {
   out.set('Content-Type', r.headers.get('Content-Type') || 'application/json');
   out.set('Cache-Control', 'no-store');
   for (const [k, v] of r.headers) if (k.toLowerCase().startsWith('x-ratelimit')) out.set(k, v);
+  // Keep the key's latest remaining count, so any device can read today's usage without spending a call.
+  // D1, not KV: KV's free plan allows 1,000 writes a day, the same as the call quota.
+  const left = parseInt(r.headers.get('X-RateLimit-Remaining'), 10);
+  if (Number.isFinite(left)) {
+    const lim = parseInt(r.headers.get('X-RateLimit-Limit'), 10);
+    ctx.waitUntil(env.DB.prepare('INSERT INTO quota (id, remaining, quota_limit, at) VALUES (1, ?, ?, ?) ' +
+      'ON CONFLICT(id) DO UPDATE SET remaining = excluded.remaining, quota_limit = excluded.quota_limit, at = excluded.at')
+      .bind(left, Number.isFinite(lim) ? lim : null, now()).run().catch(e => console.error('quota', e)));
+  }
   return new Response(r.body, { status: r.status, headers: out });
 }
 
-function search(url, env, h) {
+function search(url, env, h, ctx) {
   const qs = new URLSearchParams();
   for (const [k, v] of url.searchParams) {
     if (!SEARCH_RULES[k] || !SEARCH_RULES[k].test(v)) return json({ error: 'param', param: k }, 400, h);
     qs.set(k, v);
   }
   if (!qs.has('origin_airport') || !qs.has('destination_airport')) return json({ error: 'param' }, 400, h);
-  return relay('/search?' + qs, env, h);
+  return relay('/search?' + qs, env, h, ctx);
+}
+
+// The last remaining count seats.aero reported, and when. The page works out whether the UTC-midnight reset
+// has passed since then. Costs no seats.aero call.
+async function quota(env, h) {
+  const q = await env.DB.prepare('SELECT remaining, quota_limit, at FROM quota WHERE id = 1').first();
+  return json(q ? { remaining: q.remaining, limit: q.quota_limit || 1000, at: q.at } : { remaining: null, limit: 1000, at: null }, 200, h);
 }
 
 /* ---------- router ---------- */
 
 export default {
-  async fetch(req, env) {
+  async fetch(req, env, ctx) {
     const h = corsHeaders(req, env);
     const url = new URL(req.url);
     const p = url.pathname, m = req.method;
@@ -488,8 +504,9 @@ export default {
         await env.DB.prepare('DELETE FROM sessions WHERE id = ? AND user_id = ?').bind(mm[1], s.id).run();
         return json({ ok: true }, 200, h);
       }
-      if (p === '/search' && m === 'GET') return search(url, env, h);
-      if ((mm = /^\/trips\/([A-Za-z0-9]{10,40})$/.exec(p)) && m === 'GET') return relay('/trips/' + mm[1], env, h);
+      if (p === '/search' && m === 'GET') return search(url, env, h, ctx);
+      if ((mm = /^\/trips\/([A-Za-z0-9]{10,40})$/.exec(p)) && m === 'GET') return relay('/trips/' + mm[1], env, h, ctx);
+      if (p === '/quota' && m === 'GET') return await quota(env, h);
       if (p.startsWith('/admin/')) {
         if (s.role !== 'owner') return json({ error: 'forbidden' }, 403, h);
         return await admin(req, env, s, url, h);

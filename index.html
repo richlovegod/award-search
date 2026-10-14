@@ -142,7 +142,15 @@ details.danger[open] summary{margin-bottom:8px}
 .top .in{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:8px;padding:calc(6px + env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) 6px max(12px,env(safe-area-inset-left))}
 .brand{flex:1;display:flex;align-items:center;gap:8px;font-size:19px;min-width:0;white-space:nowrap}
 .brand .logo{width:38px;height:38px;flex:0 0 38px}
-.quota{font-size:13px;border:2px solid var(--ink);border-radius:999px;padding:0 10px;background:var(--yellow-t);white-space:nowrap}
+/* today's seats.aero calls: 已用 XXX/1000 over a bar (green, yellow from 70%, coral from 90%) */
+.quota{flex:0 0 auto;display:flex;flex-direction:column;align-items:stretch;gap:3px;min-width:92px;border:2px solid var(--ink);border-radius:12px;padding:2px 8px 5px;background:var(--paper);white-space:nowrap;font-size:12px;line-height:1.2;text-align:left;transition:transform .12s ease-out}
+.quota:active{transform:scale(.95)}
+.quota .qt b{font-weight:normal;font-size:14px;font-variant-numeric:tabular-nums}
+.qbar{display:block;height:8px;border:2px solid var(--ink);border-radius:999px;background:var(--paper);overflow:hidden}
+.qbar i{display:block;width:0;height:100%;background:var(--green);transition:width .5s var(--pop)}
+.quota.warn .qbar i{background:var(--yellow)}
+.quota.bad .qbar i{background:var(--coral)}
+@media (max-width:359px){.brand span{display:none}}
 .icon-btn{border:var(--line);background:var(--paper);width:38px;height:38px;border-radius:50%;display:grid;place-items:center;padding:0;transition:transform .12s ease-out}
 .icon-btn:active{transform:scale(.92)}
 .icon-btn svg{width:18px;height:18px}
@@ -407,7 +415,7 @@ details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13p
       <svg class="logo float" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g fill="none" stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"><path d="M20 3v6"/><circle cx="20" cy="3" r="1.5" fill="#3E3A39"/><rect x="6" y="9" width="28" height="24" rx="9" fill="#F2A497"/><circle cx="14.5" cy="19" r="4.2" fill="#F6D27A"/><circle cx="25.5" cy="19" r="4.2" fill="#F6D27A"/><path d="M16.5 27q3.5 3 7 0"/><path d="M11 38l3-5M29 38l-3-5"/></g></svg>
       <span>里程機位搜尋</span>
     </div>
-    <span id="quota" class="quota" hidden></span>
+    <button type="button" id="quota" class="quota" hidden><span class="qt"></span><span class="qbar" aria-hidden="true"><i></i></span></button>
     <button id="acct-btn" class="icon-btn" type="button" aria-label="我的帳號" title="我的帳號"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#3E3A39" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M4.5 21c1-4.2 4.1-6.5 7.5-6.5s6.5 2.3 7.5 6.5z" fill="#A8D3E6"/><circle cx="12" cy="8.5" r="4.2" fill="#F6D27A"/></g></svg></button>
   </div></header>
 
@@ -1047,7 +1055,7 @@ async function api(path) {
     throw new ApiError('network', '連不上中繼站，請檢查網路後再試一次。');
   }
   const q = r.headers.get('X-RateLimit-Remaining');
-  if (q !== null && q !== '' && !isNaN(q)) setQuota(Number(q));
+  if (q !== null && q !== '' && !isNaN(q)) setQuota(Number(q), Number(r.headers.get('X-RateLimit-Limit')) || 1000, Date.now());
   const text = await r.text();
   let body = null;
   try { body = JSON.parse(text); } catch {}
@@ -1063,16 +1071,41 @@ async function api(path) {
   if (t.includes('partner_key') || r.status === 401 || r.status === 403) throw new ApiError('key', 'seats.aero 不接受這把 API key（' + text.slice(0, 40) + '），需要重新產生一把。');
   throw new ApiError('upstream', 'seats.aero 暫時有問題（HTTP ' + r.status + '），等一下再試。');
 }
-function setQuota(x) {
-  save('award-quota', { n: x, day: new Date().toISOString().slice(0, 10) });
-  showQuota(x);
+// Today's seats.aero calls as 已用 XXX/1000. The count comes from seats.aero itself (X-RateLimit-Remaining), so it
+// covers every use of the key, not only this site. The relay also keeps the latest count (GET /quota, no call),
+// so a phone and a laptop show the same number. The quota resets at 00:00 UTC.
+const lastReset = () => { const d = new Date(); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()); };
+let Q = load('award-quota2', null);   // { left, limit, at: ms of the reading }
+let quotaTimer = 0;
+function setQuota(left, limit, at) {
+  if (Q && Q.at > at) return;   // keep the newer reading
+  Q = { left, limit: limit || 1000, at };
+  save('award-quota2', Q);
+  showQuota();
 }
-function showQuota(x) {
+function quotaUsed() {
+  const lim = (Q && Q.limit) || 1000;
+  return { lim, used: !Q || Q.at < lastReset() ? 0 : Math.max(0, lim - Q.left) };
+}
+function showQuota() {
   const el = $('#quota');
-  el.innerHTML = '今日剩 ' + n(x.toLocaleString('en-US')) + ' 次';
-  el.title = '每天' + resetText().replace('會在你這邊的 ', '') + '重置';
+  if (!Q) { el.hidden = true; return; }
+  const { lim, used } = quotaUsed(), pct = Math.min(100, used / lim * 100);
+  el.querySelector('.qt').innerHTML = '已用 <b>' + used.toLocaleString('en-US') + '</b>/' + lim.toLocaleString('en-US');
+  el.querySelector('.qbar i').style.width = (used ? Math.max(pct, 4) : 0) + '%';   // a sliver even for a few calls
+  el.classList.toggle('warn', pct >= 70 && pct < 90);
+  el.classList.toggle('bad', pct >= 90);
+  el.setAttribute('aria-label', '今天的 API 額度已用 ' + used + ' 次，共 ' + lim + ' 次');
   el.hidden = false;
+  // drop back to 0 at the next UTC midnight if the page is still open
+  clearTimeout(quotaTimer);
+  quotaTimer = setTimeout(showQuota, lastReset() + 86400000 - Date.now() + 1000);
 }
+$('#quota').addEventListener('click', () => {
+  const { lim, used } = quotaUsed();
+  const seen = Q && Q.at >= lastReset() ? '（' + new Date(Q.at).toLocaleTimeString('zh-TW', { hour: 'numeric', minute: '2-digit' }) + ' 的數字）' : '';
+  toast('今天已用 ' + used + ' 次，還剩 ' + (lim - used) + ' 次' + seen + '，' + resetText() + '重置');
+});
 
 /* ---------- cache ---------- */
 const MEM = new Map();
@@ -1844,8 +1877,8 @@ function showApp() {
   const hh = () => document.documentElement.style.setProperty('--hh', $('.top').offsetHeight + 'px');
   hh();
   addEventListener('resize', hh);
-  const q = load('award-quota', null);
-  if (q && q.day === new Date().toISOString().slice(0, 10)) showQuota(q.n);
+  showQuota();
+  api('/quota').then(q => { if (q.remaining != null) setQuota(q.remaining, q.limit, q.at * 1000); }).catch(() => {});
   route();
   if (location.hash === '#demo' && S.params) runSearch(S.params, true);
   loadFx().then(fresh => { if (fresh && S.rows) render(); });
