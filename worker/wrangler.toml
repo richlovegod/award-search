@@ -5,8 +5,8 @@ workers_dev = true
 preview_urls = false
 
 [vars]
-ALLOWED_ORIGINS = "https://richlovegod.github.io"
-SITE_URL = "https://richlovegod.github.io/award-search/"
+ALLOWED_ORIGINS = "https://award.ginochang.com"
+SITE_URL = "https://award.ginochang.com/"
 
 # lockout and rate-limit counters (short-lived, so KV is enough)
 [[kv_namespaces]]
