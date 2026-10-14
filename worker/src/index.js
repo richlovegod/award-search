@@ -3,16 +3,17 @@
 // Phase 1 sign-in (no outgoing email):
 //   users        one row per account; the password is kept only as a salted PBKDF2 hash
 //   sessions     one row per signed-in device; the browser holds a random token, D1 holds its SHA-256
-//   invites      registering needs a one-time invite code made by the owner
+//   invites      registering needs a one-time invite code made by the owner; the code is looked up by its SHA-256
+//                and also kept AES-GCM encrypted (key: INVITE_KEY) so the admin page can show it again
 //   reset_links  the owner makes one-time links for anyone who forgot a password
 // Every account searches with the owner's seats.aero key (SEATS_KEY), so the site is for the owner's own accounts only.
-// Bindings: DB (D1 award-auth), KV (lockout counters). Secret: SEATS_KEY. Vars: ALLOWED_ORIGINS, SITE_URL.
+// Bindings: DB (D1 award-auth), KV (lockout counters). Secrets: SEATS_KEY, INVITE_KEY. Vars: ALLOWED_ORIGINS, SITE_URL.
 
 const UPSTREAM = 'https://seats.aero/partnerapi';
 const PBKDF2_ITER = 100000;        // the most Workers allows; measured 19 to 26 ms CPU per hash (2026-10-13)
 const SESSION_LONG = 30 * 86400;   // "記住我"
 const SESSION_SHORT = 86400;
-const INVITE_DAYS = 7;
+const INVITE_DAYS = 30;
 const RESET_MINUTES = 30;
 // [allowed failures, window in seconds]
 const LIMITS = { email: [5, 900], ip: [20, 900], register: [10, 3600], reset: [10, 3600] };
@@ -56,6 +57,27 @@ function unb64url(s) {
 
 const randomToken = bytes => b64url(crypto.getRandomValues(new Uint8Array(bytes)));
 const sha256 = async s => b64url(await crypto.subtle.digest('SHA-256', enc.encode(s)));
+
+// Invite codes are stored encrypted, so a copy of the database alone still holds no usable code.
+// Stored as base64url(12-byte IV + ciphertext); the invite's id is bound in as additional data,
+// so an encrypted code copied onto another row fails to decrypt.
+const inviteKey = env => crypto.subtle.importKey('raw', unb64url(env.INVITE_KEY), 'AES-GCM', false, ['encrypt', 'decrypt']);
+async function sealCode(env, id, code) {
+  if (!env.INVITE_KEY) return null;
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: enc.encode(id) }, await inviteKey(env), enc.encode(code)));
+  const out = new Uint8Array(12 + ct.length);
+  out.set(iv);
+  out.set(ct, 12);
+  return b64url(out);
+}
+async function openCode(env, id, sealed) {
+  if (!sealed || !env.INVITE_KEY) return null;
+  try {
+    const b = unb64url(sealed);
+    return new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b.slice(0, 12), additionalData: enc.encode(id) }, await inviteKey(env), b.slice(12)));
+  } catch { return null; }
+}
 const clientIp = req => req.headers.get('CF-Connecting-IP') || 'local';
 
 function corsHeaders(req, env) {
@@ -367,16 +389,18 @@ async function admin(req, env, s, url, h) {
   }
   if (p === '/admin/invites' && m === 'GET') {
     const r = await env.DB.prepare(
-      'SELECT i.id, i.label, i.role, i.created_at, i.expires_at, i.used_at, u.email AS used_by ' +
+      'SELECT i.id, i.code_enc, i.label, i.role, i.created_at, i.expires_at, i.used_at, u.email AS used_by ' +
       'FROM invites i LEFT JOIN users u ON u.id = i.used_by ORDER BY i.created_at DESC LIMIT 50').all();
-    return json({ invites: r.results }, 200, h);
+    const invites = await Promise.all(r.results.map(async ({ code_enc, ...i }) => ({ ...i, code: await openCode(env, i.id, code_enc) })));
+    return json({ invites, days: INVITE_DAYS }, 200, h);
   }
   if (p === '/admin/invites' && m === 'POST') {
     const b = await readJson(req);
     const code = inviteCode(), t = now(), expires = t + INVITE_DAYS * 86400;
-    await env.DB.prepare('INSERT INTO invites (id, label, role, created_by, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)')
-      .bind(await sha256(code.replace('-', '')), String(b.label || '').trim().slice(0, 40) || null, 'user', s.id, t, expires).run();
-    return json({ code, expires_at: expires }, 201, h);   // the only time the code is ever shown
+    const id = await sha256(code.replace('-', ''));
+    await env.DB.prepare('INSERT INTO invites (id, code_enc, label, role, created_by, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .bind(id, await sealCode(env, id, code), String(b.label || '').trim().slice(0, 40) || null, 'user', s.id, t, expires).run();
+    return json({ code, expires_at: expires }, 201, h);
   }
   if ((mm = /^\/admin\/invites\/([A-Za-z0-9_-]{43})$/.exec(p)) && m === 'DELETE') {
     await env.DB.prepare('DELETE FROM invites WHERE id = ? AND used_at IS NULL').bind(mm[1]).run();

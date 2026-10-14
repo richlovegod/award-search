@@ -110,6 +110,9 @@ svg{display:block}
 .rowi .main{flex:1;min-width:0}
 .rowi .main b{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;font-size:15px;word-break:break-all}
 .rowi .main small{display:flex;flex-wrap:wrap;gap:0 12px;font-size:12px;color:var(--ink2)}
+.rowi .icode{font-size:18px;letter-spacing:2px;font-variant-numeric:tabular-nums}
+.rowi .icode.old{font-size:13px;letter-spacing:0;font-weight:normal;color:var(--ink2)}
+.rowi .who{display:block;font-size:14px;margin:1px 0 2px;word-break:break-all}
 .rowi .acts{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
 .rowi .btn{font-size:13px;padding:1px 10px}
 .rowi.col{flex-wrap:wrap}
@@ -157,8 +160,8 @@ details.danger[open] summary{margin-bottom:8px}
 .ap input{font-size:clamp(18px,5.6vw,24px);line-height:1.3;text-transform:uppercase;letter-spacing:.5px}
 .ap input::placeholder{font-size:16px;letter-spacing:0;text-transform:none;color:#A39C98}
 .names{font-size:12px;color:var(--ink2);height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.swap{align-self:center;margin:0;width:40px;height:40px;border-radius:50%;border:var(--line);background:var(--yellow);display:grid;place-items:center;padding:0;transition:transform .2s var(--pop)}
-.swap:active{transform:rotate(180deg) scale(.92)}
+/* one-way only, so the middle column is a plain arrow, not a button */
+.dir{align-self:center;display:grid;place-items:center}
 .sugg{position:absolute;left:0;right:0;top:calc(100% + 6px);background:var(--paper);border:var(--line);border-radius:18px;z-index:15;max-height:300px;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;animation:pop .3s var(--pop)}
 .sugg button{display:flex;width:100%;gap:10px;align-items:baseline;text-align:left;border:0;background:none;padding:9px 14px;border-bottom:2px dashed var(--ink)}
 .sugg button:last-child{border-bottom:0}
@@ -291,9 +294,18 @@ details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13p
 .offer{border:var(--line);border-radius:18px;margin:8px 0;background:var(--paper);overflow:hidden}
 .ohead{display:block;width:100%;text-align:left;border:0;background:none;padding:10px 12px 9px}
 .ohead:active{background:var(--yellow-t)}
-.o1,.o2,.o3{display:flex;align-items:baseline;gap:6px;min-width:0}
-.o1 .pn{font-size:17px;white-space:nowrap}
-.o1 .pz{font-size:13px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.o1,.o2,.o3,.o4{display:flex;align-items:baseline;gap:6px;min-width:0}
+/* small square airline logos (Google Flights' public image folder) */
+.lg{display:inline-block;width:16px;height:16px;object-fit:contain;vertical-align:-3px;margin-right:3px;flex:0 0 16px;align-self:center}
+.o1 .lg{width:18px;height:18px;flex-basis:18px;margin:0}
+.o4{font-size:14px;margin-top:3px;flex-wrap:wrap;row-gap:2px;font-variant-numeric:tabular-nums}
+.o4 b{font-weight:normal;font-size:16px;letter-spacing:.3px}
+.o4 sup{font-size:10px;margin-left:1px}
+.o4 .du,.o4 .via{color:var(--ink2);font-size:13px}
+.o4 .more{margin-left:auto;font-size:12px;color:var(--ink2);white-space:nowrap}
+/* on a narrow phone the Chinese name gives way first, then the program name; the miles always stay inside the card */
+.o1 .pn{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:2.5em;flex:0 1 auto}
+.o1 .pz{font-size:13px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 30 auto}
 .al{flex:0 0 auto;font-size:12px;border:2px solid var(--ink);background:var(--c);border-radius:999px;padding:0 7px;line-height:1.35;align-self:center}
 .mi{margin-left:auto;font-size:23px;white-space:nowrap;letter-spacing:-.2px;font-variant-numeric:tabular-nums;background:linear-gradient(transparent 62%,var(--yellow) 62%);padding:0 2px}
 .mi small{font-size:13px;margin-left:2px}
@@ -303,7 +315,8 @@ details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13p
 .tag.d{background:var(--green)}
 .tx{margin-left:auto;white-space:nowrap;font-size:13px;font-variant-numeric:tabular-nums}
 .o3{font-size:12px;color:var(--ink2);margin-top:4px}
-.o3 .ca{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.o3 .ca{flex:1;min-width:0}
+.o3 .fl{white-space:nowrap}
 .o3 .age{white-space:nowrap}
 .o3 .chev{width:18px;height:18px;flex:0 0 18px;transition:transform .25s var(--pop);align-self:center;color:var(--ink)}
 .ohead[aria-expanded=true] .chev{transform:rotate(180deg)}
@@ -333,7 +346,6 @@ details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13p
 .skel{height:78px;border:3px dashed #CFC8C3;border-radius:18px;margin:8px 0;background:linear-gradient(90deg,var(--paper) 25%,var(--yellow-t) 37%,var(--paper) 63%);background-size:400% 100%;animation:sk 1.3s ease infinite}
 @keyframes sk{0%{background-position:100% 50%}100%{background-position:0 50%}}
 .note{font-size:12px;color:var(--ink2);margin:16px 0 0}
-footer{text-align:center;font-size:12px;color:var(--ink2);margin-top:24px}
 @media (hover:hover) and (pointer:fine){
   .sugg button:hover,.ohead:hover{background:var(--yellow-t)}
   .chip:hover,.mchip:hover,.recent button:hover{background:var(--yellow-t)}
@@ -396,7 +408,7 @@ footer{text-align:center;font-size:12px;color:var(--ink2);margin-top:24px}
           <input id="from" placeholder="例：TPE" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="next">
           <div class="names" id="from-names"></div>
         </div>
-        <button type="button" class="swap" id="swap" aria-label="交換出發和抵達"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg></button>
+        <span class="dir" id="dir" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24"><path d="M3.5 12h16M13.5 6l6 6-6 6" fill="none" stroke="#3E3A39" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         <div class="field ap">
           <label for="to">抵達</label>
           <input id="to" placeholder="例：SEA" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="done">
@@ -455,8 +467,6 @@ footer{text-align:center;font-size:12px;color:var(--ink2);margin-top:24px}
       <div class="vhead"><a class="back" href="#/account">← 我的帳號</a><h2>管理</h2></div>
       <div id="admin-body"></div>
     </section>
-
-    <footer>資料來源：<a href="https://seats.aero" target="_blank" rel="noopener">seats.aero</a>　僅供個人使用</footer>
   </main>
 </div>
 <div id="toast" class="toast" role="status" hidden></div>
@@ -521,6 +531,13 @@ const PROGRAMS = {
   spirit: ['Spirit', '精神航空', 'none', 'https://www.spirit.com'],
 };
 const NO_TAX = new Set(['qatar', 'turkish', 'singapore']);   // seats.aero has no tax data for these
+// airline code of each program, for its logo
+const PROGRAM_CODE = {
+  united: 'UA', aeroplan: 'AC', turkish: 'TK', singapore: 'SQ', lufthansa: 'LH', connectmiles: 'CM', ethiopian: 'ET',
+  american: 'AA', alaska: 'AS', qantas: 'QF', qatar: 'QR', finnair: 'AY', british: 'BA', iberia: 'IB',
+  delta: 'DL', flyingblue: 'AF', virginatlantic: 'VS', aeromexico: 'AM', eurobonus: 'SK', saudia: 'SV',
+  emirates: 'EK', etihad: 'EY', velocity: 'VA', jetblue: 'B6', azul: 'AD', smiles: 'G3', frontier: 'F9', spirit: 'NK',
+};
 
 const CARRIERS = {
   BR: '長榮', CI: '華航', JX: '星宇', AE: '華信', B7: '立榮', IT: '台灣虎航',
@@ -582,8 +599,10 @@ const S = {
 const savePrefs = () => save('award-prefs', S.prefs);
 const prog = src => {
   const p = PROGRAMS[src];
-  return p ? { name: p[0], zh: p[1], al: p[2], url: p[3] } : { name: src || '?', zh: '', al: 'none', url: '' };
+  return p ? { name: p[0], zh: p[1], al: p[2], url: p[3], code: PROGRAM_CODE[src] || '' } : { name: src || '?', zh: '', al: 'none', url: '', code: '' };
 };
+// Google Flights' public logo images, one per airline code; an unknown code gets its plain grey tail.
+const logo = c => /^[A-Z0-9]{2}$/.test(c) ? '<img class="lg" src="https://www.gstatic.com/flights/airline_logos/70px/' + c + '.png" alt="" loading="lazy" onerror="this.remove()">' : '';
 
 /* ---------- dates and formats ---------- */
 const pad = x => String(x).padStart(2, '0');
@@ -920,9 +939,12 @@ async function loadAdmin() {
   const t = Date.now() / 1000;
   const invites = inv.invites.map(i => {
     const open = !i.used_at && i.expires_at >= t;
-    const state = i.used_at ? '已使用：' + esc(i.used_by || '已刪除的帳號') : i.expires_at < t ? '已過期' : '還沒用，' + fmtDay(i.expires_at) + ' 前有效';
-    return '<div class="rowi"><div class="main"><b>' + esc(i.label || '（沒有備註）') + '</b><small><span>' + state + '</span><span>建立：' + fmtDay(i.created_at) + '</span></small></div>' +
-      (open ? '<div class="acts"><button type="button" class="btn ghost" data-revoke="' + esc(i.id) + '">撤銷</button></div>' : '') + '</div>';
+    const code = i.code ? '<span class="icode">' + esc(i.code) + '</span>' : '<span class="icode old">（這個碼建立時還沒有存下來）</span>';
+    const who = i.used_at ? '<span class="who">使用者：' + esc(i.used_by || '已刪除的帳號') + '</span>' : '';
+    const state = i.used_at ? '使用：' + fmtDay(i.used_at) : i.expires_at < t ? '已過期' : '還沒用，' + fmtDay(i.expires_at) + ' 前有效';
+    return '<div class="rowi"><div class="main"><b>' + code + '</b>' + who + '<small>' + (i.label ? '<span>備註：' + esc(i.label) + '</span>' : '') + '<span>' + state + '</span><span>建立：' + fmtDay(i.created_at) + '</span></small></div>' +
+      (open ? '<div class="acts">' + (i.code ? '<button type="button" class="btn ghost" data-copy="' + esc(i.code) + '">複製</button>' : '') +
+        '<button type="button" class="btn ghost" data-revoke="' + esc(i.id) + '">撤銷</button></div>' : '') + '</div>';
   }).join('') || '<p class="note0">還沒有邀請碼。</p>';
   const users = u.users.map(x => {
     const self = x.id === u.me;
@@ -934,7 +956,7 @@ async function loadAdmin() {
       '<div class="acts">' + acts + '</div><div class="out" id="reset-out-' + x.id + '"></div></div>';
   }).join('');
   box.innerHTML =
-    '<div class="acard y"><h3>邀請碼</h3><p class="note0">新帳號要有邀請碼才能註冊。每個碼只能用一次，7 天後失效。</p>' +
+    '<div class="acard y"><h3>邀請碼</h3><p class="note0">新帳號要有邀請碼才能註冊。每個碼只能用一次，' + inv.days + ' 天後失效。</p>' +
       '<form id="invform" class="invnew" novalidate><div class="field"><label for="inv-label">備註（選填）</label><input id="inv-label" maxlength="40" placeholder="例：測試帳號 1"></div><button class="btn pri" type="submit">產生邀請碼</button></form>' +
       '<div id="inv-out"></div>' + invites + '</div>' +
     '<div class="acard w"><h3>所有帳號</h3>' + users + '</div>';
@@ -945,7 +967,7 @@ $('#admin-body').addEventListener('submit', async e => {
   try {
     const r = await call('POST', '/admin/invites', { label: $('#inv-label').value });
     await loadAdmin();
-    $('#inv-out').innerHTML = codeBox(r.code, '把這個碼給要註冊的人。離開這頁之後就看不到了，' + fmtDay(r.expires_at) + ' 前有效。');
+    $('#inv-out').innerHTML = codeBox(r.code, '把這個碼給要註冊的人，' + fmtDay(r.expires_at) + ' 前有效。下面的清單裡也找得到它。');
   } catch (err) { toast(err.message); }
 });
 $('#admin-body').addEventListener('click', async e => {
@@ -1075,13 +1097,8 @@ $('#sugg').addEventListener('pointerdown', e => {
   e.preventDefault();
   pick(b.dataset.codes);
 });
-$('#swap').addEventListener('click', () => {
-  const a = $('#from'), b = $('#to');
-  [a.value, b.value] = [b.value, a.value];
-  showNames(a); showNames(b);
-});
-
 /* ---------- dates ---------- */
+const shortDay = v => { const d = parseDate(v); return (d.getMonth() + 1) + '/' + d.getDate() + ' (' + WD[d.getDay()] + ')'; };
 function setRange(s, e) {
   $('#d1').value = s;
   $('#d2').value = e;
@@ -1105,10 +1122,13 @@ function monthRange(y, m) {
 function showDates() {
   for (const id of ['d1', 'd2']) {
     const v = $('#' + id).value;
-    const d = v ? parseDate(v) : null;
-    $('#' + id + 'v').textContent = d ? (d.getMonth() + 1) + '/' + d.getDate() + ' (' + WD[d.getDay()] + ')' : '選日期';
-    $('#' + id + 'y').textContent = d ? d.getFullYear() : '';
+    $('#' + id + 'v').textContent = v ? shortDay(v) : '選日期';
+    $('#' + id + 'y').textContent = v ? parseDate(v).getFullYear() : '';
   }
+  // the pickers grey out days that can't be chosen: nothing before today, and 最晚 never before 最早
+  const today = isoDate(new Date());
+  $('#d1').min = today;
+  $('#d2').min = $('#d1').value > today ? $('#d1').value : today;
 }
 function markMonths() {
   showDates();
@@ -1121,8 +1141,15 @@ $('#months').addEventListener('click', e => {
   const b = e.target.closest('.mchip');
   if (b) setRange(...monthRange(+b.dataset.y, +b.dataset.m));
 });
-$('#d1').addEventListener('change', () => { if ($('#d2').value && $('#d2').value < $('#d1').value) $('#d2').value = $('#d1').value; markMonths(); });
-$('#d2').addEventListener('change', markMonths);
+// A picker that ignores min (or a typed date) can still give 最晚 before 最早: move 最晚 up to 最早 and say so.
+for (const id of ['d1', 'd2']) $('#' + id).addEventListener('change', () => {
+  const s = $('#d1').value, e = $('#d2').value;
+  if (s && e && e < s) {
+    $('#d2').value = s;
+    toast(id === 'd1' ? '最晚出發已跟著改成 ' + shortDay(s) : '最晚出發不能早於最早出發，已改成 ' + shortDay(s));
+  }
+  markMonths();
+});
 for (const id of ['d1', 'd2']) $('#' + id).addEventListener('click', e => { try { e.target.showPicker(); } catch {} });
 
 /* ---------- filters ---------- */
@@ -1200,7 +1227,7 @@ function readForm() {
   if (!o.codes.length || !d.codes.length) return formErr('請輸入出發和抵達的機場。');
   let s = $('#d1').value, e = $('#d2').value;
   if (!s || !e) return formErr('請選出發日期的範圍。');
-  if (e < s) [s, e] = [e, s];
+  if (e < s) return formErr('最晚出發不能早於最早出發。');
   const today = isoDate(new Date());
   if (e < today) return formErr('這些日期已經過了。');
   if (s < today) s = today;
@@ -1246,7 +1273,8 @@ async function runSearch(p, demo, scroll) {
     const rows = [];
     let cursor = null, more = false, pages = 0;
     do {
-      const q = new URLSearchParams({ origin_airport: p.o, destination_airport: p.d, start_date: p.s, end_date: p.e, take: '1000' });
+      // include_trips brings each row's flights along, so cards can show times without one more call per card
+      const q = new URLSearchParams({ origin_airport: p.o, destination_airport: p.d, start_date: p.s, end_date: p.e, take: '1000', include_trips: 'true' });
       if (cursor != null) { q.set('cursor', cursor); q.set('skip', rows.length); }
       const res = await api('/search?' + q);
       rows.push(...(res.data || []));
@@ -1338,11 +1366,33 @@ function offersOf(rows, cab, f) {
     out.push({
       id: r.ID, src, date: r.Date, from: r.Route ? r.Route.OriginAirport : '', to: r.Route ? r.Route.DestinationAirport : '',
       miles, dmiles, direct, taxes: num(pickD('TotalTaxes')), cur: r.TaxesCurrency || '', seats: num(pickD('RemainingSeats')),
-      airlines, updated: r.UpdatedAt,
+      airlines, updated: r.UpdatedAt, ...bestTrip(r.AvailabilityTrips, CABIN_BY[cab].api, f.direct, miles),
     });
   }
   return out;
 }
+const segsOf = t => (t.AvailabilitySegments || []).slice().sort((a, b) => (a.Order || 0) - (b.Order || 0));
+const stopsOf = t => { const s = segsOf(t); return s.length ? s.length - 1 : num(t.Stops); };
+// The flight a card describes: in this cabin (nonstop only if asked), at the card's price if one matches,
+// then the shortest. trip: the summary the card shows; more: how many other flights the row has.
+function bestTrip(trips, api, direct, miles) {
+  let list = (trips || []).filter(t => String(t.Cabin || '').toLowerCase() === api);
+  if (direct) list = list.filter(t => stopsOf(t) === 0);
+  if (!list.length) return { trip: null, more: 0 };
+  list.sort((a, b) => (num(a.MileageCost) !== miles) - (num(b.MileageCost) !== miles) || num(a.MileageCost) - num(b.MileageCost) || (a.TotalDuration || 0) - (b.TotalDuration || 0));
+  const t = list[0], segs = segsOf(t);
+  const conn = Array.isArray(t.Connections) ? t.Connections : typeof t.Connections === 'string' ? t.Connections.split(/[\s,]+/) : segs.slice(1).map(s => s.OriginAirport);
+  const flights = (segs.length ? segs.map(s => s.FlightNumber) : String(t.FlightNumbers || '').split(',')).map(x => String(x || '').replace(/\s+/g, '')).filter(Boolean);
+  return {
+    trip: {
+      dep: t.DepartsAt || (segs[0] || {}).DepartsAt || '', arr: t.ArrivesAt || (segs[segs.length - 1] || {}).ArrivesAt || '',
+      mins: num(t.TotalDuration), stops: stopsOf(t), via: conn.filter(Boolean), flights,
+    },
+    more: list.length - 1,
+  };
+}
+// "BR12" -> logo + "長榮 BR 12"
+const flightHtml = f => { const c = f.slice(0, 2); return '<span class="fl">' + logo(c) + esc(carrierName(c)) + ' ' + esc(f.slice(2)) + '</span>'; };
 function render() {
   renderCabins(null);
   if (!S.rows || !S.params) return;
@@ -1437,12 +1487,21 @@ function cardHtml(o, showDate) {
     ? (o.dmiles && o.dmiles !== o.miles ? '<span class="tag">直飛另價 ' + n(fmtMiles(o.dmiles)) + '</span>' : '<span class="tag d">直飛</span>')
     : '<span class="tag">轉機</span>';
   const tax = o.taxes ? '+ ' + money(o.taxes / 100, o.cur) : NO_TAX.has(o.src) ? '稅金未提供' : '';
+  const t = o.trip, plus = t ? dayDiff(t.dep, t.arr) : 0;
+  // times, total time and connections of the flight the card describes (only when the search brought flights along)
+  const when = t && t.dep && t.arr ? '<span class="o4"><b>' + hm(t.dep) + '</b>→<b>' + hm(t.arr) + '</b>' + (plus ? '<sup>+' + plus + '</sup>' : '') +
+    (t.mins ? '<span class="du">共 ' + dur(t.mins) + '</span>' : '') +
+    (t.via.length ? '<span class="via">經 ' + esc(t.via.join('、')) + '</span>' : t.stops ? '<span class="via">轉機 ' + t.stops + ' 次</span>' : '') +
+    (o.more ? '<span class="more">還有 ' + o.more + ' 個航班</span>' : '') + '</span>' : '';
+  // each flight with its airline, so two airlines on one trip both show; without flights, the row's airline list
+  const who = t && t.flights.length ? t.flights.map(flightHtml).join(' → ')
+    : o.airlines.map(c => '<span class="fl">' + logo(c) + esc(carrierName(c)) + '</span>').join('、');
   return '<article class="offer" data-id="' + esc(o.id) + '" data-src="' + esc(o.src) + '">' +
     '<button type="button" class="ohead" aria-expanded="false">' +
-      '<span class="o1"><span class="pn">' + esc(p.name) + '</span><span class="pz">' + esc(p.zh) + '</span><span class="al" style="--c:var(--' + p.al + ')">' + al.short + '</span><span class="mi">' + fmtMiles(o.miles) + '<small>哩</small></span></span>' +
+      '<span class="o1"><span class="pn">' + esc(p.name) + '</span><span class="pz">' + esc(p.zh) + '</span>' + logo(p.code) + '<span class="al" style="--c:var(--' + p.al + ')">' + al.short + '</span><span class="mi">' + fmtMiles(o.miles) + '<small>哩</small></span></span>' +
       '<span class="o2">' + (showDate ? '<span class="od">' + mdw(o.date) + '</span>' : '') + '<span class="rt">' + esc(o.from) + ' → ' + esc(o.to) + '</span>' + tag +
-        (o.seats ? '<span>剩 ' + o.seats + ' 位</span>' : '') + '<span class="tx">' + tax + '</span></span>' +
-      '<span class="o3"><span class="ca">' + (o.airlines.length ? '實際搭乘：' + esc(o.airlines.map(carrierName).join('、')) : '') + '</span><span class="age">' + ago(o.updated) + '</span>' +
+        (o.seats ? '<span>剩 ' + o.seats + ' 位</span>' : '') + '<span class="tx">' + tax + '</span></span>' + when +
+      '<span class="o3"><span class="ca">' + (who ? '實際搭乘：' + who : '') + '</span><span class="age">' + ago(o.updated) + '</span>' +
         '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></span>' +
     '</button><div class="trips" hidden></div></article>';
 }
@@ -1586,33 +1645,38 @@ function demoRows(p) {
           [k + 'Airlines']: ok ? cs.slice(0, 1 + Math.floor(r() * 2)).join(', ') : '', [k + 'DirectAirlines']: direct ? cs[0] : '',
         });
       }
+      row.AvailabilityTrips = demoTripList(row);   // like a real search with include_trips
       rows.push(row);
     }
   }
   return rows;
 }
-function demoTrips(id, src) {
+function demoTrips(id) {
   const row = (S.rows || []).find(x => x.ID === id);
-  if (!row) return { data: [] };
-  const r = rng(id), al = PROGRAMS[src] ? PROGRAMS[src][2] : 'none', cs = DEMO_CARRIERS[al], hub = DEMO_HUB[al];
+  return { data: row ? row.AvailabilityTrips || demoTripList(row) : [], booking_links: [] };
+}
+function demoTripList(row) {
+  const r = rng(row.ID), al = PROGRAMS[row.Source] ? PROGRAMS[row.Source][2] : 'none', cs = DEMO_CARRIERS[al], hub = DEMO_HUB[al];
   const o = row.Route.OriginAirport, d = row.Route.DestinationAirport, data = [];
   for (const c of CABINS) {
     if (!row[c.k + 'Available']) continue;
-    const at = (day, h, m) => row.Date.slice(0, 8) + pad(+row.Date.slice(8) + day) + 'T' + pad(h) + ':' + pad(m) + ':00Z';
+    const at = (day, h, m) => isoDate(new Date(+row.Date.slice(0, 4), +row.Date.slice(5, 7) - 1, +row.Date.slice(8) + day)) + 'T' + pad(h) + ':' + pad(m) + ':00Z';
     const fn = cs[0] + ' ' + (10 + Math.floor(r() * 90));
     if (row[c.k + 'Direct']) {
       data.push({ Cabin: c.api, MileageCost: num(row[c.k + 'MileageCost']), TotalTaxes: row[c.k + 'TotalTaxes'], TaxesCurrency: 'USD', RemainingSeats: row[c.k + 'RemainingSeats'],
-        FlightNumbers: fn, TotalDuration: 650, Stops: 0,
+        FlightNumbers: fn, TotalDuration: 650, Stops: 0, Connections: [], Carriers: cs[0],
+        DepartsAt: at(0, 23, 40), ArrivesAt: at(0, 19, 30),
         AvailabilitySegments: [{ FlightNumber: fn.replace(' ', ''), OriginAirport: o, DestinationAirport: d, DepartsAt: at(0, 23, 40), ArrivesAt: at(0, 19, 30), AircraftName: 'Boeing 777-300ER', Cabin: c.api, FareClass: 'I', Order: 0 }] });
     }
     const f1 = cs[0] + (100 + Math.floor(r() * 800)), f2 = cs[cs.length - 1] + (100 + Math.floor(r() * 800));
     data.push({ Cabin: c.api, MileageCost: num(row[c.k + 'MileageCost']), TotalTaxes: row[c.k + 'TotalTaxes'], TaxesCurrency: 'USD', RemainingSeats: 2,
-      FlightNumbers: f1 + ', ' + f2, TotalDuration: 900, Stops: 1,
+      FlightNumbers: f1 + ', ' + f2, TotalDuration: 950, Stops: 1, Connections: [hub], Carriers: [...new Set([f1.slice(0, 2), f2.slice(0, 2)])].join(', '),
+      DepartsAt: at(0, 8, 50), ArrivesAt: at(0, 9, 40),
       AvailabilitySegments: [
         { FlightNumber: f1, OriginAirport: o, DestinationAirport: hub, DepartsAt: at(0, 8, 50), ArrivesAt: at(0, 13, 10), AircraftName: 'Airbus A350-900', Cabin: c.api, FareClass: 'I', Order: 0 },
         { FlightNumber: f2, OriginAirport: hub, DestinationAirport: d, DepartsAt: at(0, 16, 55), ArrivesAt: at(0, 9, 40), AircraftName: 'Boeing 787-9', Cabin: c.api, FareClass: 'I', Order: 1 }] });
   }
-  return { data, booking_links: [] };
+  return data;
 }
 
 /* ---------- start ---------- */
