@@ -253,6 +253,18 @@ details.progs[open] summary::after{content:"－"}
 details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13px;text-align:right}
 .pl{padding:0 12px 12px}
 .pl .field{margin:2px 0 4px}
+.tfh{font-size:15px;margin:12px 0 0;padding-top:8px;border-top:2px dashed var(--ink)}
+.tfh:first-child{border-top:0;padding-top:0;margin-top:4px}
+#tf .lbl{margin:10px 0 4px}
+#tf .chip{font-size:14px;padding:0 10px}
+#tf .chip small{font-size:11px;margin-left:3px;color:var(--ink2)}
+#tf .chip[data-tf=noVia][aria-pressed=true]{background:var(--coral-t);text-decoration:line-through}
+.tfc{margin:6px 0 2px;font-size:13px;padding:1px 12px}
+.cash{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-top:10px;padding-top:10px;border-top:2px dashed var(--ink)}
+.cpp{display:inline-flex;align-items:center;gap:4px;font-size:14px}
+.cpp input{width:84px;font-size:16px;border:2px solid var(--ink);border-radius:10px;padding:1px 6px;background:var(--paper)}
+.cppv{font-size:14px;flex-basis:100%}
+.cppv:empty{display:none}
 .pgh{display:flex;align-items:center;gap:6px;font-size:13px;margin:12px 0 4px}
 .pgh .dot{width:12px;height:12px;border:2px solid var(--ink);border-radius:50%;background:var(--c)}
 .pgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 10px}
@@ -444,6 +456,11 @@ details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13p
         <details class="progs" id="progs">
           <summary><span>更多篩選</span><span id="prog-sum"></span></summary>
           <div class="pl">
+            <div class="tfh">航班條件</div>
+            <div id="tf"></div>
+            <div class="field"><label for="maxmi">最多里程</label><input id="maxmi" inputmode="numeric" placeholder="不限，例：80000" autocomplete="off" enterkeyhint="done"></div>
+            <button type="button" class="btn ghost tfc" id="tf-clear" hidden>清除航班條件</button>
+            <div class="tfh">航空公司和里程計畫</div>
             <div class="field"><label for="carriers">實際搭乘的航空公司（代碼）</label><input id="carriers" placeholder="不限，例：BR,DL" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="done"></div>
             <div id="prog-list"></div>
           </div>
@@ -555,8 +572,9 @@ const CARRIERS = {
 // [airport codes, Chinese name, English name, show before typing]
 const PLACES = [
   ['TPE,TSA', '台北（桃園＋松山）', 'Taipei', 1], ['TPE', '台北桃園', 'Taipei Taoyuan', 1], ['TSA', '台北松山', 'Taipei Songshan'],
-  ['KHH', '高雄', 'Kaohsiung'], ['RMQ', '台中', 'Taichung'],
-  ['SEA', '西雅圖', 'Seattle', 1], ['SFO', '舊金山', 'San Francisco', 1], ['SJC', '聖荷西', 'San Jose'], ['OAK', '奧克蘭（加州）', 'Oakland'],
+  ['KHH', '高雄', 'Kaohsiung'], ['RMQ', '台中', 'Taichung'], ['TPE,TSA,KHH,RMQ', '台灣（全部機場）', 'Taiwan'],
+  ['SEA', '西雅圖', 'Seattle', 1], ['SEA,PDX,YVR', '西雅圖周邊（＋波特蘭、溫哥華）', 'Seattle area'],
+  ['SEA,PDX,YVR,SFO,SJC,OAK,LAX,SAN', '美西（全部）', 'US West Coast'], ['SFO', '舊金山', 'San Francisco', 1], ['SJC', '聖荷西', 'San Jose'], ['OAK', '奧克蘭（加州）', 'Oakland'],
   ['SFO,SJC,OAK', '舊金山灣區（全部）', 'Bay Area'], ['LAX', '洛杉磯', 'Los Angeles', 1], ['ONT', '安大略（加州）', 'Ontario'],
   ['SAN', '聖地牙哥', 'San Diego'], ['PDX', '波特蘭', 'Portland'], ['LAS', '拉斯維加斯', 'Las Vegas'], ['PHX', '鳳凰城', 'Phoenix'],
   ['DEN', '丹佛', 'Denver'], ['SLC', '鹽湖城', 'Salt Lake City'], ['DFW', '達拉斯', 'Dallas'], ['IAH', '休士頓', 'Houston'],
@@ -567,8 +585,10 @@ const PLACES = [
   ['HNL', '檀香山', 'Honolulu'], ['ANC', '安克拉治', 'Anchorage'], ['YVR', '溫哥華', 'Vancouver', 1], ['YYZ', '多倫多', 'Toronto'],
   ['YUL', '蒙特婁', 'Montreal'], ['YYC', '卡加利', 'Calgary'], ['MEX', '墨西哥城', 'Mexico City'],
   ['NRT,HND', '東京（成田＋羽田）', 'Tokyo', 1], ['NRT', '東京成田', 'Tokyo Narita'], ['HND', '東京羽田', 'Tokyo Haneda'],
+  ['NRT,HND,KIX,NGO,FUK,CTS,OKA', '日本（主要機場）', 'Japan'],
   ['KIX', '大阪關西', 'Osaka Kansai', 1], ['NGO', '名古屋', 'Nagoya'], ['FUK', '福岡', 'Fukuoka'], ['CTS', '札幌', 'Sapporo'], ['OKA', '沖繩', 'Okinawa'],
   ['ICN', '首爾仁川', 'Seoul Incheon', 1], ['GMP', '首爾金浦', 'Seoul Gimpo'], ['PUS', '釜山', 'Busan'],
+  ['ICN,GMP,PUS', '韓國（全部）', 'Korea'],
   ['HKG', '香港', 'Hong Kong', 1], ['MFM', '澳門', 'Macau'], ['PVG', '上海浦東', 'Shanghai Pudong'], ['PEK', '北京首都', 'Beijing Capital'],
   ['PKX', '北京大興', 'Beijing Daxing'], ['CAN', '廣州', 'Guangzhou'], ['XMN', '廈門', 'Xiamen'],
   ['SIN', '新加坡', 'Singapore', 1], ['BKK', '曼谷', 'Bangkok', 1], ['KUL', '吉隆坡', 'Kuala Lumpur'], ['MNL', '馬尼拉', 'Manila'],
@@ -592,7 +612,9 @@ function load(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); retur
 function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 
 const S = {
-  prefs: Object.assign({ cabin: 'J', off: [], direct: false, carriers: '', sort: 'date' }, load('award-prefs', {})),
+  // pax..maxMiles: the 航班條件 in 更多篩選 (maxStops 9 = any number of stops; 0 hours = no limit)
+  prefs: Object.assign({ cabin: 'J', off: [], direct: false, carriers: '', sort: 'date',
+    pax: 1, wd: [], dep: [], arr: [], maxStops: 9, maxHours: 0, maxLay: 0, noVia: [], maxMiles: 0 }, load('award-prefs', {})),
   params: null, rows: null, truncated: false, fetchedAt: 0, demo: false, day: null, shown: 60,
   trips: new Map(),
 };
@@ -643,6 +665,8 @@ function dur(min) {
 // seats.aero trip times are each airport's local clock with a trailing Z, so read them as text.
 const hm = ts => (ts || '').slice(11, 16);
 const dayDiff = (a, b) => (a && b) ? daysBetween(a.slice(0, 10), b.slice(0, 10)) : 0;
+// arrival day against departure day: +1 next day; -1 when flying east over the date line lands the day before
+const dayTag = d => d ? '<sup>' + (d > 0 ? '+' : '') + d + '</sup>' : '';
 const minsBetween = (a, b) => (Date.parse(b) - Date.parse(a)) / 60000;
 const carrierName = c => ((CARRIERS[c] || '') + ' ' + c).trim();
 function resetText() {
@@ -1176,7 +1200,8 @@ function renderAlliances() {
   }).join('');
   const total = Object.keys(PROGRAMS).length, on = total - S.prefs.off.filter(s => PROGRAMS[s]).length;
   const cs = (S.prefs.carriers.toUpperCase().match(/[A-Z0-9]{2}/g) || []);
-  $('#prog-sum').textContent = (on === total ? '全部 ' + total + ' 個計畫' : '計畫 ' + on + ' / ' + total) + (cs.length ? '，只看 ' + cs.join(',') : '');
+  const conds = activeConds();
+  $('#prog-sum').textContent = (on === total ? '全部 ' + total + ' 個計畫' : '計畫 ' + on + ' / ' + total) + (cs.length ? '，只看 ' + cs.join(',') : '') + (conds ? '，條件 ' + conds + ' 項' : '');
   for (const cb of $$('#prog-list input')) cb.checked = !S.prefs.off.includes(cb.dataset.src);
 }
 function renderProgramList() {
@@ -1212,11 +1237,36 @@ $('#carriers').addEventListener('input', e => {
   carrierTimer = setTimeout(() => { renderAlliances(); render(); }, 250);
 });
 function filt() {
+  const p = S.prefs;
   return {
-    off: new Set(S.prefs.off),
-    direct: S.prefs.direct,
-    carriers: new Set((S.prefs.carriers.toUpperCase().match(/[A-Z0-9]{2}/g) || [])),
+    off: new Set(p.off),
+    direct: p.direct,
+    carriers: new Set((p.carriers.toUpperCase().match(/[A-Z0-9]{2}/g) || [])),
+    pax: p.pax || 1, wd: new Set(p.wd), maxMiles: p.maxMiles || 0,
+    // conditions on the flight itself, checked against the trips include_trips brings along
+    dep: new Set(p.dep), arr: new Set(p.arr), maxStops: p.maxStops ?? 9, maxHours: p.maxHours || 0, maxLay: p.maxLay || 0, noVia: new Set(p.noVia),
   };
+}
+// true when a condition needs flight details, so a row without trips can't be checked and is left out
+const tripRules = f => !!(f.dep.size || f.arr.size || f.maxStops < 9 || f.maxHours || f.maxLay || f.noVia.size);
+const activeConds = () => { const f = filt(); return [f.pax > 1, f.wd.size, f.maxMiles, f.dep.size, f.arr.size, f.maxStops < 9, f.maxHours, f.maxLay, f.noVia.size].filter(Boolean).length; };
+const BANDS = [['凌晨', 0, 6], ['上午', 6, 12], ['下午', 12, 18], ['晚上', 18, 24]];
+const bandOf = ts => { const h = parseInt(String(ts || '').slice(11, 13), 10); return Number.isFinite(h) ? BANDS.findIndex(([, a, b]) => h >= a && h < b) : -1; };
+const viaOf = t => (Array.isArray(t.Connections) ? t.Connections : typeof t.Connections === 'string' ? t.Connections.split(/[\s,]+/) : segsOf(t).slice(1).map(s => s.OriginAirport)).filter(Boolean);
+// Does one flight meet the 航班條件? Unknown values fail, so a filter never lets through what it can't check.
+function tripOK(t, f) {
+  const segs = segsOf(t);
+  if (f.pax > 1 && num(t.RemainingSeats) && num(t.RemainingSeats) < f.pax) return false;
+  if (f.dep.size && !f.dep.has(bandOf(t.DepartsAt || (segs[0] || {}).DepartsAt))) return false;
+  if (f.arr.size && !f.arr.has(bandOf(t.ArrivesAt || (segs[segs.length - 1] || {}).ArrivesAt))) return false;
+  if (stopsOf(t) > f.maxStops) return false;
+  if (f.maxHours && !(num(t.TotalDuration) > 0 && num(t.TotalDuration) <= f.maxHours * 60)) return false;
+  if (f.maxLay) {
+    if (stopsOf(t) && segs.length < 2) return false;
+    for (let i = 1; i < segs.length; i++) if (minsBetween(segs[i - 1].ArrivesAt, segs[i].DepartsAt) > f.maxLay * 60) return false;
+  }
+  if (f.noVia.size && viaOf(t).some(a => f.noVia.has(a))) return false;
+  return true;
 }
 
 /* ---------- search ---------- */
@@ -1350,6 +1400,7 @@ $('#recent').addEventListener('click', e => {
 /* ---------- results ---------- */
 function offersOf(rows, cab, f) {
   const out = [];
+  out.noData = 0;   // rows left out only because the 航班條件 need trips the row doesn't have
   for (const r of rows) {
     if (!r[cab + 'Available']) continue;
     const src = r.Source || (r.Route && r.Route.Source);
@@ -1363,30 +1414,35 @@ function offersOf(rows, cab, f) {
     const pickD = k => (useD && r[cab + 'Direct' + k] != null ? r[cab + 'Direct' + k] : r[cab + k]);
     const airlines = String(pickD('Airlines') || '').split(/[\s,]+/).filter(Boolean);
     if (f.carriers.size && !airlines.some(a => f.carriers.has(a))) continue;
+    if (f.maxMiles && miles > f.maxMiles) continue;
+    if (f.wd.size && !f.wd.has(parseDate(r.Date).getDay())) continue;
+    const seats = num(pickD('RemainingSeats'));
+    if (f.pax > 1 && seats && seats < f.pax) continue;   // 0 means the program doesn't say, so keep it
+    const bt = bestTrip(r.AvailabilityTrips, CABIN_BY[cab].api, f, miles);
+    if (bt.drop) { if (bt.noData) out.noData++; continue; }
     out.push({
       id: r.ID, src, date: r.Date, from: r.Route ? r.Route.OriginAirport : '', to: r.Route ? r.Route.DestinationAirport : '',
-      miles, dmiles, direct, taxes: num(pickD('TotalTaxes')), cur: r.TaxesCurrency || '', seats: num(pickD('RemainingSeats')),
-      airlines, updated: r.UpdatedAt, ...bestTrip(r.AvailabilityTrips, CABIN_BY[cab].api, f.direct, miles),
+      miles, dmiles, direct, taxes: num(pickD('TotalTaxes')), cur: r.TaxesCurrency || '', seats,
+      airlines, updated: r.UpdatedAt, trip: bt.trip, more: bt.more,
     });
   }
   return out;
 }
 const segsOf = t => (t.AvailabilitySegments || []).slice().sort((a, b) => (a.Order || 0) - (b.Order || 0));
 const stopsOf = t => { const s = segsOf(t); return s.length ? s.length - 1 : num(t.Stops); };
-// The flight a card describes: in this cabin (nonstop only if asked), at the card's price if one matches,
-// then the shortest. trip: the summary the card shows; more: how many other flights the row has.
-function bestTrip(trips, api, direct, miles) {
-  let list = (trips || []).filter(t => String(t.Cabin || '').toLowerCase() === api);
-  if (direct) list = list.filter(t => stopsOf(t) === 0);
-  if (!list.length) return { trip: null, more: 0 };
+// The flight a card describes: in this cabin, meeting the filters, at the card's price if one matches, then the
+// shortest. trip: the summary the card shows; more: how many other flights qualify; drop: leave the row out.
+function bestTrip(trips, api, f, miles) {
+  const cabin = (trips || []).filter(t => String(t.Cabin || '').toLowerCase() === api);
+  let list = cabin.filter(t => (!f.direct || stopsOf(t) === 0) && tripOK(t, f));
+  if (!list.length) return tripRules(f) ? { drop: true, noData: !cabin.length } : { trip: null, more: 0 };
   list.sort((a, b) => (num(a.MileageCost) !== miles) - (num(b.MileageCost) !== miles) || num(a.MileageCost) - num(b.MileageCost) || (a.TotalDuration || 0) - (b.TotalDuration || 0));
   const t = list[0], segs = segsOf(t);
-  const conn = Array.isArray(t.Connections) ? t.Connections : typeof t.Connections === 'string' ? t.Connections.split(/[\s,]+/) : segs.slice(1).map(s => s.OriginAirport);
   const flights = (segs.length ? segs.map(s => s.FlightNumber) : String(t.FlightNumbers || '').split(',')).map(x => String(x || '').replace(/\s+/g, '')).filter(Boolean);
   return {
     trip: {
       dep: t.DepartsAt || (segs[0] || {}).DepartsAt || '', arr: t.ArrivesAt || (segs[segs.length - 1] || {}).ArrivesAt || '',
-      mins: num(t.TotalDuration), stops: stopsOf(t), via: conn.filter(Boolean), flights,
+      mins: num(t.TotalDuration), stops: stopsOf(t), via: viaOf(t), flights,
     },
     more: list.length - 1,
   };
@@ -1407,6 +1463,7 @@ function render() {
   for (const o of all) per[o.src] = (per[o.src] || 0) + 1;
   for (const em of $$('#prog-list em')) em.textContent = per[em.dataset.c] ? per[em.dataset.c] : '';
   if (S.demo) setBanner('<span><b>示範資料</b>數字都是假的</span><div class="acts"><button type="button" class="btn" data-act="exit-demo">結束示範</button></div>', 'demo');
+  renderTripFilters();
   renderSummary(offers);
   renderCalendar(offers);
   renderSortbar();
@@ -1427,8 +1484,59 @@ function renderSummary(offers) {
     fresh = '資料更新：最新 ' + ago(newest).replace('更新', '') + '，最舊 ' + ago(oldest).replace('更新', '');
   }
   if (S.truncated) fresh += (fresh ? '。' : '') + '結果太多，只拿到前 5,000 筆，請縮短日期。';
+  if (offers.noData) fresh += (fresh ? '。' : '') + '另有 ' + offers.noData + ' 筆沒有航班細節，沒辦法檢查航班條件，先不列出';
   $('#fresh').textContent = fresh;
 }
+
+/* ---------- 航班條件 (more filters, all on data already loaded: no API call) ---------- */
+function renderTripFilters() {
+  const p = S.prefs, api = CABIN_BY[p.cabin].api;
+  const chip = (g, v, label, on) => '<button type="button" class="chip" data-tf="' + g + '" data-v="' + v + '" aria-pressed="' + on + '">' + label + '</button>';
+  const group = (title, html) => '<div class="lbl">' + title + '</div><div class="chips">' + html + '</div>';
+  // connection airports that appear in this search, in this cabin, so the list stays short
+  const seen = new Map();
+  for (const r of S.rows || []) for (const t of r.AvailabilityTrips || []) {
+    if (String(t.Cabin || '').toLowerCase() !== api) continue;
+    for (const a of viaOf(t)) seen.set(a, (seen.get(a) || 0) + 1);
+  }
+  const via = [...new Set([...seen.keys(), ...p.noVia])].sort((a, b) => (seen.get(b) || 0) - (seen.get(a) || 0)).slice(0, 16);
+  $('#tf').innerHTML =
+    group('人數（座位至少要有幾個）', [1, 2, 3, 4, 5, 6].map(x => chip('pax', x, x + ' 人', (p.pax || 1) === x)).join('')) +
+    group('出發星期', [...WD].map((w, i) => chip('wd', i, w, p.wd.includes(i))).join('')) +
+    group('起飛時段', BANDS.map(([x, a, b], i) => chip('dep', i, x + '<small>' + a + '-' + b + ' 點</small>', p.dep.includes(i))).join('')) +
+    group('抵達時段', BANDS.map(([x, a, b], i) => chip('arr', i, x + '<small>' + a + '-' + b + ' 點</small>', p.arr.includes(i))).join('')) +
+    group('轉機次數', [[9, '不限'], [1, '最多 1 次']].map(([v, x]) => chip('maxStops', v, x, (p.maxStops ?? 9) === v)).join('')) +
+    group('總飛行時間', [[0, '不限'], [12, '12 小時內'], [16, '16 小時內'], [20, '20 小時內'], [24, '24 小時內']].map(([v, x]) => chip('maxHours', v, x, (p.maxHours || 0) === v)).join('')) +
+    group('轉機等待', [[0, '不限'], [3, '3 小時內'], [6, '6 小時內'], [12, '12 小時內']].map(([v, x]) => chip('maxLay', v, x, (p.maxLay || 0) === v)).join('')) +
+    group('不要經過（點了就排除）', via.length ? via.map(a => chip('noVia', a, esc(a) + (seen.get(a) ? '<small>' + seen.get(a) + '</small>' : ''), p.noVia.includes(a))).join('') : '<span class="note0">這次搜尋沒有轉機機場。</span>');
+  $('#tf-clear').hidden = !activeConds();
+}
+$('#tf').addEventListener('click', e => {
+  const b = e.target.closest('[data-tf]');
+  if (!b) return;
+  const g = b.dataset.tf, v = g === 'noVia' ? b.dataset.v : Number(b.dataset.v);
+  if (Array.isArray(S.prefs[g])) {
+    const i = S.prefs[g].indexOf(v);
+    if (i < 0) S.prefs[g].push(v); else S.prefs[g].splice(i, 1);
+  } else S.prefs[g] = v;
+  savePrefs();
+  renderAlliances();
+  render();
+});
+let maxMiTimer = 0;
+$('#maxmi').addEventListener('input', e => {
+  S.prefs.maxMiles = parseInt(e.target.value.replace(/\D/g, ''), 10) || 0;
+  savePrefs();
+  clearTimeout(maxMiTimer);
+  maxMiTimer = setTimeout(() => { renderAlliances(); render(); }, 300);
+});
+$('#tf-clear').addEventListener('click', () => {
+  Object.assign(S.prefs, { pax: 1, wd: [], dep: [], arr: [], maxStops: 9, maxHours: 0, maxLay: 0, noVia: [], maxMiles: 0 });
+  $('#maxmi').value = '';
+  savePrefs();
+  renderAlliances();
+  render();
+});
 function renderCalendar(offers) {
   const p = S.params;
   const best = new Map(), dir = new Set();
@@ -1469,7 +1577,7 @@ $('#cal').addEventListener('click', e => {
   }
 });
 function renderSortbar() {
-  const opts = [['date', '依日期'], ['miles', '最少里程'], ['seats', '最多座位']];
+  const opts = [['date', '依日期'], ['miles', '最少里程'], ['dur', '最短時間'], ['tax', '最低稅金'], ['seats', '最多座位']];
   $('#sortbar').innerHTML = '排序' + opts.map(([k, x]) => '<button type="button" class="chip" data-sort="' + k + '" aria-pressed="' + (S.prefs.sort === k) + '">' + x + '</button>').join('') +
     (S.day ? '<button type="button" class="chip dayf" data-clear="1">只看 ' + md(S.day) + '　✕</button>' : '');
 }
@@ -1489,14 +1597,15 @@ function cardHtml(o, showDate) {
   const tax = o.taxes ? '+ ' + money(o.taxes / 100, o.cur) : NO_TAX.has(o.src) ? '稅金未提供' : '';
   const t = o.trip, plus = t ? dayDiff(t.dep, t.arr) : 0;
   // times, total time and connections of the flight the card describes (only when the search brought flights along)
-  const when = t && t.dep && t.arr ? '<span class="o4"><b>' + hm(t.dep) + '</b>→<b>' + hm(t.arr) + '</b>' + (plus ? '<sup>+' + plus + '</sup>' : '') +
+  const when = t && t.dep && t.arr ? '<span class="o4"><b>' + hm(t.dep) + '</b>→<b>' + hm(t.arr) + '</b>' + dayTag(plus) +
     (t.mins ? '<span class="du">共 ' + dur(t.mins) + '</span>' : '') +
     (t.via.length ? '<span class="via">經 ' + esc(t.via.join('、')) + '</span>' : t.stops ? '<span class="via">轉機 ' + t.stops + ' 次</span>' : '') +
     (o.more ? '<span class="more">還有 ' + o.more + ' 個航班</span>' : '') + '</span>' : '';
   // each flight with its airline, so two airlines on one trip both show; without flights, the row's airline list
   const who = t && t.flights.length ? t.flights.map(flightHtml).join(' → ')
     : o.airlines.map(c => '<span class="fl">' + logo(c) + esc(carrierName(c)) + '</span>').join('、');
-  return '<article class="offer" data-id="' + esc(o.id) + '" data-src="' + esc(o.src) + '">' +
+  return '<article class="offer" data-id="' + esc(o.id) + '" data-src="' + esc(o.src) + '" data-date="' + esc(o.date) + '" data-from="' + esc(o.from) + '" data-to="' + esc(o.to) +
+    '" data-miles="' + o.miles + '" data-tax="' + (o.taxes || 0) + '" data-cur="' + esc(o.cur) + '">' +
     '<button type="button" class="ohead" aria-expanded="false">' +
       '<span class="o1"><span class="pn">' + esc(p.name) + '</span><span class="pz">' + esc(p.zh) + '</span>' + logo(p.code) + '<span class="al" style="--c:var(--' + p.al + ')">' + al.short + '</span><span class="mi">' + fmtMiles(o.miles) + '<small>哩</small></span></span>' +
       '<span class="o2">' + (showDate ? '<span class="od">' + mdw(o.date) + '</span>' : '') + '<span class="rt">' + esc(o.from) + ' → ' + esc(o.to) + '</span>' + tag +
@@ -1510,6 +1619,9 @@ function renderList(offers, counts) {
   const sort = S.prefs.sort;
   if (sort === 'miles') list.sort((a, b) => a.miles - b.miles || a.date.localeCompare(b.date));
   else if (sort === 'seats') list.sort((a, b) => (b.seats || 0) - (a.seats || 0) || a.miles - b.miles);
+  // unknown duration or taxes go last
+  else if (sort === 'dur') list.sort((a, b) => ((a.trip && a.trip.mins) || 1e9) - ((b.trip && b.trip.mins) || 1e9) || a.miles - b.miles);
+  else if (sort === 'tax') list.sort((a, b) => (a.taxes || 1e12) - (b.taxes || 1e12) || a.miles - b.miles);
   else list.sort((a, b) => a.date.localeCompare(b.date) || a.miles - b.miles);
   if (!list.length) {
     $('#list').innerHTML = emptyHtml(counts);
@@ -1556,7 +1668,7 @@ async function toggleTrips(art) {
       res = S.demo ? demoTrips(id, src) : await api('/trips/' + encodeURIComponent(id));
       S.trips.set(id, res);
     }
-    box.innerHTML = tripsHtml(res, src);
+    box.innerHTML = tripsHtml(res, src) + cashHtml(art.dataset);
     box.dataset.loaded = '1';
   } catch (err) {
     box.innerHTML = '<div class="terr">' + esc(err.message) + '</div>';
@@ -1581,6 +1693,25 @@ function tripsHtml(res, src) {
     : (p.url ? '<a class="btn pri" href="' + esc(p.url) + '" target="_blank" rel="noopener">到 ' + esc(p.name) + ' 官網訂位</a>' : '')) + '</div>';
   return h;
 }
+// Cash check: Google Flights opened on the same one-way search (its text query, tested 2026-10-14 for economy,
+// business and first; it doesn't read "premium economy", so that cabin opens as economy), plus value per mile.
+const GF_CABIN = { Y: 'economy', W: 'economy', J: 'business class', F: 'first class' };
+function cashHtml(d) {
+  const q = 'Flights to ' + d.to + ' from ' + d.from + ' on ' + d.date + ' oneway ' + GF_CABIN[S.prefs.cabin];
+  const url = 'https://www.google.com/travel/flights?q=' + encodeURIComponent(q) + '&curr=USD&hl=zh-TW';
+  return '<div class="cash"><a class="btn" href="' + esc(url) + '" target="_blank" rel="noopener">Google Flights 看現金價' + (S.prefs.cabin === 'W' ? '（打開後改成豪經）' : '') + '</a>' +
+    '<label class="cpp">現金票價 US$<input inputmode="decimal" placeholder="例：2400" data-cpp="1" aria-label="現金票價（美元）"></label><span class="cppv"></span></div>';
+}
+// value per mile = (cash fare minus the award's taxes) / miles, in US cents
+$('#list').addEventListener('input', e => {
+  if (!e.target.dataset.cpp) return;
+  const art = e.target.closest('.offer'), out = art.querySelector('.cppv'), d = art.dataset;
+  const cash = parseFloat(e.target.value.replace(/[^\d.]/g, ''));
+  if (!(cash > 0)) { out.textContent = ''; return; }
+  const usd = !d.cur || d.cur === 'USD', tax = usd ? +d.tax / 100 : 0;
+  const cents = (cash - tax) / +d.miles * 100;
+  out.textContent = '每哩約 ' + cents.toFixed(2) + ' 美分' + (usd ? (tax ? '（已扣稅金 US$' + tax.toFixed(0) + '）' : '') : '（稅金不是美元，沒有扣）');
+});
 function tripHtml(t) {
   const segs = (t.AvailabilitySegments || []).slice().sort((a, b) => (a.Order || 0) - (b.Order || 0));
   const first = segs[0] || {}, last = segs[segs.length - 1] || {};
@@ -1589,7 +1720,7 @@ function tripHtml(t) {
   const stops = segs.length ? segs.length - 1 : num(t.Stops);
   const miles = num(t.MileageCost);
   let h = '<div class="trip"><div class="t1"><b>' + hm(dep) + '</b><span class="ap3">' + esc(first.OriginAirport || '') + '</span> → <b>' + hm(arr) + '</b><span class="ap3">' + esc(last.DestinationAirport || '') + '</span>' +
-    (plus ? '<sup>+' + plus + '</sup>' : '') + '<span class="t-mi">' + (miles ? fmtMiles(miles) + ' 哩' : '') + (t.TotalTaxes ? ' + ' + money(t.TotalTaxes / 100, t.TaxesCurrency) : '') + '</span></div>';
+    dayTag(plus) + '<span class="t-mi">' + (miles ? fmtMiles(miles) + ' 哩' : '') + (t.TotalTaxes ? ' + ' + money(t.TotalTaxes / 100, t.TaxesCurrency) : '') + '</span></div>';
   const bits = ['<span class="fn">' + esc(t.FlightNumbers || '') + '</span>', dur(t.TotalDuration), stops ? '轉機 ' + stops + ' 次' : '直飛'];
   if (num(t.RemainingSeats)) bits.push('剩 ' + num(t.RemainingSeats) + ' 位');
   if (t.MixedCabinPct) bits.push('有 ' + Math.round(t.MixedCabinPct) + '% 航程是較低艙等');
@@ -1603,7 +1734,7 @@ function tripHtml(t) {
       if (i) h += '<div class="lay">在 ' + esc(s.OriginAirport) + ' 轉機 ' + dur(minsBetween(segs[i - 1].ArrivesAt, s.DepartsAt)) + '</div>';
       const plusSeg = dayDiff(s.DepartsAt, s.ArrivesAt);
       h += '<div class="sg"><div class="sg1"><b>' + esc(s.FlightNumber || '') + '</b>' + esc(s.OriginAirport) + ' ' + hm(s.DepartsAt) + ' → ' + esc(s.DestinationAirport) + ' ' + hm(s.ArrivesAt) +
-        (plusSeg ? '<sup>+' + plusSeg + '</sup>' : '') + '</div>' + (extra(s) ? '<div class="sg2">' + extra(s) + '</div>' : '') + '</div>';
+        dayTag(plusSeg) + '</div>' + (extra(s) ? '<div class="sg2">' + extra(s) + '</div>' : '') + '</div>';
     });
     h += '</div>';
   }
@@ -1658,23 +1789,29 @@ function demoTrips(id) {
 function demoTripList(row) {
   const r = rng(row.ID), al = PROGRAMS[row.Source] ? PROGRAMS[row.Source][2] : 'none', cs = DEMO_CARRIERS[al], hub = DEMO_HUB[al];
   const o = row.Route.OriginAirport, d = row.Route.DestinationAirport, data = [];
+  // local clock times like the real data (a trailing Z, but each airport's own clock); the shifts pretend
+  // TPE is UTC+8, the hub UTC+9 and the destination UTC-7, so they read about right for TPE to SEA
+  const base = Date.UTC(+row.Date.slice(0, 4), +row.Date.slice(5, 7) - 1, +row.Date.slice(8));
+  const at = (min) => new Date(base + min * 60000).toISOString().slice(0, 19) + 'Z';
+  const pick = a => a[Math.floor(r() * a.length)];
   for (const c of CABINS) {
     if (!row[c.k + 'Available']) continue;
-    const at = (day, h, m) => isoDate(new Date(+row.Date.slice(0, 4), +row.Date.slice(5, 7) - 1, +row.Date.slice(8) + day)) + 'T' + pad(h) + ':' + pad(m) + ':00Z';
     const fn = cs[0] + ' ' + (10 + Math.floor(r() * 90));
     if (row[c.k + 'Direct']) {
+      const dep = pick([10 * 60 + 20, 16 * 60 + 55, 23 * 60 + 40]);
       data.push({ Cabin: c.api, MileageCost: num(row[c.k + 'MileageCost']), TotalTaxes: row[c.k + 'TotalTaxes'], TaxesCurrency: 'USD', RemainingSeats: row[c.k + 'RemainingSeats'],
-        FlightNumbers: fn, TotalDuration: 650, Stops: 0, Connections: [], Carriers: cs[0],
-        DepartsAt: at(0, 23, 40), ArrivesAt: at(0, 19, 30),
-        AvailabilitySegments: [{ FlightNumber: fn.replace(' ', ''), OriginAirport: o, DestinationAirport: d, DepartsAt: at(0, 23, 40), ArrivesAt: at(0, 19, 30), AircraftName: 'Boeing 777-300ER', Cabin: c.api, FareClass: 'I', Order: 0 }] });
+        FlightNumbers: fn, TotalDuration: 650, Stops: 0, Connections: [], Carriers: cs[0], DepartsAt: at(dep), ArrivesAt: at(dep + 650 - 900),
+        AvailabilitySegments: [{ FlightNumber: fn.replace(' ', ''), OriginAirport: o, DestinationAirport: d, DepartsAt: at(dep), ArrivesAt: at(dep + 650 - 900), AircraftName: 'Boeing 777-300ER', Cabin: c.api, FareClass: 'I', Order: 0 }] });
     }
     const f1 = cs[0] + (100 + Math.floor(r() * 800)), f2 = cs[cs.length - 1] + (100 + Math.floor(r() * 800));
+    const dep = pick([1 * 60 + 5, 8 * 60 + 50, 13 * 60 + 30, 18 * 60 + 15]), lay = pick([95, 225, 480, 760]);
+    const a1 = dep + 200 + 60, d2 = a1 + lay, a2 = d2 + 525 - 960;   // 3h20 to the hub, then 8h45 on
     data.push({ Cabin: c.api, MileageCost: num(row[c.k + 'MileageCost']), TotalTaxes: row[c.k + 'TotalTaxes'], TaxesCurrency: 'USD', RemainingSeats: 2,
-      FlightNumbers: f1 + ', ' + f2, TotalDuration: 950, Stops: 1, Connections: [hub], Carriers: [...new Set([f1.slice(0, 2), f2.slice(0, 2)])].join(', '),
-      DepartsAt: at(0, 8, 50), ArrivesAt: at(0, 9, 40),
+      FlightNumbers: f1 + ', ' + f2, TotalDuration: 200 + lay + 525, Stops: 1, Connections: [hub], Carriers: [...new Set([f1.slice(0, 2), f2.slice(0, 2)])].join(', '),
+      DepartsAt: at(dep), ArrivesAt: at(a2),
       AvailabilitySegments: [
-        { FlightNumber: f1, OriginAirport: o, DestinationAirport: hub, DepartsAt: at(0, 8, 50), ArrivesAt: at(0, 13, 10), AircraftName: 'Airbus A350-900', Cabin: c.api, FareClass: 'I', Order: 0 },
-        { FlightNumber: f2, OriginAirport: hub, DestinationAirport: d, DepartsAt: at(0, 16, 55), ArrivesAt: at(0, 9, 40), AircraftName: 'Boeing 787-9', Cabin: c.api, FareClass: 'I', Order: 1 }] });
+        { FlightNumber: f1, OriginAirport: o, DestinationAirport: hub, DepartsAt: at(dep), ArrivesAt: at(a1), AircraftName: 'Airbus A350-900', Cabin: c.api, FareClass: 'I', Order: 0 },
+        { FlightNumber: f2, OriginAirport: hub, DestinationAirport: d, DepartsAt: at(d2), ArrivesAt: at(a2), AircraftName: 'Boeing 787-9', Cabin: c.api, FareClass: 'I', Order: 1 }] });
   }
   return data;
 }
@@ -1699,6 +1836,7 @@ function init() {
   renderRecent();
   $('#direct').checked = S.prefs.direct;
   $('#carriers').value = S.prefs.carriers;
+  $('#maxmi').value = S.prefs.maxMiles || '';
   const today = isoDate(new Date());
   const last = load('award-last', null);
   if (last && last.e >= today) {
