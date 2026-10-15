@@ -241,6 +241,35 @@ details.danger[open] summary{margin-bottom:8px}
 .legs button b{display:block;font-size:15px;font-weight:normal;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .legs small{display:block;font-size:12px;color:var(--ink2)}
 .legs .sum2{grid-column:1/-1;font-size:14px;margin:0 2px}
+/* 多城市: each extra leg under the first one (the main route and date rows are leg 1) */
+.tt{grid-template-columns:repeat(3,minmax(0,1fr));max-width:340px}
+html[lang=en] .tt button{font-size:clamp(13px,4vw,16px)}
+.mlegs{margin-top:4px}
+.mleg{margin-top:12px;padding-top:8px;border-top:2px dashed var(--ink)}
+.mhead{display:flex;align-items:center;justify-content:space-between;font-size:14px;margin-bottom:6px}
+.mdel{border:2px solid var(--ink);border-radius:999px;background:var(--paper);min-width:36px;min-height:32px;font-size:14px}
+.mroute{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 28px minmax(0,1fr);gap:6px;align-items:stretch}
+.mroute .mto{align-self:center;text-align:center;font-size:18px}
+.mleg .dates{margin-top:6px}
+.madd{margin-top:12px;font-size:14px}
+/* 日期組合: the cheapest outbound + return pairs, and a grid for short ranges */
+.legs .cmb-btn{grid-column:1/-1;justify-self:start;font-size:13px;padding:1px 12px}
+.legs .cmb-btn[aria-expanded=true]{background:var(--yellow)}
+.cmb{grid-column:1/-1;border:var(--line);border-radius:var(--r);background:var(--paper);padding:8px 10px 10px}
+.cmb .lbl{margin:2px 0 6px}
+.combos{display:grid;gap:6px}
+.combo{display:grid;grid-template-columns:1fr auto;gap:0 8px;align-items:baseline;text-align:left;border:2px solid var(--ink);border-radius:14px;background:var(--paper);padding:5px 10px;line-height:1.35}
+.combo b{font-weight:normal;font-size:16px;white-space:nowrap}
+.combo small{grid-column:1/-1;font-size:12px;color:var(--ink2)}
+.combo span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.combo.on{background:var(--yellow-t)}
+.cgrid-wrap{overflow-x:auto;margin-top:10px;-webkit-overflow-scrolling:touch}
+.cgrid{border-collapse:separate;border-spacing:3px;font-size:12px}
+.cgrid th{font-weight:normal;color:var(--ink2);white-space:nowrap;padding:0 2px}
+.cgrid td button{border:2px solid var(--ink);border-radius:9px;background:var(--paper);min-width:42px;padding:3px 2px;font-size:12px}
+.cgrid td.good button{background:var(--green-t)}
+.cgrid td.best button{background:var(--green)}
+.cgrid td.x{background:none}
 .switch.opt{margin:6px 0}
 .switch.opt small{display:block;font-size:11px;color:var(--ink2)}
 .sugg{position:absolute;left:0;right:0;top:calc(100% + 6px);background:var(--paper);border:var(--line);border-radius:18px;z-index:15;max-height:300px;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;animation:pop .3s var(--pop)}
@@ -410,7 +439,7 @@ details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13p
 .day:active{transform:scale(.92)}
 .day .dn{font-size:12px;font-variant-numeric:tabular-nums}
 .day .dm{font-size:13px;white-space:nowrap;letter-spacing:-.4px;font-variant-numeric:tabular-nums}
-.day.none{border:2px dashed #CFC8C3;color:#A39C98}
+.day.none{border:2px dashed #CFC8C3;color:var(--ink2)}
 .day.good{background:var(--green-t)}
 /* every cell keeps a 2px border so the numbers in a row line up; emphasis is drawn inside with a shadow */
 .day.best{background:var(--green);box-shadow:inset 0 0 0 1px var(--ink)}
@@ -458,7 +487,7 @@ details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13p
 .svgo{flex:1;min-width:0;text-align:left;border:var(--line);border-radius:14px;background:var(--paper);padding:5px 12px;font-size:14px;line-height:1.35}
 .svgo small{display:block;font-size:11px;color:var(--ink2)}
 .svx{flex:0 0 38px;border:var(--line);border-radius:14px;background:var(--paper);font-size:15px}
-.saverow{margin:4px 0 6px}
+.saverow{margin:4px 0 6px;display:flex;flex-wrap:wrap;gap:6px}
 .saverow .btn{font-size:13px;padding:1px 12px}
 .saverow .btn[aria-pressed=true]{background:var(--yellow)}
 .tx{margin-left:auto;white-space:nowrap;font-size:13px;font-variant-numeric:tabular-nums}
@@ -502,6 +531,65 @@ details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13p
 }
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 .route-h .ar svg{width:100%;height:100%}
+/* ---------- the tab bar (機票 探索 飯店 提醒 我的), fixed at the bottom; it slides away while typing ---------- */
+:root{--tabh:58px;--sab:env(safe-area-inset-bottom,0px);--barh:calc(var(--tabh) + 3px + var(--sab))}
+html.has-bar{scroll-padding-bottom:calc(var(--barh) + 8px)}
+html.has-bar .wrap{padding-bottom:calc(var(--barh) + 28px)}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--paper);border-top:var(--line);
+  padding:0 env(safe-area-inset-right,0px) var(--sab) env(safe-area-inset-left,0px);transition:transform .24s cubic-bezier(.2,.8,.2,1),visibility 0s linear 0s}
+.tabbar ul{list-style:none;margin:0 auto;padding:0 2px;max-width:560px;display:grid;grid-template-columns:repeat(var(--tabs,5),minmax(0,1fr))}
+.tab{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;height:var(--tabh);
+  color:var(--ink2);text-decoration:none;font-size:12px;line-height:1.2;white-space:nowrap;
+  touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.tab .ti{position:relative;display:grid;place-items:center;width:54px;height:32px;border:2.5px solid transparent;border-radius:999px;transition:transform .12s ease-out}
+.tab svg{width:26px;height:26px}
+.tab:active .ti{transform:scale(.9)}
+.tab .tl{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.tab[aria-current=page]{color:var(--ink)}
+.tab[aria-current=page] .ti{background:var(--yellow);border-color:var(--ink);animation:pop .3s var(--pop)}
+.tab:focus-visible{outline:none}
+.tab:focus-visible .ti{outline:3px solid var(--water);outline-offset:2px}
+.tab .k0{fill:var(--paper)}
+.tab .k1,.tab .k2{fill:var(--paper);transition:fill .2s}
+.tab[aria-current=page] .k1{fill:var(--c1)}
+.tab[aria-current=page] .k2{fill:var(--c2)}
+html.kb .tabbar{transform:translateY(100%);visibility:hidden;transition:transform .18s ease-in,visibility 0s linear .18s}
+@media (orientation:landscape) and (max-height:500px){
+  :root{--tabh:44px}
+  .tab{flex-direction:row;gap:6px}
+  .tab .ti{width:44px;height:28px}
+  .tab svg{width:22px;height:22px}
+}
+/* wide screens: a dock in the middle of the bottom edge, labels beside the icons */
+@media (min-width:900px){
+  .tabbar{left:50%;right:auto;width:600px;margin-left:-300px;border:var(--line);border-bottom:0;border-radius:22px 22px 0 0}
+  .tab{flex-direction:row;gap:6px;font-size:15px}
+  .tab .ti{width:46px;height:30px}
+  .tab svg{width:23px;height:23px}
+}
+@media (hover:hover) and (pointer:fine){
+  .tab:hover{color:var(--ink)}
+  .tab:not([aria-current=page]):hover .ti{background:var(--yellow-t);border-color:var(--ink)}
+}
+/* the toast: centred with auto margins (the pop animation moves it too), above the bar or the keyboard, never in the way of a tap */
+.toast{left:0;right:0;margin:0 auto;width:max-content;max-width:min(440px,calc(100% - 32px));transform:none;border-radius:22px;line-height:1.45;pointer-events:none}
+html.has-bar .toast{bottom:calc(var(--barh) + 12px)}
+html.kb .toast{bottom:calc(var(--kbh,0px) + 12px)}
+/* 我的: the list of its pages */
+.hub{padding:4px 14px}
+.hubrow{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:2px dashed var(--ink);text-decoration:none;color:var(--ink);min-height:48px}
+.hubrow:last-child{border-bottom:0}
+.hubrow .hi{flex:0 0 38px;height:38px;display:grid;place-items:center;border:2.5px solid var(--ink);border-radius:12px;background:var(--water-t)}
+.hubrow .hi svg{width:24px;height:24px}
+.hubrow .hl{flex:1;min-width:0;font-size:16px}
+.hubrow .hl small{display:block;font-size:12px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hubrow .hc{font-size:20px;color:var(--ink2)}
+.kv b.em{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+/* line icons on the result tools */
+.saverow .btn{display:inline-flex;align-items:center;gap:5px}
+.bi{width:16px;height:16px;flex:0 0 16px}
+.saverow .btn[aria-pressed=true] .bi path{fill:var(--yellow)}
+.vhead h2:focus{outline:none}
 /* English runs wider than Chinese: words in fixed boxes get smaller type, and a long title ends in … */
 .brand span{min-width:0;overflow:hidden;text-overflow:ellipsis}
 html[lang=en] .seg button{font-size:clamp(12px,3.7vw,16px)}
@@ -554,14 +642,13 @@ html[lang=en] .brand{font-size:18px}
       <span>里程機位搜尋</span>
     </a>
     <button type="button" id="quota" class="quota" hidden><span class="qt"></span><span class="qbar" aria-hidden="true"><i></i></span></button>
-    <button id="acct-btn" class="icon-btn" type="button" aria-label="我的帳號" title="我的帳號"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#3E3A39" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M4.5 21c1-4.2 4.1-6.5 7.5-6.5s6.5 2.3 7.5 6.5z" fill="#A8D3E6"/><circle cx="12" cy="8.5" r="4.2" fill="#F6D27A"/></g></svg></button>
   </div></header>
 
   <main class="wrap">
     <div id="view-search">
     <form id="sf" class="card" autocomplete="off" novalidate>
       <div class="hero" aria-hidden="true"><svg viewBox="0 0 320 96" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"><circle cx="284" cy="24" r="11" fill="#F6D27A"/><g class="drift"><path d="M92 36h26a8 8 0 0 0-3-15 10 10 0 0 0-19-2 7 7 0 0 0-4 17z" fill="#FFFCF6"/></g><g class="drift d2"><path d="M222 45h20a6 6 0 0 0-2-11 8 8 0 0 0-15-2 6 6 0 0 0-3 13z" fill="#FFFCF6"/></g><path class="flow" d="M60 66Q150 -8 262 74" stroke-width="2.5"/><path d="M0 84q40-14 80-4t80 2 80-6 80 4v16H0z" fill="#B9DAA5"/><g transform="translate(250 56)"><path d="M12 26V4"/><g class="sway"><path d="M12 4h12l-3 5 3 5H12z" fill="#F2A497"/></g></g><g transform="translate(130 2)"><g class="float"><path d="M24 30l38-12c4-1 6 3 2 5L32 38z" fill="#FFFCF6"/><path d="M40 24l-6-12h7l11 9" fill="#F2A497"/><path d="M42 32l-2 12h7l7-14" fill="#F2A497"/><path d="M26 31l-4-7"/></g></g><g transform="translate(22 40)"><g class="float"><path d="M20 3v6"/><circle cx="20" cy="3" r="1.5" fill="#3E3A39"/><rect x="6" y="9" width="28" height="24" rx="9" fill="#F2A497"/><circle cx="14.5" cy="19" r="4.2" fill="#F6D27A"/><circle cx="25.5" cy="19" r="4.2" fill="#F6D27A"/><path d="M16.5 27q3.5 3 7 0"/><path d="M11 38l3-5M29 38l-3-5"/></g></g></g></svg></div>
-      <div class="tt" id="tt" role="radiogroup" aria-label="單程或來回"><button type="button" role="radio" data-tt="ow" aria-checked="true">單程</button><button type="button" role="radio" data-tt="rt" aria-checked="false">來回</button></div>
+      <div class="tt" id="tt" role="radiogroup" aria-label="單程、來回或多城市"><button type="button" role="radio" data-tt="ow" aria-checked="true">單程</button><button type="button" role="radio" data-tt="rt" aria-checked="false">來回</button><button type="button" role="radio" data-tt="mc" aria-checked="false">多城市</button></div>
       <div class="route" id="route">
         <div class="field ap">
           <label for="from">出發</label>
@@ -595,6 +682,7 @@ html[lang=en] .brand{font-size:18px}
           </div>
         </div>
       </div>
+      <div class="mlegs" id="mlegs" hidden><div id="mlist"></div><button type="button" class="btn ghost madd" id="madd">＋ 加一段</button></div>
       <p class="vh" id="swap-live" aria-live="polite"></p>
       <p class="ferr" id="ferr" role="alert"></p>
       <button class="go" id="go" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#3E3A39" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6" fill="#FFFCF6"/><path d="M15 15l5 5"/></g></svg><span id="go-t">搜尋</span></button>
@@ -607,8 +695,10 @@ html[lang=en] .brand{font-size:18px}
       <div id="banner"></div>
       <div class="legs" id="legs" hidden></div>
       <div class="route-h" id="route-h"></div>
-      <div class="saverow"><button type="button" class="btn ghost" id="save-btn" hidden>☆ 收藏這個搜尋</button>
-        <button type="button" class="btn ghost" id="alert-btn" hidden>🔔 設定提醒</button></div>
+      <div class="saverow"><button type="button" class="btn ghost" id="save-btn" hidden><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z" fill="none" stroke="#3E3A39" stroke-width="2" stroke-linejoin="round"/></svg><span>收藏這個搜尋</span></button>
+        <button type="button" class="btn ghost" id="alert-btn" hidden><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#3E3A39" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M12 3.6v2.2"/><path d="M6.4 16.4v-4.8a5.6 5.6 0 0 1 11.2 0v4.8l1.9 2.3H4.5z"/><path d="M10 21.2a2.3 2.3 0 0 0 4 0"/></g></svg><span>設定提醒</span></button>
+        <button type="button" class="btn ghost" id="share-btn" hidden><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#3E3A39" stroke-width="2" stroke-linecap="round"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/></g></svg><span>分享</span></button>
+        <button type="button" class="btn ghost" id="csv-btn" hidden><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#3E3A39" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14"/></g></svg><span>CSV</span></button></div>
       <form class="acard y alertf" id="alert-form" novalidate hidden></form>
       <div class="sum" id="sum" aria-live="polite"></div>
       <div class="fresh" id="fresh"></div>
@@ -625,7 +715,9 @@ html[lang=en] .brand{font-size:18px}
           <div class="pl">
             <div class="tfh">航班條件</div>
             <div id="tf"></div>
+            <div id="tf-feat"></div>
             <div class="field"><label for="maxmi">最多里程</label><input id="maxmi" inputmode="numeric" placeholder="不限，例：80000" autocomplete="off" enterkeyhint="done"></div>
+            <div class="field"><label for="maxtax" id="maxtax-l">稅金上限</label><input id="maxtax" inputmode="decimal" placeholder="不限" autocomplete="off" enterkeyhint="done"></div>
             <button type="button" class="btn ghost tfc" id="tf-clear" hidden>清除航班條件</button>
             <div class="tfh">搜尋選項（改了要重新搜尋）</div>
             <label class="switch opt"><input type="checkbox" id="opt-mixed"><span class="tr"></span><span>包含混艙<small>至少一半航程在這個艙等</small></span></label>
@@ -647,20 +739,21 @@ html[lang=en] .brand{font-size:18px}
     </div>
 
     <section id="view-account" class="page" hidden>
-      <div class="vhead"><a class="back" href="#/">← 回搜尋</a><h2>我的帳號</h2></div>
+      <div class="vhead"><h2 tabindex="-1">我的</h2></div>
       <div id="acct-body"></div>
     </section>
 
     <section id="view-alerts" class="page" hidden>
-      <div class="vhead"><a class="back" href="#/">← 回搜尋</a><h2>我的提醒</h2></div>
+      <div class="vhead"><h2 tabindex="-1">我的提醒</h2></div>
       <div id="alerts-body"></div>
     </section>
 
     <section id="view-admin" class="page" hidden>
-      <div class="vhead"><a class="back" href="#/account">← 我的帳號</a><h2>管理</h2></div>
+      <div class="vhead"><a class="back" href="#/account">← 我的</a><h2 tabindex="-1">管理</h2></div>
       <div id="admin-body"></div>
     </section>
   </main>
+  <nav class="tabbar" id="tabbar" aria-label="主選單"><ul id="tabs"></ul></nav>
 </div>
 <div id="toast" class="toast" role="status" hidden></div>
 
@@ -672,6 +765,87 @@ html[lang=en] .brand{font-size:18px}
 let LANG = localStorage.getItem('award-lang') === 'en' ? 'en' : 'zh';
 const LOC = () => (LANG === 'en' ? 'en-US' : 'zh-TW');
 const EN = {
+  "主選單": "Main",
+  "機票": "Flights",
+  "探索": "Explore",
+  "飯店": "Hotels",
+  "提醒": "Alerts",
+  "我的": "Me",
+  "收藏這個搜尋": "Save this search",
+  "已收藏": "Saved",
+  "設定提醒": "Set an alert",
+  "CSV": "CSV",
+  "← 我的": "← Me",
+  "← 我的提醒": "← My alerts",
+  "← 探索": "← Explore",
+  "← 飯店": "← Hotels",
+  "還沒有提醒。搜尋之後，在結果上方按「設定提醒」。": "No alerts yet. After a search, tap \"Set an alert\" above the results.",
+  "單程、來回或多城市": "One way, round trip or multi-city",
+  "多城市": "Multi-city",
+  "＋ 加一段": "＋ Add a leg",
+  "第 1 段最早": "Leg 1 from",
+  "第 1 段最晚": "Leg 1 to",
+  "第 {0} 段": "Leg {0}",
+  "刪掉第 {0} 段": "Remove leg {0}",
+  "例：NRT": "e.g. NRT",
+  "最早": "From",
+  "最晚": "To",
+  "第 {0} 段：{1}": "Leg {0}: {1}",
+  "第 {0} 段：請輸入出發和抵達的機場。": "Leg {0}: enter both airports.",
+  "第 {0} 段：請選日期的範圍。": "Leg {0}: pick a date range.",
+  "第 {0} 段：最晚不能早於最早。": "Leg {0}: the latest date can't be before the earliest.",
+  "第 {0} 段：這些日期已經過了。": "Leg {0}: these dates have passed.",
+  "第 {0} 段不能早於前一段。": "Leg {0} can't start before the leg before it.",
+  "第 {0} 段：日期範圍最多 3 個月，請縮短一點。": "Leg {0}: the date range can be 3 months at most.",
+  "多城市至少要兩段。": "A multi-city trip needs at least two legs.",
+  "目前的條件下，找不到每段都有位子、日期依序的組合。": "With these filters, no dates in order have seats on every leg.",
+  "多城市最低合計 <b>{0}</b> 哩（{1}，日期依序：{2}）": "Multi-city from <b>{0}</b> miles in total ({1}; dates in order: {2})",
+  "提醒方式": "Alert type",
+  "來回都要有位子": "Both directions",
+  "只看去程": "Outbound only",
+  "只看回程": "Return only",
+  "來回合計最多幾哩": "Max miles, both ways",
+  "大約每 3 小時檢查一次，每次用 2 次額度（去回各 1 次）。只寄合計在上限內、回程至少晚一天的日期組合；第一封列出現在就有的，之後只寄新的或更便宜的。": "Checked about every 3 hours, 2 calls each time (one per direction). Emails only date pairs under the total, with the return at least a day later; the first email lists what is open now, then only new or cheaper pairs.",
+  "請選回程日期。": "Pick the return dates.",
+  "去 {0} 到 {1}": "Out {0} to {1}",
+  "回 {0} 到 {1}": "Back {0} to {1}",
+  "來回合計 {0} 哩以下": "up to {0} miles both ways",
+  "現在沒有符合的日期組合，有了會寄信通知你": "No matching date pairs right now. You will get an email when there are",
+  "找到 {0} 組符合的日期": "{0} matching date pairs",
+  "已套用提醒的條件：{0}，來回合計 {1} 哩以下": "Applied the alert's filters: {0}, up to {1} miles both ways",
+  "🔗 分享": "🔗 Share",
+  "⬇ CSV": "⬇ CSV",
+  "連結已複製。對方要登入這個網站才看得到結果": "Link copied. The other person must be signed in to this site to see results",
+  "複製這個連結：": "Copy this link:",
+  "這個分享連結看不懂。": "This shared link can't be read.",
+  "{0} → {1}，{2} 到 {3}": "{0} → {1}, {2} to {3}",
+  "日期": "Date",
+  "星期": "Weekday",
+  "里程計畫": "Program",
+  "里程": "Miles",
+  "稅金": "Taxes",
+  "幣別": "Currency",
+  "剩餘座位": "Seats left",
+  "航空公司": "Airlines",
+  "起飛": "Departs",
+  "降落": "Arrives",
+  "飛行時間（分鐘）": "Duration (min)",
+  "航班": "Flights",
+  "資料更新": "Updated",
+  "是": "Yes",
+  "已匯出 {0} 筆": "Exported {0}",
+  "📅 日期組合": "📅 Date pairs",
+  "目前的條件下，沒有去程和回程都有位子的日期組合。": "With these filters, no outbound and return dates both have seats.",
+  "停留 {0} 天": "{0}-day stay",
+  "去程和回程日期的合計里程": "Total miles by outbound and return date",
+  "去＼回": "Out \\ Back",
+  "去 {0} 回 {1}，合計 {2} 哩": "Out {0}, back {1}: {2} miles in total",
+  "最便宜的 {0} 種組合（{1}）": "Cheapest {0} pairs ({1})",
+  "稅金上限": "Max taxes",
+  "稅金上限（{0}）": "Max taxes ({0})",
+  "機型（至少一段是這個機型）": "Aircraft (at least one flight on it)",
+  "廣體機": "Widebody",
+  "這次搜尋沒有機型資料。": "No aircraft data in these results.",
   "最早日期": "Earliest",
   "最晚日期": "Latest",
   "還不能寄信：要等管理員在 Cloudflare 設定好。": "Emails can't go out yet: the admin has to finish the Cloudflare setup.",
@@ -1435,6 +1609,7 @@ const S = {
   // pax..maxMiles: the 航班條件 in 更多篩選 (maxStops 9 = any number of stops; 0 hours = no limit)
   prefs: Object.assign({ cabin: 'J', off: [], direct: false, carriers: '', sort: 'date',
     pax: 1, wd: [], dep: [], arr: [], maxStops: 9, maxHours: 0, noVia: [], maxMiles: 0, myBanks: [],
+    aircraft: [], maxTax: 0, maxTaxCur: 'USD',   // 機型 families (or 'wide'); 稅金上限 as typed, in its currency
     disp: 'USD' }, load('award-prefs', {})),   // disp: the currency money is shown in (USD or TWD)
   search: null, legs: null, leg: 0,   // the whole search (one or two legs) and which leg is on screen
   saved: [], seen: null, seenAt: 0,   // 收藏, and what the matching one held at the last look
@@ -1502,9 +1677,12 @@ function setLang(l) {
   if (S.rows) render();
   if (!$('#app').hidden) route();
   for (const a of $$('.offer')) if (open.includes(a.dataset.id)) toggleTrips(a);   // open cards stay open (no new call)
-  if (!$('#sugg').hidden && suggFor) suggest(suggFor);   // an open airport list, in the new language
+  if ($('#sugg') && !$('#sugg').hidden && suggFor) suggest(suggFor);   // an open airport list, in the new language
   if (!$('#alert-form').hidden) openAlertForm();
+  if (!$('#mlegs').hidden) renderMc(mcLegs());   // 多城市 rows, in the new language
   $('#toast').hidden = true;   // a toast still up is in the old language
+  featureHook('onLang');
+  if (!$('#app').hidden) renderNav();
   if (LSUB_NOW) $('#lsub').textContent = t(...LSUB_NOW);
   for (const b of $$('.eye')) b.textContent = b.getAttribute('aria-pressed') === 'true' ? t('隱藏') : t('顯示');
   setBusy($('#go').disabled);
@@ -1576,6 +1754,8 @@ const toUSD = (minor, cur) => { const rate = !cur || cur === 'USD' ? 1 : FX && F
 // Money in the currency picked under 金額 (US$ or NT$), converted with the same daily rates; a converted amount
 // keeps the original in small print. Without a rate the original is shown as it is.
 const DISP = () => (S.prefs.disp === 'TWD' ? 'TWD' : 'USD');
+// minor units of cur in another currency (major units), or null without a rate
+const inCur = (minor, cur, to) => { const c = cur || 'USD'; if (c === to) return minor / 100; const usd = toUSD(minor, c), rate = to === 'USD' ? 1 : FX && FX.rates[to]; return usd == null || !rate ? null : usd * rate; };
 function inDisp(minor, cur) {
   const c = cur || 'USD', d = DISP();
   if (c === d) return minor / 100;
@@ -1596,6 +1776,10 @@ document.addEventListener('click', e => {
   const b = e.target.closest('[data-disp]');
   if (!b) return;
   S.prefs.disp = b.dataset.disp;
+  if (S.prefs.maxTax && S.prefs.maxTaxCur !== DISP()) {
+    const v = inCur(Math.round(S.prefs.maxTax * 100), S.prefs.maxTaxCur, DISP());
+    if (v != null) { S.prefs.maxTax = DISP() === 'TWD' ? Math.round(v) : Math.round(v * 100) / 100; S.prefs.maxTaxCur = DISP(); $('#maxtax').value = S.prefs.maxTax; }
+  }
   savePrefs();
   for (const x of $$('[data-disp]')) x.setAttribute('aria-pressed', String(x.dataset.disp === DISP()));
   if (S.rows) render();
@@ -1709,6 +1893,7 @@ const LSUB = '用 Email 登入。新帳號要有邀請碼。';
 let LSUB_NOW = null;   // the line now showing, so switching the language can redraw it
 const setLsub = (...a) => { LSUB_NOW = a; $('#lsub').textContent = t(...a); };
 function showLogin(msg) {
+  document.documentElement.classList.remove('has-bar');
   $('#app').hidden = true;
   $('#login').hidden = false;
   $('#af').hidden = false;
@@ -1807,20 +1992,145 @@ $('#rf').addEventListener('submit', async e => {
 });
 $('#rback').addEventListener('click', () => { clearHash(); if (getToken()) showApp(); else showLogin(''); });
 
+/* ---------- feature modules (features/*.js) ---------- */
+// Newer features live in their own files and register here, so each can be built and tested on its own:
+//   addFeature({ id, title: '探索' (Chinese; give its English in en), route: '#/explore' or a RegExp on the hash,
+//     back: '#/' (the back link's target; false for none), nav: { tab, order } (where the navigation lists it),
+//     css: '...', en: { 中文: 'English' }, show(match, body) draws the page into body, and any of the hooks
+//     onLang(), onAuth(), onRender({ offers }), onDetails(art, box), onAccountPage(el, me), onAlertsPage(el, state),
+//     onAdminPage(el, users), onFilters(el) (controls in 更多篩選), filter(x) (false hides the award; x = { r, src,
+//     miles, direct, cab, seats, taxes, cur, date }) })
+// A feature page is <section id="view-<id>" class="page">; its static text is Chinese and translateStatic()
+// switches it, like the rest of the page.
+const FEATURES = [];
+function addFeature(f) {
+  FEATURES.push(f);
+  if (f.en) Object.assign(EN, f.en);
+  if (f.css) { const st = document.createElement('style'); st.dataset.feature = f.id; st.textContent = f.css; document.head.appendChild(st); }
+  if (f.route) {
+    const sec = document.createElement('section');
+    sec.id = 'view-' + f.id; sec.className = 'page'; sec.hidden = true;
+    const home = { flights: '#/', explore: '#/explore', hotels: '#/hotels', alerts: '#/alerts', me: '#/account' }[f.nav && f.nav.tab] || '#/';
+    const back = f.back === false || home === f.route ? false : home;   // (a module's own back: '#/' is ignored: its tab decides)
+    const word = { '#/account': '← 我的', '#/alerts': '← 我的提醒', '#/explore': '← 探索', '#/hotels': '← 飯店' }[back] || '← 回搜尋';
+    sec.innerHTML = '<div class="vhead">' + (back === false ? '' : '<a class="back" href="' + back + '">' + word + '</a>') +
+      '<h2 tabindex="-1">' + esc(f.title || '') + '</h2></div><div id="' + f.id + '-body"></div>';
+    $('main.wrap').appendChild(sec);
+  }
+}
+// run one hook on every feature that has it; a failing feature does not stop the others
+const featureHook = (name, ...a) => { for (const f of FEATURES) if (f[name]) { try { f[name](...a); } catch (e) { console.error(f.id, name, e); } } };
+const featureOf = h => {
+  for (const f of FEATURES) {
+    if (!f.route) continue;
+    const m = typeof f.route === 'string' ? (h === f.route ? [h] : null) : f.route.exec(h);
+    if (m) return [f, m];
+  }
+  return null;
+};
+
+/* ---------- the tab bar ---------- */
+// icons: ink line drawings; .k1 / .k2 get their colours when the tab is the current one
+const TAB_G = (vb, sw, inner) => '<svg viewBox="' + vb + '" aria-hidden="true"><g fill="none" stroke="#3E3A39" stroke-width="' + sw + '" stroke-linejoin="round" stroke-linecap="round">' + inner + '</g></svg>';
+const TAB_ICON = {
+  flights: TAB_G('0 0 30 30', 2.4, '<path class="k0" d="M3 16l23-8c2-.6 3 1.4 1.2 2.4L9 19z"/><path class="k1" d="M12 13l-3-7h4l6 5"/><path class="k1" d="M13 17l-1 7h4l4-8"/>'),
+  explore: TAB_G('0 0 24 24', 1.9, '<path class="k1" d="M2.8 6.4 8.6 4.2l6.8 2.2 5.8-2.2v13.4l-5.8 2.2-6.8-2.2-5.8 2.2z"/><path d="M8.6 4.2v13.4M15.4 6.4v13.4"/><path class="k2" d="M12 16.6s-3.6-3.8-3.6-6.4a3.6 3.6 0 0 1 7.2 0c0 2.6-3.6 6.4-3.6 6.4z"/><circle cx="12" cy="10.1" r="1.2" fill="#3E3A39" stroke="none"/>'),
+  hotels: TAB_G('0 0 24 24', 1.9, '<path d="M3 5.2v14.3M21 14.2v5.3"/><path class="k1" d="M3 12.6h13.4a4.6 4.6 0 0 1 4.6 4.6v.6H3z"/><rect class="k2" x="5.2" y="8.7" width="6.4" height="3.9" rx="1.9"/>'),
+  alerts: TAB_G('0 0 24 24', 1.9, '<path d="M12 3.6v2.2"/><path class="k1" d="M6.4 16.4v-4.8a5.6 5.6 0 0 1 11.2 0v4.8l1.9 2.3H4.5z"/><path d="M10 21.2a2.3 2.3 0 0 0 4 0"/>'),
+  me: TAB_G('0 0 24 24', 1.9, '<path class="k1" d="M4.5 21c1-4.2 4.1-6.5 7.5-6.5s6.5 2.3 7.5 6.5z"/><circle class="k2" cx="12" cy="8.5" r="4.2"/>'),
+};
+// a tab whose page comes from a feature module shows only when that module is loaded
+const TABS = [
+  { k: 'flights', route: '#/', label: '機票', c1: 'var(--coral)', c2: 'var(--paper)' },
+  { k: 'explore', route: '#/explore', label: '探索', c1: 'var(--green)', c2: 'var(--coral)', feature: 'explore' },
+  { k: 'hotels', route: '#/hotels', label: '飯店', c1: 'var(--water)', c2: 'var(--paper)', feature: 'hotels' },
+  { k: 'alerts', route: '#/alerts', label: '提醒', c1: 'var(--coral)', c2: 'var(--paper)' },
+  { k: 'me', route: '#/account', label: '我的', c1: 'var(--water)', c2: 'var(--paper)', id: 'acct-btn' },
+];
+const TAB_HOME = Object.fromEntries(TABS.map(x => [x.k, x.route]));
+let TAB_NOW = 'flights', TAB_TAPPED = false;
+function renderNav() {
+  const tabs = TABS.filter(x => !x.feature || FEATURES.some(f => f.id === x.feature));
+  $('#tabs').style.setProperty('--tabs', tabs.length);
+  $('#tabs').innerHTML = tabs.map(x => '<li><a class="tab" href="' + x.route + '" data-tab="' + x.k + '"' + (x.id ? ' id="' + x.id + '"' : '') +
+    (TAB_NOW === x.k ? ' aria-current="page"' : '') + ' style="--c1:' + x.c1 + ';--c2:' + x.c2 + '"><span class="ti">' + TAB_ICON[x.k] + '</span><span class="tl">' + t(x.label) + '</span></a></li>').join('');
+  $('#tabbar').setAttribute('aria-label', t('主選單'));
+}
+function markTab(k) {
+  TAB_NOW = k;
+  for (const a of $$('#tabs .tab')) { if (a.dataset.tab === k) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); }
+}
+// tapping the current tab: back to the top of its first page
+$('#tabbar').addEventListener('click', e => {
+  const a = e.target.closest('.tab');
+  if (!a) return;
+  TAB_TAPPED = true;
+  const root = a.getAttribute('href'), here = location.hash || '#/';
+  if (a.getAttribute('aria-current') === 'page' && (here === root || (root === '#/' && here === '#'))) {
+    e.preventDefault();
+    scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }
+});
+// the iOS keyboard: on a touch screen the bar slides away while a text field has focus (dates and selects open
+// their own pickers, so they keep it). visualViewport is the backstop and gives the toast its lift (--kbh).
+// A focused field removed from the page (a redraw, a page change) sends no focusout in WebKit, so route() calls
+// kbSync() to bring the bar back when nothing is being typed in any more.
+let kbSync = () => {};
+{
+  const root = document.documentElement, coarse = matchMedia('(pointer: coarse)');
+  const TYPING = 'input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]):not([type=range]):not([type=date]),textarea,[contenteditable]:not([contenteditable=false])';
+  const typing = el => !!(el && el.matches && el.matches(TYPING));
+  kbSync = () => { const a = document.activeElement; if (!typing(a) || !a.isConnected || a.closest('[hidden]')) root.classList.remove('kb'); };
+  let kbTimer = 0;
+  document.addEventListener('focusin', e => { if (coarse.matches && typing(e.target)) { clearTimeout(kbTimer); root.classList.add('kb'); } });
+  // moving from one field to the next fires focusout then focusin: wait a moment so the bar does not flash back
+  document.addEventListener('focusout', () => { clearTimeout(kbTimer); kbTimer = setTimeout(() => { if (!typing(document.activeElement)) root.classList.remove('kb'); }, 150); });
+  if (window.visualViewport) {
+    const vv = window.visualViewport;
+    const fit = () => {
+      if (vv.scale > 1.01) return;   // pinch zoom also shrinks the visual viewport; that is not a keyboard
+      const kb = Math.max(0, Math.round(innerHeight - vv.height - vv.offsetTop));
+      root.style.setProperty('--kbh', kb + 'px');
+      if (kb > 120 && coarse.matches) root.classList.add('kb');
+      else if (!typing(document.activeElement)) root.classList.remove('kb');
+    };
+    vv.addEventListener('resize', fit);
+    vv.addEventListener('scroll', fit);
+  }
+}
+// each page keeps its own scroll position, so going back to 機票 finds the results where they were
+const SCROLL_AT = {};
+let ROUTE_NOW = null;
 /* ---------- pages: search, my account, admin ---------- */
 function route() {
-  const h = location.hash;
+  const h = location.hash, y0 = scrollY;
   const al = /^#\/alert\/(\d{1,12})$/.exec(h);
   if (al) { openAlertSearch(+al[1]); return; }   // a link in an alert email
-  const page = h === '#/account' ? 'account' : h === '#/alerts' ? 'alerts' : h === '#/admin' && ME && ME.role === 'owner' ? 'admin' : 'search';
+  const sh = /^#\/s\?(.+)$/.exec(h);
+  if (sh) { openShared(sh[1]); return; }   // a 分享 link
+  const fh = featureOf(h);
+  const page = fh ? 'feature' : h === '#/account' ? 'account' : h === '#/alerts' ? 'alerts' : h === '#/admin' && ME && ME.role === 'owner' ? 'admin' : 'search';
   $('#view-search').hidden = page !== 'search';
   $('#view-account').hidden = page !== 'account';
   $('#view-alerts').hidden = page !== 'alerts';
   $('#view-admin').hidden = page !== 'admin';
+  for (const f of FEATURES) if (f.route) $('#view-' + f.id).hidden = !fh || fh[0] !== f;
+  if (fh) { try { fh[0].show(fh[1], $('#' + fh[0].id + '-body')); } catch (e) { console.error(fh[0].id, 'show', e); } }
   if (page === 'account') loadAccount();
   if (page === 'alerts') loadAlerts();
   if (page === 'admin') loadAdmin();
-  if (page !== 'search') scrollTo(0, 0);
+  markTab(fh ? (fh[0].nav && fh[0].nav.tab) || 'flights' : page === 'account' || page === 'admin' ? 'me' : page === 'alerts' ? 'alerts' : 'flights');
+  const title = fh ? fh[0].title : { account: '我的', alerts: '我的提醒', admin: '管理' }[page];
+  document.title = (title ? t(title) + '｜' : '') + t('里程機位搜尋');
+  const key = page === 'search' ? '#/' : h;
+  if (ROUTE_NOW !== key) {
+    if (ROUTE_NOW) SCROLL_AT[ROUTE_NOW] = y0;   // read before the views changed (a shorter page clamps scrollY)
+    ROUTE_NOW = key;
+    scrollTo(0, SCROLL_AT[key] || 0);
+    if (TAB_TAPPED && page !== 'search') { const hd = $('#view-' + (fh ? fh[0].id : page) + ' h2'); if (hd) hd.focus({ preventScroll: true }); }
+  }
+  TAB_TAPPED = false;
+  kbSync();
 }
 addEventListener('hashchange', () => {
   // a reset link opened in a tab that already has the site loaded only changes the hash, so catch it here too
@@ -1830,7 +2140,6 @@ addEventListener('hashchange', () => {
   else if (join) { clearHash(); toast(t('你已經登入了，這個邀請碼可以留給別人用')); route(); }
   else if (!$('#app').hidden) route();
 });
-$('#acct-btn').addEventListener('click', () => { location.hash = '#/account'; });
 // the mascot and title go back to the search page, and to its top if already there
 $('#home').addEventListener('click', e => {
   e.preventDefault();
@@ -1861,13 +2170,20 @@ async function loadAccount() {
   const devices = m.sessions.map(x => '<div class="rowi"><div class="main"><b>' + esc(x.device || t('不明的裝置')) + '</b><small>' +
       (x.country ? '<span>' + esc(t(COUNTRY[x.country] || x.country)) + '</span>' : '') + '<span>' + t('最後使用：{0}', since(x.last_seen_at)) + '</span><span>' + t('登入：{0}', fmtDay(x.created_at)) + '</span></small></div>' +
       '<div class="acts">' + (x.id === m.current ? '<span class="tag me">' + t('這台') + '</span>' : '<button type="button" class="btn ghost" data-sess="' + esc(x.id) + '">' + t('登出') + '</button>') + '</div></div>').join('');
-  box.innerHTML =
+  // the 我的 pages of the feature modules (點數錢包, 開票日, 訂位須知...), each with a one-line preview when it has one
+  // (a module whose route is a RegExp, like #/notes?k=..., names its link in nav.href)
+  const hrefOf = f => f.nav.href || (typeof f.route === 'string' ? f.route : '');
+  const mine = FEATURES.filter(f => f.nav && f.nav.tab === 'me' && hrefOf(f)).sort((a, b) => (a.nav.order || 0) - (b.nav.order || 0));
+  const peek = f => { try { return f.nav.summary ? f.nav.summary() || '' : ''; } catch { return ''; } };
+  const hub = mine.length ? '<nav class="acard hub" aria-label="' + t('我的') + '">' + mine.map(f => '<a class="hubrow" href="' + hrefOf(f) + '"><span class="hi">' + (f.nav.icon || TAB_ICON.me) + '</span>' +
+    '<span class="hl">' + esc(t(f.nav.label || f.title)) + (peek(f) ? '<small>' + esc(peek(f)) + '</small>' : '') + '</span><span class="hc" aria-hidden="true">›</span></a>').join('') + '</nav>' : '';
+  box.innerHTML = hub +
     '<div class="acard y"><h3>' + t('帳號') + '</h3>' +
-      '<div class="kv"><span>Email</span><b>' + esc(m.email) + '</b></div>' +
+      '<div class="kv"><span>Email</span><b class="em" title="' + esc(m.email) + '">' + esc(m.email) + '</b></div>' +
       '<div class="kv"><span>' + t('身分') + '</span><b>' + (m.role === 'owner' ? t('管理員') : t('一般帳號')) + '</b></div>' +
       '<div class="kv"><span>' + t('註冊日期') + '</span><b>' + fmtDay(m.created_at) + '</b></div>' +
       (m.role === 'owner' ? '<a class="btn pri" href="#/admin">' + t('到管理頁') + '</a>' : '') + '</div>' +
-    '<div class="acard"><h3>' + t('🔔 我的提醒') + '</h3><p class="note0">' + t('有位子時寄信通知你。') + '</p><a class="btn pri" href="#/alerts">' + t('管理提醒') + '</a></div>' +
+    '<div id="acct-feat"></div>' +
     '<div class="acard w" id="prefs-card"><h3>' + t('顯示設定') + '</h3><div class="kv"><span>' + t('語言') + '</span>' + langSeg() + '</div><div class="kv"><span>' + t('金額幣別') + '</span>' + dispSeg() + '</div><p class="note0">' + t('稅金、每哩價值和 Google Flights 都會用這個幣別，匯率每天更新一次。') + '</p></div>' +
     '<form class="acard" id="pwform" novalidate><h3>' + t('改密碼') + '</h3>' +
       '<input type="email" class="sr" autocomplete="username" value="' + esc(m.email) + '" tabindex="-1" aria-hidden="true">' +
@@ -1879,6 +2195,7 @@ async function loadAccount() {
     '<details class="acard c danger"><summary>' + t('刪除帳號') + '</summary><form id="delform" novalidate>' +
       '<p class="note0">' + t('帳號和所有登入中的裝置都會刪掉，不能復原。') + '</p>' + pwField('del-pw', t('輸入密碼確認'), 'current-password') +
       '<button class="btn warn" type="submit">' + t('永久刪除我的帳號') + '</button><p class="msg" id="del-msg" role="status"></p></form></details>';
+  featureHook('onAccountPage', $('#acct-feat'), m);   // feature cards on the account page (點數錢包, 開票日...)
 }
 $('#acct-body').addEventListener('click', async e => {
   const b = e.target.closest('button');
@@ -1982,7 +2299,8 @@ async function loadAdmin() {
     '<div class="acard y"><h3>' + t('邀請碼') + '</h3><p class="note0">' + t('新帳號要有邀請碼才能註冊。每個碼只能用一次，{0} 天後失效。', inv.days) + '</p>' +
       '<form id="invform" class="invnew" novalidate><div class="field"><label for="inv-label">' + t('備註（選填）') + '</label><input id="inv-label" maxlength="40" placeholder="' + t('例：測試帳號 1') + '"></div><button class="btn pri" type="submit">' + t('產生邀請碼') + '</button></form>' +
       '<div id="inv-out"></div>' + invites + '</div>' +
-    '<div class="acard w"><h3>' + t('所有帳號') + '</h3>' + users + '</div>';
+    '<div class="acard w"><h3>' + t('所有帳號') + '</h3>' + users + '</div><div id="admin-feat"></div>';
+  featureHook('onAdminPage', $('#admin-feat'), u);   // feature cards for the owner (轉點加碼, 用量...)
 }
 $('#admin-body').addEventListener('submit', async e => {
   e.preventDefault();
@@ -2058,27 +2376,36 @@ $('#alert-btn').addEventListener('click', () => {
 });
 // the form, filled from the search on screen: its direction and dates, the cabin, the programs left ticked, the
 // cheapest award now as the ceiling (or the 最多里程 filter), nonstop and seats from the filters
-function openAlertForm() {
-  const L = S.legs[S.leg] || S.legs[0], f = filt(), today = isoDate(new Date());
-  const low = Math.min(...offersOf(S.rows || [], S.prefs.cabin, f).map(o => o.miles));
-  const max = f.maxMiles || (isFinite(low) ? low : '');
+// after a 來回 search it can watch both directions together (rt, the default) or only the direction on screen
+function openAlertForm(rtMode) {
+  const two = !!(S.search && S.search.rt) && S.legs.length > 1 && !!S.legs[1].rows, rt = two && rtMode !== false;
+  const L = rt ? S.legs[0] : (S.legs[S.leg] || S.legs[0]), f = filt(), today = isoDate(new Date());
+  let max = '';
+  if (rt) { const c = combos().list; max = c.length ? c[0].total : ''; }
+  else { const low = Math.min(...offersOf(S.rows || [], S.prefs.cabin, f).map(o => o.miles)); max = f.maxMiles || (isFinite(low) ? low : ''); }
   const kept = Object.keys(PROGRAMS).filter(k => !f.off.has(k));
+  const R = S.legs[1] && S.legs[1].p;
+  const route = n(esc(L.p.o.split(',').join('/')) + (rt ? ' ⇄ ' : ' → ') + esc(L.p.d.split(',').join('/')));
   const seg = (id, label, items) => '<div class="seg ' + (items.length === 2 ? 'two' : 'cab5') + '" id="' + id + '" role="radiogroup" aria-label="' + label + '">' +
     items.map(([v, x, on]) => '<button type="button" role="radio" data-v="' + v + '" aria-checked="' + on + '">' + x + '</button>').join('') + '</div>';
   $('#alert-form').innerHTML =
     '<h3>' + t('🔔 有位子時寄信通知我') + '</h3>' +
-    '<p class="note0">' + n(esc(L.p.o.split(',').join('/')) + ' → ' + esc(L.p.d.split(',').join('/'))) + (S.legs.length > 1 ? '　' + (L.p.back ? t('回程') : t('去程')) : '') + '</p>' +
-    '<div class="af2"><div class="field"><label for="af-s">' + t('最早日期') + '</label><input type="date" id="af-s" value="' + L.p.s + '" min="' + today + '"></div>' +
-    '<div class="field"><label for="af-e">' + t('最晚日期') + '</label><input type="date" id="af-e" value="' + L.p.e + '" min="' + today + '"></div></div>' +
+    (two ? seg('af-mode', t('提醒方式'), [['rt', t('來回都要有位子'), rt], ['ow', S.leg ? t('只看回程') : t('只看去程'), !rt]]) : '') +
+    '<p class="note0">' + route + (two && !rt ? '　' + (L.p.back ? t('回程') : t('去程')) : '') + '</p>' +
+    '<div class="af2"><div class="field"><label for="af-s">' + (rt ? t('去程最早') : t('最早日期')) + '</label><input type="date" id="af-s" value="' + L.p.s + '" min="' + today + '"></div>' +
+    '<div class="field"><label for="af-e">' + (rt ? t('去程最晚') : t('最晚日期')) + '</label><input type="date" id="af-e" value="' + L.p.e + '" min="' + today + '"></div></div>' +
+    (rt ? '<div class="af2"><div class="field"><label for="af-rs">' + t('回程最早') + '</label><input type="date" id="af-rs" value="' + R.s + '" min="' + today + '"></div>' +
+      '<div class="field"><label for="af-re">' + t('回程最晚') + '</label><input type="date" id="af-re" value="' + R.e + '" min="' + today + '"></div></div>' : '') +
     seg('af-cab', t('艙等'), CABINS.map(c => [c.k, c.name, c.k === S.prefs.cabin])) +
-    '<div class="field"><label for="af-max">' + t('最多幾哩') + '</label><input id="af-max" inputmode="numeric" autocomplete="off" enterkeyhint="done" value="' + max + '" placeholder="' + t('例：80000') + '"></div>' +
+    '<div class="field"><label for="af-max">' + (rt ? t('來回合計最多幾哩') : t('最多幾哩')) + '</label><input id="af-max" inputmode="numeric" autocomplete="off" enterkeyhint="done" value="' + max + '" placeholder="' + t('例：80000') + '"></div>' +
     (f.off.size ? '<p class="lblx">' + t('要檢查的計畫') + '</p>' + seg('af-src', t('要檢查的計畫'), [['kept', t('目前勾選的 {0} 個', kept.length), true], ['all', t('所有計畫'), false]])
       : '<p class="note0">' + t('所有計畫都會檢查。只想看某些計畫的話，先在「更多篩選」取消勾選其他的。') + '</p>') +
     '<label class="check"><input type="checkbox" id="af-direct"' + (f.direct ? ' checked' : '') + '><span class="box"></span>' + t('只要直飛') + '</label>' +
     '<div class="af2"><div class="field"><label for="af-seats">' + t('至少幾個位子') + '</label><select id="af-seats">' +
       [1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => '<option' + (i === f.pax ? ' selected' : '') + '>' + i + '</option>').join('') + '</select></div>' +
     '<div class="field"><label for="af-label">' + t('名稱（選填）') + '</label><input id="af-label" maxlength="40" placeholder="' + t('例：東京賞櫻') + '"></div></div>' +
-    '<p class="note0">' + t('大約每 3 小時檢查一次，每次用 1 次額度。第一封信會列出現在就有的位子，之後只寄新出現或更便宜的。') + '</p>' +
+    '<p class="note0">' + (rt ? t('大約每 3 小時檢查一次，每次用 2 次額度（去回各 1 次）。只寄合計在上限內、回程至少晚一天的日期組合；第一封列出現在就有的，之後只寄新的或更便宜的。')
+      : t('大約每 3 小時檢查一次，每次用 1 次額度。第一封信會列出現在就有的位子，之後只寄新出現或更便宜的。')) + '</p>' +
     '<div class="acts"><button class="btn pri" type="submit">' + t('建立提醒') + '</button><button type="button" class="btn ghost" id="af-cancel">' + t('取消') + '</button></div>' +
     '<p class="msg" id="af-msg" role="status"></p>';
   $('#alert-form').hidden = false;
@@ -2086,6 +2413,7 @@ function openAlertForm() {
 }
 $('#alert-form').addEventListener('click', e => {
   const r = e.target.closest('[role=radio]');
+  if (r && r.parentNode.id === 'af-mode') { if (r.getAttribute('aria-checked') !== 'true') openAlertForm(r.dataset.v === 'rt'); return; }
   if (r) { for (const x of r.parentNode.children) x.setAttribute('aria-checked', String(x === r)); return; }
   if (e.target.closest('#af-cancel')) $('#alert-form').hidden = true;
 });
@@ -2100,11 +2428,21 @@ $('#alert-form').addEventListener('submit', async e => {
   if (e2 < today) return msg(t('這些日期已經過了。'));
   if (s1 < today) s1 = today;
   if (daysBetween(s1, e2) > MAX_DAYS) return msg(t('日期範圍最多 3 個月，請縮短一點。'));
-  if (!(max >= 1000 && max <= 2000000)) return msg(t('請輸入最多幾哩，例如 80000。'));
+  const rt = !!$('#af-rs');
+  if (!(max >= 1000 && max <= (rt ? 4000000 : 2000000))) return msg(t('請輸入最多幾哩，例如 80000。'));
+  let rs = rt ? $('#af-rs').value : null;
+  const re = rt ? $('#af-re').value : null;
+  if (rt) {
+    if (!rs || !re) return msg(t('請選回程日期。'));
+    if (re < rs) return msg(t('回程最晚不能早於回程最早。'));
+    if (re < today) return msg(t('這些日期已經過了。'));
+    if (rs < s1) rs = s1;
+    if (daysBetween(rs, re) > MAX_DAYS) return msg(t('日期範圍最多 3 個月，請縮短一點。'));
+  }
   const src = $('#af-src [aria-checked=true]'), off = new Set(S.prefs.off);
-  const L = S.legs[S.leg] || S.legs[0];
+  const L = rt ? S.legs[0] : (S.legs[S.leg] || S.legs[0]);
   const body = {
-    o: L.p.o, d: L.p.d, s: s1, e: e2, cabin: $('#af-cab [aria-checked=true]').dataset.v, max_miles: max,
+    o: L.p.o, d: L.p.d, s: s1, e: e2, cabin: $('#af-cab [aria-checked=true]').dataset.v, max_miles: max, ...(rt ? { rs, re } : {}),
     sources: src && src.dataset.v === 'kept' ? Object.keys(PROGRAMS).filter(k => !off.has(k)) : null,
     direct: $('#af-direct').checked, seats: +$('#af-seats').value, label: $('#af-label').value.trim(), lang: LANG,
   };
@@ -2133,12 +2471,13 @@ function alertState(a) {
   return t('上次檢查：{0}', since(a.checked_at)) + (a.found != null && !a.check_note ? t('，找到 {0} 筆', a.found) : '') + note;
 }
 function alertRow(a) {
-  const bits = [a.label ? n(esc(a.o.split(',').join('/')) + ' → ' + esc(a.d.split(',').join('/'))) : '', t('{0} 到 {1}', md(a.s), md(a.e)), esc(cabName(a.cabin)),
-    t('{0} 哩以下', fmtMiles(a.max_miles)), a.sources ? t('{0} 個計畫', a.sources.length) : t('所有計畫'), a.direct ? t('只要直飛') : '', a.seats > 1 ? t('至少 {0} 位', a.seats) : ''];
+  const route = n(esc(a.o.split(',').join('/')) + (a.rs ? ' ⇄ ' : ' → ') + esc(a.d.split(',').join('/')));
+  const bits = [a.label ? route : '', a.rs ? t('去 {0} 到 {1}', md(a.s), md(a.e)) : t('{0} 到 {1}', md(a.s), md(a.e)), a.rs ? t('回 {0} 到 {1}', md(a.rs), md(a.re)) : '', esc(cabName(a.cabin)),
+    a.rs ? t('來回合計 {0} 哩以下', fmtMiles(a.max_miles)) : t('{0} 哩以下', fmtMiles(a.max_miles)), a.sources ? t('{0} 個計畫', a.sources.length) : t('所有計畫'), a.direct ? t('只要直飛') : '', a.seats > 1 ? t('至少 {0} 位', a.seats) : ''];
   const tag = a.status === 'paused' ? '<span class="tag pause">' + t('暫停中') + '</span>' : a.status === 'ended' ? '<span class="tag off">' + t('已結束') + '</span>' : '';
   const sent = a.sent_count ? t('已寄 {0} 封，最近一次 {1}', a.sent_count, whenShort(a.sent_at)) : t('還沒寄過信');
   const live = a.status !== 'ended';
-  return '<div class="rowi col arow"><div class="main"><b>' + esc(a.label || '') + (a.label ? '' : n(esc(a.o.split(',').join('/')) + ' → ' + esc(a.d.split(',').join('/')))) + tag + '</b>' +
+  return '<div class="rowi col arow"><div class="main"><b>' + esc(a.label || '') + (a.label ? '' : route) + tag + '</b>' +
     '<small>' + bits.filter(Boolean).map(x => '<span>' + x + '</span>').join('') + '</small>' +
     '<span class="st">' + alertState(a) + '</span><span class="st">' + sent + '</span></div>' +
     '<div class="acts">' + (live ? '<button type="button" class="btn ghost" data-agoto="' + a.id + '">' + t('看結果') + '</button>' +
@@ -2171,8 +2510,9 @@ function renderAlerts() {
   const live = A.alerts.filter(a => a.status !== 'ended').length;
   box.innerHTML = mailCard(A.mail) +
     '<div class="acard"><h3>' + t('提醒（{0}/{1}）', live, A.max) + '</h3>' +
-    (A.alerts.map(alertRow).join('') || '<p class="note0">' + t('還沒有提醒。搜尋之後，在結果上方按「🔔 設定提醒」。') + '</p>') +
-    '<p class="note0">' + t('每個提醒大約每 3 小時檢查一次，每次用 1 次額度，一個提醒一天大約 8 次。') + '</p></div>';
+    (A.alerts.map(alertRow).join('') || '<p class="note0">' + t('還沒有提醒。搜尋之後，在結果上方按「設定提醒」。') + '</p>') +
+    '<p class="note0">' + t('每個提醒大約每 3 小時檢查一次，每次用 1 次額度，一個提醒一天大約 8 次。') + '</p></div><div id="alerts-feat"></div>';
+  featureHook('onAlertsPage', $('#alerts-feat'), A);   // feature cards on 我的提醒 (開票日提醒, 推播...)
 }
 async function loadAlerts() {
   const box = $('#alerts-body');
@@ -2183,9 +2523,11 @@ async function loadAlerts() {
 // 立即檢查's answer, under its alert
 function runHtml(r) {
   if (r.note) return '<div class="arun"><p>' + alertState({ status: 'active', checked_at: Date.now() / 1000, check_note: r.note }) + '</p></div>';
-  const head = !r.found ? t('現在沒有符合的位子，有了會寄信通知你')
-    : t('找到 {0} 筆符合的位子', r.found) + (r.mailed ? t('，有 {0} 筆是新的，已寄信', r.fresh) : r.fresh ? t('（Email 還沒驗證，所以沒寄信）') : t('，沒有新的，所以沒寄信'));
-  const rows = (r.top || []).slice(0, 5).map(x => '<li>' + dayW(x.date) + '　' + esc((PROGRAMS[x.src] || [x.src])[0]) + '　' + t('{0} 哩', fmtMiles(x.miles)) + '</li>').join('');
+  const head = !r.found ? (r.rt ? t('現在沒有符合的日期組合，有了會寄信通知你') : t('現在沒有符合的位子，有了會寄信通知你'))
+    : (r.rt ? t('找到 {0} 組符合的日期', r.found) : t('找到 {0} 筆符合的位子', r.found)) + (r.mailed ? t('，有 {0} 筆是新的，已寄信', r.fresh) : r.fresh ? t('（Email 還沒驗證，所以沒寄信）') : t('，沒有新的，所以沒寄信'));
+  const side = x => dayW(x.date) + ' ' + esc((PROGRAMS[x.src] || [x.src])[0]) + ' ' + fmtMiles(x.miles);
+  const rows = r.rt ? (r.pairs || []).slice(0, 5).map(p => '<li>' + side(p.out) + ' ＋ ' + side(p.back) + ' ＝ ' + t('{0} 哩', fmtMiles(p.total)) + '</li>').join('')
+    : (r.top || []).slice(0, 5).map(x => '<li>' + dayW(x.date) + '　' + esc((PROGRAMS[x.src] || [x.src])[0]) + '　' + t('{0} 哩', fmtMiles(x.miles)) + '</li>').join('');
   return '<div class="arun"><p>' + head + '</p>' + (rows ? '<ul>' + rows + '</ul>' : '') + '</div>';
 }
 $('#alerts-body').addEventListener('click', async e => {
@@ -2236,17 +2578,18 @@ async function openAlertSearch(id) {
   route();
   if (!a) { toast(t('找不到這個提醒，可能已經刪掉了')); return; }
   if (a.e < today) { toast(t('這個提醒的日期已經過了')); return; }
-  Object.assign(S.prefs, { cabin: a.cabin, direct: a.direct, maxMiles: a.max_miles, pax: a.seats > 1 ? Math.min(a.seats, 6) : 1,
+  Object.assign(S.prefs, { cabin: a.cabin, direct: a.direct, maxMiles: a.rs ? 0 : a.max_miles, pax: a.seats > 1 ? Math.min(a.seats, 6) : 1,
     off: a.sources ? Object.keys(PROGRAMS).filter(k => !a.sources.includes(k)) : [] });
   savePrefs();
   $('#direct').checked = S.prefs.direct;
-  $('#maxmi').value = S.prefs.maxMiles;
+  $('#maxmi').value = S.prefs.maxMiles || '';
   renderProgramList();
-  fillForm({ o: a.o, d: a.d, s: a.s < today ? today : a.s, e: a.e });
+  fillForm({ o: a.o, d: a.d, s: a.s < today ? today : a.s, e: a.e, ...(a.rs ? { rt: { s: a.rs < today ? today : a.rs, e: a.re } } : {}) });
   const p = readForm();
   if (!p) return;
-  toast(t('已套用提醒的條件：{0}，{1} 哩以下', cabName(a.cabin), fmtMiles(a.max_miles)));
-  runSearch(p, false, true);
+  toast(a.rs ? t('已套用提醒的條件：{0}，來回合計 {1} 哩以下', cabName(a.cabin), fmtMiles(a.max_miles)) : t('已套用提醒的條件：{0}，{1} 哩以下', cabName(a.cabin), fmtMiles(a.max_miles)));
+  await runSearch(p, false, true);
+  if (a.rs && S.search === p) { S.combosOpen = true; renderLegs(); }
 }
 
 /* ---------- API ---------- */
@@ -2390,12 +2733,13 @@ function pick(codes) {
   input.value = parts.map(s => s.trim()).filter(Boolean).join(',');
   showNames(input);
   $('#sugg').hidden = true;
-  if (input.id === 'from' && !$('#to').value) $('#to').focus();
+  const next = input.id === 'from' ? $('#to') : /^m\do$/.test(input.id) ? $('#' + input.id.slice(0, 2) + 'd') : null;
+  if (next && !next.value) next.focus();
   else input.blur();
 }
 for (const id of ['from', 'to']) {
   const input = $('#' + id);
-  input.addEventListener('focus', () => suggest(input));
+  input.addEventListener('focus', () => { suggHere(input); suggest(input); });
   input.addEventListener('input', () => { suggest(input); showNames(input); });
   input.addEventListener('blur', () => setTimeout(() => { if (suggFor === input && document.activeElement !== input) $('#sugg').hidden = true; }, 150));
   input.addEventListener('keydown', e => { if (e.key === 'Escape') $('#sugg').hidden = true; });
@@ -2411,11 +2755,61 @@ $('#sugg').addEventListener('pointerdown', e => {
 let TRIP = 'ow';
 const plusDays = (v, k) => { const d = parseDate(v); d.setDate(d.getDate() + k); return isoDate(d); };
 // the words on the outbound date boxes: with two legs on screen, each names its leg (去程 over 回程)
-const outWord = i => (TRIP === 'rt' ? [t('去程最早'), t('去程最晚')] : [t('最早出發'), t('最晚出發')])[i];
+const outWord = i => (TRIP === 'rt' ? [t('去程最早'), t('去程最晚')] : TRIP === 'mc' ? [t('第 1 段最早'), t('第 1 段最晚')] : [t('最早出發'), t('最晚出發')])[i];
+/* ---------- 多城市: legs 2 to 4, each { o, d, s, e }, drawn under leg 1 (the main route and date rows) ---------- */
+const MC_MAX = 4;
+function mcLegs() {
+  return $$('#mlist .mleg').map(el => { const i = el.dataset.i; return { o: $('#m' + i + 'o').value, d: $('#m' + i + 'd').value, s: $('#m' + i + 's').value, e: $('#m' + i + 'e').value }; });
+}
+function renderMc(list) {
+  const today = isoDate(new Date()), sg = $('#sugg');
+  if ($('#mlist').contains(sg)) { sg.hidden = true; $('#route').appendChild(sg); }   // the airport list must not go with the old rows
+  $('#mlist').innerHTML = list.map((L, i) => {
+    const k = i + 2;
+    const ap = (x, label, v) => '<div class="field ap"><label for="m' + k + x + '">' + label + '</label><input id="m' + k + x + '" value="' + esc(v || '') + '" placeholder="' + (x === 'o' ? t('例：NRT') : t('例：SEA')) + '" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="next"><div class="names" id="m' + k + x + '-names"></div></div>';
+    const df = (x, label, v) => '<div class="field df"><label for="m' + k + x + '">' + label + '<small id="m' + k + x + 'y"></small></label><span class="dv" id="m' + k + x + 'v"></span><input type="date" id="m' + k + x + '" value="' + esc(v || '') + '" min="' + today + '"></div>';
+    return '<div class="mleg" data-i="' + k + '"><div class="mhead"><b>' + t('第 {0} 段', k) + '</b><button type="button" class="mdel" data-del="' + i + '" aria-label="' + t('刪掉第 {0} 段', k) + '">✕</button></div>' +
+      '<div class="mroute">' + ap('o', t('出發'), L.o) + '<span class="mto" aria-hidden="true">→</span>' + ap('d', t('抵達'), L.d) + '</div>' +
+      '<div class="dates">' + df('s', t('最早'), L.s) + '<span class="to" aria-hidden="true">' + t('到') + '</span>' + df('e', t('最晚'), L.e) + '</div></div>';
+  }).join('');
+  for (const el of $$('#mlist .ap input')) showNames(el);
+  mcDates();
+  $('#madd').hidden = list.length >= MC_MAX - 1;
+}
+function mcDates() {
+  for (const el of $$('#mlist .df input')) {
+    $('#' + el.id + 'v').textContent = el.value ? shortDay(el.value) : t('選日期');
+    $('#' + el.id + 'y').textContent = el.value ? parseDate(el.value).getFullYear() : '';
+  }
+}
+// a new leg starts where the last one lands, a week after it
+function addMcLeg() {
+  const list = mcLegs(), prev = list.length ? list[list.length - 1] : { d: $('#to').value, s: $('#d1').value, e: $('#d2').value };
+  list.push({ o: prev.d, d: '', s: prev.s ? plusDays(prev.s, 7) : '', e: prev.e ? plusDays(prev.e, 7) : '' });
+  renderMc(list);
+  const k = list.length + 1;
+  setTimeout(() => $('#m' + k + 'd').focus(), 50);
+}
+$('#madd').addEventListener('click', addMcLeg);
+$('#mlist').addEventListener('click', e => {
+  const b = e.target.closest('[data-del]');
+  if (b) { const list = mcLegs(); list.splice(+b.dataset.del, 1); renderMc(list); if (!list.length) setTrip('ow'); return; }
+  const dv = e.target.closest('.df');
+  if (dv) { const el = dv.querySelector('input'); try { el.showPicker(); } catch {} }
+});
+$('#mlist').addEventListener('change', e => { if (/^m\d[se]$/.test(e.target.id)) { mcDates(); formErr(''); } });   // (not .type: some engines report text)
+// the airport list follows whichever airport box has focus
+const suggHere = input => { const box = input.closest('.route, .mroute'); if (box && $('#sugg').parentNode !== box) box.appendChild($('#sugg')); };
+$('#mlist').addEventListener('focusin', e => { const el = e.target.closest('.ap input'); if (el) { suggHere(el); suggest(el); } });
+$('#mlist').addEventListener('input', e => { const el = e.target.closest('.ap input'); if (el) { suggest(el); showNames(el); } });
+$('#mlist').addEventListener('focusout', e => { const el = e.target.closest('.ap input'); if (el) setTimeout(() => { if (suggFor === el && document.activeElement !== el) $('#sugg').hidden = true; }, 150); });
+$('#mlist').addEventListener('keydown', e => { if (e.key === 'Escape') $('#sugg').hidden = true; });
 function setTrip(t) {
   TRIP = t;
   for (const b of $$('#tt button')) b.setAttribute('aria-checked', String(b.dataset.tt === t));
   $('#rdates').hidden = t !== 'rt';
+  $('#mlegs').hidden = t !== 'mc';
+  if (t === 'mc' && !$$('#mlist .mleg').length) addMcLeg();
   $('#d1l').textContent = outWord(0);
   $('#d2l').textContent = outWord(1);
   // first time on 來回: start the return two weeks after the outbound range (the 2 週 chip lights up)
@@ -2616,18 +3010,24 @@ function filt() {
     direct: p.direct,
     carriers: new Set((p.carriers.toUpperCase().match(/[A-Z0-9]{2}/g) || [])),
     pax: p.pax || 1, wd: new Set(p.wd), maxMiles: p.maxMiles || 0, myBanks: new Set(p.myBanks || []),
+    aircraft: new Set(p.aircraft || []), maxTax: p.maxTax || 0, maxTaxCur: p.maxTaxCur || 'USD',
     // conditions on the flight itself, checked against the trips include_trips brings along. Those trips have
     // no segments (checked on real data 2026-10-14), so layover length can't be filtered without one call per row.
     dep: new Set(p.dep), arr: new Set(p.arr), maxStops: p.maxStops ?? 9, maxHours: p.maxHours || 0, noVia: new Set(p.noVia),
   };
 }
 // true when a condition needs flight details, so a row without trips can't be checked and is left out
-const tripRules = f => !!(f.dep.size || f.arr.size || f.maxStops < 9 || f.maxHours || f.noVia.size);
-const activeConds = () => { const f = filt(); return [f.pax > 1, f.wd.size, f.maxMiles, f.dep.size, f.arr.size, f.maxStops < 9, f.maxHours, f.noVia.size, f.myBanks.size].filter(Boolean).length; };
+const tripRules = f => !!(f.dep.size || f.arr.size || f.maxStops < 9 || f.maxHours || f.noVia.size || f.aircraft.size);
+const activeConds = () => { const f = filt(); return [f.pax > 1, f.wd.size, f.maxMiles, f.dep.size, f.arr.size, f.maxStops < 9, f.maxHours, f.noVia.size, f.myBanks.size, f.aircraft.size, f.maxTax].filter(Boolean).length +
+  FEATURES.filter(x => { try { return !!(x.active && x.active()); } catch { return false; } }).length; };   // a module's own filter that is on (只看我付得起的)
 const BANDS = [['凌晨', 0, 6], ['上午', 6, 12], ['下午', 12, 18], ['晚上', 18, 24]];
 const bandOf = ts => { const h = parseInt(String(ts || '').slice(11, 13), 10); return Number.isFinite(h) ? BANDS.findIndex(([, a, b]) => h >= a && h < b) : -1; };
 const viaOf = t => (Array.isArray(t.Connections) ? t.Connections : typeof t.Connections === 'string' ? t.Connections.split(/[\s,]+/) : segsOf(t).slice(1).map(s => s.OriginAirport)).filter(Boolean);
 // Does one flight meet the 航班條件? Unknown values fail, so a filter never lets through what it can't check.
+// a trip's aircraft families, one per flight: "Boeing 777-300ER" -> 777, "Bombardier CRJ900" -> CRJ900
+const acFamily = x => { const m = /\b(A3\d\d|A220|7\d7|E\d{3}|CRJ ?\d{3}|Q400|ATR ?\d\d)/i.exec(String(x || '')); return m ? m[1].toUpperCase().replace(' ', '') : ''; };
+const planesOf = t => (Array.isArray(t.Aircraft) ? t.Aircraft : []).map(acFamily).filter(Boolean);
+const WIDE = new Set(['A330', 'A340', 'A350', 'A380', '747', '767', '777', '787']);
 function tripOK(t, f) {
   const segs = segsOf(t);
   if (f.pax > 1 && num(t.RemainingSeats) && num(t.RemainingSeats) < f.pax) return false;
@@ -2636,6 +3036,8 @@ function tripOK(t, f) {
   if (stopsOf(t) > f.maxStops) return false;
   if (f.maxHours && !(num(t.TotalDuration) > 0 && num(t.TotalDuration) <= f.maxHours * 60)) return false;
   if (f.noVia.size && viaOf(t).some(a => f.noVia.has(a))) return false;
+  // 機型: at least one flight on a chosen type (unknown aircraft fails, like the other flight conditions)
+  if (f.aircraft.size && !planesOf(t).some(a => f.aircraft.has(a) || (f.aircraft.has('wide') && WIDE.has(a)))) return false;
   return true;
 }
 
@@ -2663,6 +3065,28 @@ function readForm() {
     if (daysBetween(rs, re) > MAX_DAYS) return formErr(t('回程日期範圍最多 3 個月，請縮短一點。'));
     p.rt = { s: rs, e: re };
   }
+  if (TRIP === 'mc') {
+    // each extra leg: its own airports and range, starting no earlier than the leg before it
+    const mc = [];
+    let prev = s;
+    for (const [i, L] of mcLegs().entries()) {
+      const k = i + 2, lo = resolve(L.o), ld = resolve(L.d);
+      if (lo.err || ld.err) return formErr(t('第 {0} 段：{1}', k, lo.err || ld.err));
+      if (!lo.codes.length || !ld.codes.length) return formErr(t('第 {0} 段：請輸入出發和抵達的機場。', k));
+      let ls = L.s;
+      const le = L.e;
+      if (!ls || !le) return formErr(t('第 {0} 段：請選日期的範圍。', k));
+      if (le < ls) return formErr(t('第 {0} 段：最晚不能早於最早。', k));
+      if (le < today) return formErr(t('第 {0} 段：這些日期已經過了。', k));
+      if (ls < prev) return formErr(t('第 {0} 段不能早於前一段。', k));
+      if (ls < today) ls = today;
+      if (daysBetween(ls, le) > MAX_DAYS) return formErr(t('第 {0} 段：日期範圍最多 3 個月，請縮短一點。', k));
+      mc.push({ o: lo.codes.join(','), d: ld.codes.join(','), s: ls, e: le });
+      prev = ls;
+    }
+    if (!mc.length) return formErr(t('多城市至少要兩段。'));
+    p.mc = mc;
+  }
   // pre-search options: seats.aero applies them on its side, so they are part of the search (and its cache)
   if (S.prefs.mixed) p.mixed = 1;
   if (S.prefs.dyn) p.dyn = 1;
@@ -2671,8 +3095,16 @@ function readForm() {
 }
 // a search is one or two one-way legs; each leg is searched (and cached) on its own
 const legsOf = p => [{ o: p.o, d: p.d, s: p.s, e: p.e, mixed: p.mixed, dyn: p.dyn }]
-  .concat(p.rt ? [{ o: p.d, d: p.o, s: p.rt.s, e: p.rt.e, mixed: p.mixed, dyn: p.dyn, back: 1 }] : []);
-const searchKey = p => JSON.stringify([p.o, p.d, p.s, p.e, p.rt ? [p.rt.s, p.rt.e] : 0, p.mixed ? 1 : 0, p.dyn ? 1 : 0]);
+  .concat(p.rt ? [{ o: p.d, d: p.o, s: p.rt.s, e: p.rt.e, mixed: p.mixed, dyn: p.dyn, back: 1 }] : [])
+  .concat((p.mc || []).map((L, i) => ({ o: L.o, d: L.d, s: L.s, e: L.e, mixed: p.mixed, dyn: p.dyn, mc: i + 2 })));
+// (a multi-city search adds its legs at the end, so every older key stays the same)
+const searchKey = p => JSON.stringify([p.o, p.d, p.s, p.e, p.rt ? [p.rt.s, p.rt.e] : 0, p.mixed ? 1 : 0, p.dyn ? 1 : 0].concat(p.mc ? [p.mc.map(L => [L.o, L.d, L.s, L.e])] : []));
+// how a search reads in a list: TPE → NRT → SEA when the legs connect
+const routeLine = p => {
+  if (!p.mc) return esc(p.o) + (p.rt ? ' ⇄ ' : ' → ') + esc(p.d);
+  const legs = [{ o: p.o, d: p.d }].concat(p.mc);
+  return legs.every((L, i) => !i || L.o === legs[i - 1].d) ? [legs[0].o].concat(legs.map(L => L.d)).map(esc).join(' → ') : legs.map(L => esc(L.o) + ' → ' + esc(L.d)).join(' ＋ ');
+};
 function setBusy(on) {
   $('#go').disabled = on;
   $('#go-t').textContent = on ? t('搜尋中…') : t('搜尋');
@@ -2705,7 +3137,7 @@ async function fetchLeg(lp) {
 function useLeg(i) {
   const L = S.legs[i];
   S.leg = i; S.params = L.p; S.rows = L.rows; S.truncated = L.truncated; S.fetchedAt = L.fetchedAt;
-  S.day = null; S.shown = 60;
+  S.day = S.combo ? (i ? S.combo.d2 : S.combo.d1) : null; S.shown = 60;
   $('#alert-form').hidden = true;   // it was filled for the other direction
   render();
 }
@@ -2713,6 +3145,7 @@ async function runSearch(p, demo, scroll) {
   const done = () => { if (scroll && S.search === p) toResults(); };
   S.search = p; S.legs = legsOf(p).map(lp => ({ p: lp, rows: null, truncated: false, fetchedAt: 0, error: '' })); S.leg = 0;
   S.params = S.legs[0].p; S.day = null; S.shown = 60; S.demo = !!demo; S.rows = null; S.truncated = false;
+  S.combo = null; S.combosOpen = false;
   S.seen = null; S.seenAt = 0; S.verified = {};
   save('award-last', p);
   addRecent(p);
@@ -2753,6 +3186,102 @@ async function runSearch(p, demo, scroll) {
     setBusy(false);
   }
 }
+/* ---------- result tools: 分享 a link, ⬇ CSV, 日期組合 for round trips (no API call) ---------- */
+// buttons under the route, next to 收藏 and 提醒
+function renderToolBtns() {
+  const on = !!(S.search && S.legs && S.legs[0].rows);
+  $('#share-btn').hidden = !on || S.demo;
+  $('#csv-btn').hidden = !on;
+}
+// a link that reruns this search for anyone signed in on the site (it shows no data by itself)
+function shareUrl(p) {
+  const q = new URLSearchParams({ o: p.o, d: p.d, s: p.s, e: p.e });
+  if (p.rt) { q.set('rs', p.rt.s); q.set('re', p.rt.e); }
+  (p.mc || []).forEach((L, i) => { const k = 'l' + (i + 2); q.set(k + 'o', L.o); q.set(k + 'd', L.d); q.set(k + 's', L.s); q.set(k + 'e', L.e); });
+  q.set('c', S.prefs.cabin);
+  if (p.mixed) q.set('m', '1');
+  if (p.dyn) q.set('y', '1');
+  return location.origin + location.pathname + '#/s?' + q;
+}
+$('#share-btn').addEventListener('click', async () => {
+  const p = S.search, url = shareUrl(p);
+  const text = t('{0} → {1}，{2} 到 {3}', p.o, p.d, md(p.s), md(p.e)) + (p.rt ? t('，回 {0} 到 {1}', md(p.rt.s), md(p.rt.e)) : '');
+  if (canShare()) {
+    try { await navigator.share({ title: t('里程機位搜尋'), text, url }); return; } catch (err) { if (err.name === 'AbortError') return; }
+  }
+  try { await navigator.clipboard.writeText(url); toast(t('連結已複製。對方要登入這個網站才看得到結果')); }
+  catch { prompt(t('複製這個連結：'), url); }
+});
+// opening a shared link: fill the form from it and search (the cabin and search options come along)
+function openShared(qs) {
+  const q = new URLSearchParams(qs), A = /^[A-Z]{3}(,[A-Z]{3}){0,19}$/, D = /^\d{4}-\d{2}-\d{2}$/;
+  const p = { o: String(q.get('o') || '').toUpperCase(), d: String(q.get('d') || '').toUpperCase(), s: q.get('s') || '', e: q.get('e') || '' };
+  history.replaceState(null, '', location.pathname + location.search + '#/');
+  route();
+  if (!A.test(p.o) || !A.test(p.d) || !D.test(p.s) || !D.test(p.e)) { toast(t('這個分享連結看不懂。')); return; }
+  if (D.test(q.get('rs') || '') && D.test(q.get('re') || '')) p.rt = { s: q.get('rs'), e: q.get('re') };
+  const mc = [];
+  for (let k = 2; k <= MC_MAX; k++) {
+    const L = { o: String(q.get('l' + k + 'o') || '').toUpperCase(), d: String(q.get('l' + k + 'd') || '').toUpperCase(), s: q.get('l' + k + 's') || '', e: q.get('l' + k + 'e') || '' };
+    if (A.test(L.o) && A.test(L.d) && D.test(L.s) && D.test(L.e)) mc.push(L); else break;
+  }
+  if (mc.length && !p.rt) p.mc = mc;
+  if (CABIN_BY[q.get('c')]) S.prefs.cabin = q.get('c');
+  S.prefs.mixed = q.get('m') === '1'; S.prefs.dyn = q.get('y') === '1';
+  savePrefs();
+  $('#opt-mixed').checked = S.prefs.mixed; $('#opt-dyn').checked = S.prefs.dyn;
+  fillForm(p);
+  const r = readForm();
+  if (r) runSearch(r, false, true);
+}
+// ⬇ CSV: the awards the list shows (this direction, cabin, filters and picked day), in the language on screen
+$('#csv-btn').addEventListener('click', () => {
+  const offers = offersOf(S.rows || [], S.prefs.cabin, filt()), list = S.day ? offers.filter(o => o.date === S.day) : offers;
+  const q = v => { const x = String(v == null ? '' : v); return /[",\r\n]/.test(x) ? '"' + x.replace(/"/g, '""') + '"' : x; };
+  const hm = x => (x ? String(x).slice(0, 16).replace('T', ' ') : '');
+  const head = [t('日期'), t('星期'), t('出發'), t('抵達'), t('里程計畫'), t('艙等'), t('里程'), t('稅金'), t('幣別'), t('剩餘座位'), t('直飛'),
+    t('航空公司'), t('起飛'), t('降落'), t('飛行時間（分鐘）'), t('轉機次數'), t('航班'), t('資料更新')];
+  const rows = list.map(o => [o.date, WD[parseDate(o.date).getDay()], o.from, o.to, prog(o.src).name, CABIN_BY[S.prefs.cabin].name, o.miles,
+    o.taxes ? (o.taxes / 100).toFixed(2) : '', o.taxes ? o.cur || 'USD' : '', o.seats || '', o.direct ? t('是') : '', o.airlines.join(' '),
+    o.trip ? hm(o.trip.dep) : '', o.trip ? hm(o.trip.arr) : '', o.trip ? o.trip.mins || '' : '', o.trip ? o.trip.stops : '', o.trip ? o.trip.flights.join(' ') : '', hm(o.updated)]);
+  const text = '\ufeff' + [head, ...rows].map(r => r.map(q).join(',')).join('\r\n');   // the BOM lets Excel read the Chinese
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
+  a.download = 'award-' + S.params.o.split(',')[0] + '-' + S.params.d.split(',')[0] + '-' + S.params.s + (S.day ? '-' + S.day : '') + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  toast(t('已匯出 {0} 筆', list.length));
+});
+// 日期組合: per direction the cheapest award of each day (this cabin and filters), then every pair with the return at
+// least a day after the outbound, cheapest first
+function combos() {
+  const f = filt(), cab = S.prefs.cabin;
+  const best = L => { const m = new Map(); for (const o of offersOf(L.rows || [], cab, f)) { const x = m.get(o.date); if (!x || o.miles < x.miles) m.set(o.date, o); } return m; };
+  const out = best(S.legs[0]), back = best(S.legs[1]), list = [];
+  for (const [d1, a] of out) for (const [d2, b] of back) if (d2 > d1) list.push({ d1, d2, a, b, total: a.miles + b.miles, stay: daysBetween(d1, d2) });
+  list.sort((x, y) => x.total - y.total || (x.d1 < y.d1 ? -1 : x.d1 > y.d1 ? 1 : 0));
+  return { out, back, list };
+}
+function combosHtml() {
+  const { out, back, list } = combos();
+  if (!list.length) return '<p class="note0">' + t('目前的條件下，沒有去程和回程都有位子的日期組合。') + '</p>';
+  const on = c => S.combo && S.combo.d1 === c.d1 && S.combo.d2 === c.d2;
+  const top = list.slice(0, 10).map(c => '<button type="button" class="combo' + (on(c) ? ' on' : '') + '" data-c1="' + c.d1 + '" data-c2="' + c.d2 + '"><span>' +
+    mdw(c.d1) + ' → ' + mdw(c.d2) + '</span><b>' + t('{0} 哩', fmtMiles(c.total)) + '</b>' +
+    '<small>' + t('停留 {0} 天', c.stay) + '・' + esc(prog(c.a.src).name) + ' ' + fmtMiles(c.a.miles) + ' ＋ ' + esc(prog(c.b.src).name) + ' ' + fmtMiles(c.b.miles) + '</small></button>').join('');
+  const ds1 = [...out.keys()].sort(), ds2 = [...back.keys()].sort(), min = list[0].total;
+  let grid = '';
+  if (ds1.length <= 14 && ds2.length <= 14) {
+    grid = '<div class="cgrid-wrap"><table class="cgrid" aria-label="' + t('去程和回程日期的合計里程') + '"><thead><tr><th>' + t('去＼回') + '</th>' + ds2.map(d => '<th>' + md(d) + '</th>').join('') + '</tr></thead><tbody>' +
+      ds1.map(d1 => '<tr><th>' + md(d1) + '</th>' + ds2.map(d2 => {
+        if (d2 <= d1) return '<td class="x"></td>';
+        const v = out.get(d1).miles + back.get(d2).miles;
+        return '<td class="' + (v === min ? 'best' : v <= min * 1.2 ? 'good' : '') + '"><button type="button" data-c1="' + d1 + '" data-c2="' + d2 + '" aria-label="' + t('去 {0} 回 {1}，合計 {2} 哩', md(d1), md(d2), fmtMiles(v)) + '">' + fmtMan(v) + '</button></td>';
+      }).join('') + '</tr>').join('') + '</tbody></table></div>';
+  }
+  return '<p class="lbl">' + t('最便宜的 {0} 種組合（{1}）', Math.min(10, list.length), CABIN_BY[S.prefs.cabin].name) + '</p><div class="combos">' + top + '</div>' + grid;
+}
 /* ---------- 收藏 (saved searches, kept in D1 so every device has them) ---------- */
 // "seen" = lowest miles per leg + cabin + date + program at the last look; cards compare against it.
 const seenKey = (leg, cab, date, src) => leg + cab + date + src;
@@ -2783,7 +3312,7 @@ function renderSaved() {
   if (!S.saved.length) { box.hidden = true; box.innerHTML = ''; return; }
   box.innerHTML = '<h3>' + t('我的收藏') + '</h3>' + S.saved.map(x => {
     const p = x.params;
-    return '<div class="sv"><button type="button" class="svgo" data-sv="' + x.id + '"><span>' + n(esc(p.o) + (p.rt ? ' ⇄ ' : ' → ') + esc(p.d)) + '　' + t('{0} 到 {1}', md(p.s), md(p.e)) +
+    return '<div class="sv"><button type="button" class="svgo" data-sv="' + x.id + '"><span>' + n(routeLine(p)) + '　' + t('{0} 到 {1}', md(p.s), md(p.e)) +
       (p.rt ? t('，回 {0} 到 {1}', md(p.rt.s), md(p.rt.e)) : '') + '</span>' + (x.seen_at ? '<small>' + t('上次看 {0}', whenShort(x.seen_at)) + '</small>' : '') + '</button>' +
       '<button type="button" class="svx" data-svdel="' + x.id + '" aria-label="' + t('刪除這個收藏') + '">✕</button></div>';
   }).join('');
@@ -2793,10 +3322,11 @@ function renderSaveBtn() {
   const b = $('#save-btn');
   if (!S.search || !S.legs || !S.legs[0].rows) { b.hidden = true; return; }
   const x = savedOf(S.search);
-  b.textContent = x ? t('★ 已收藏') : t('☆ 收藏這個搜尋');
+  b.querySelector('span').textContent = x ? t('已收藏') : t('收藏這個搜尋');
   b.setAttribute('aria-pressed', String(!!x));
   b.hidden = false;
   renderAlertBtn();
+  renderToolBtns();
 }
 $('#save-btn').addEventListener('click', async () => {
   const x = savedOf(S.search);
@@ -2852,14 +3382,49 @@ function renderLegs() {
   if (!S.legs || S.legs.length < 2) { box.hidden = true; box.innerHTML = ''; return; }
   const f = filt(), cab = S.prefs.cabin;
   const low = L => { if (!L.rows) return null; const m = offersOf(L.rows, cab, f).map(o => o.miles); return m.length ? Math.min(...m) : 0; };
-  const lows = S.legs.map(low);
+  const lows = S.legs.map(low), mc = !!(S.search && S.search.mc);
+  const tag = i => (mc ? t('第 {0} 段', i + 1) : i ? t('回程') : t('去程'));
   box.innerHTML = S.legs.map((L, i) => '<button type="button" role="tab" data-leg="' + i + '" aria-selected="' + (S.leg === i) + '"' + (L.rows ? '' : ' disabled') + '>' +
-    '<small>' + (i ? t('回程') : t('去程')) + '　' + t('{0} 到 {1}', md(L.p.s), md(L.p.e)) + '</small><b>' + esc(L.p.o) + ' → ' + esc(L.p.d) + '</b>' +
+    '<small>' + tag(i) + '　' + t('{0} 到 {1}', md(L.p.s), md(L.p.e)) + '</small><b>' + esc(L.p.o) + ' → ' + esc(L.p.d) + '</b>' +
     '<small>' + (L.error ? t('查不到：{0}', esc(L.error)) : !L.rows ? t('讀取中…') : lows[i] ? t('{0}最低 {1} 哩', CABIN_BY[cab].name, fmtMiles(lows[i])) : t('{0}沒有位子', CABIN_BY[cab].name)) + '</small></button>').join('') +
-    (lows[0] && lows[1] ? '<p class="sum2">' + t('來回最低合計 <b>{0}</b> 哩（{1}，兩段可以用不同計畫）', fmtMiles(lows[0] + lows[1]), CABIN_BY[cab].name) + '</p>' : '');
+    (mc ? mcTotalHtml(f, cab) : '') +
+    (!mc && lows[0] && lows[1] ? '<p class="sum2">' + t('來回最低合計 <b>{0}</b> 哩（{1}，兩段可以用不同計畫）', fmtMiles(lows[0] + lows[1]), CABIN_BY[cab].name) + '</p>' +
+      '<button type="button" class="btn ghost cmb-btn" data-act="combos" aria-expanded="' + !!S.combosOpen + '">' + t('📅 日期組合') + '</button>' +
+      (S.combosOpen ? '<div class="cmb">' + combosHtml() + '</div>' : '') : '');
   box.hidden = false;
 }
+// 多城市: the cheapest total with one date per leg, each on or after the one before (best by date, prefix minima)
+function mcTotalHtml(f, cab) {
+  if (S.legs.some(L => !L.rows)) return '';
+  const per = S.legs.map(L => { const m = new Map(); for (const o of offersOf(L.rows, cab, f)) { const x = m.get(o.date); if (!x || o.miles < x.miles) m.set(o.date, o); } return m; });
+  let prev = null;   // per date: { total, path } for the legs so far
+  for (const m of per) {
+    const dates = [...m.keys()].sort(), next = new Map();
+    let best = null, j = 0;
+    const before = prev ? [...prev.keys()].sort() : [];
+    for (const d of dates) {
+      while (prev && j < before.length && before[j] <= d) { const v = prev.get(before[j]); if (!best || v.total < best.total) best = v; j++; }
+      if (prev && !best) continue;
+      const o = m.get(d);
+      next.set(d, { total: (best ? best.total : 0) + o.miles, path: (best ? best.path : []).concat([o]) });
+    }
+    prev = next;
+    if (!prev.size) break;
+  }
+  const end = prev && [...prev.values()].sort((a, b) => a.total - b.total)[0];
+  if (!end || end.path.length !== S.legs.length) return '<p class="sum2">' + t('目前的條件下，找不到每段都有位子、日期依序的組合。') + '</p>';
+  return '<p class="sum2">' + t('多城市最低合計 <b>{0}</b> 哩（{1}，日期依序：{2}）', fmtMiles(end.total), CABIN_BY[cab].name, end.path.map(o => md(o.date)).join(t('、'))) + '</p>';
+}
 $('#legs').addEventListener('click', e => {
+  if (e.target.closest('[data-act="combos"]')) { S.combosOpen = !S.combosOpen; renderLegs(); return; }
+  const c = e.target.closest('[data-c1]');
+  if (c) {
+    // a pair: show the outbound day now; the 回程 tab opens on the return day
+    S.combo = { d1: c.dataset.c1, d2: c.dataset.c2 };
+    if (S.leg !== 0) useLeg(0); else { S.day = S.combo.d1; render(); }
+    toResults();
+    return;
+  }
   const b = e.target.closest('[data-leg]');
   if (b && !b.disabled && +b.dataset.leg !== S.leg) { useLeg(+b.dataset.leg); toResults(); }
 });
@@ -2911,7 +3476,7 @@ function addRecent(p) {
 }
 function renderRecent() {
   const list = load('award-recent', []);
-  $('#recent').innerHTML = list.map((p, i) => '<button type="button" data-i="' + i + '">' + n(esc(p.o) + (p.rt ? ' ⇄ ' : ' → ') + esc(p.d)) + '　' + t('{0} 到 {1}', md(p.s), md(p.e)) +
+  $('#recent').innerHTML = list.map((p, i) => '<button type="button" data-i="' + i + '">' + n(routeLine(p)) + '　' + t('{0} 到 {1}', md(p.s), md(p.e)) +
     (p.rt ? t('，回 {0} 到 {1}', md(p.rt.s), md(p.rt.e)) : '') + '</button>').join('');
 }
 // put a saved search (recent, last, or a 收藏) back into the form
@@ -2920,7 +3485,8 @@ function fillForm(p) {
   showNames($('#from')); showNames($('#to'));
   setRange(p.s, p.e);
   if (p.rt) { $('#r1').value = p.rt.s; $('#r2').value = p.rt.e; }
-  setTrip(p.rt ? 'rt' : 'ow');
+  renderMc(p.mc || []);
+  setTrip(p.rt ? 'rt' : p.mc ? 'mc' : 'ow');
 }
 $('#recent').addEventListener('click', e => {
   const b = e.target.closest('button[data-i]');
@@ -2950,10 +3516,12 @@ function offersOf(rows, cab, f) {
     const airlines = String(pickD('Airlines') || '').split(/[\s,]+/).filter(Boolean);
     if (f.carriers.size && !airlines.some(a => f.carriers.has(a))) continue;
     if (f.maxMiles && miles > f.maxMiles) continue;
+    if (f.maxTax) { const tx = num(pickD('TotalTaxes')), v = tx ? inCur(tx, r.TaxesCurrency, f.maxTaxCur) : 0; if (v != null && v > f.maxTax) continue; }
     if (f.myBanks.size && !Object.keys(routesTo(src)).some(b => f.myBanks.has(b))) continue;   // 我的點數 can't reach it
     if (f.wd.size && !f.wd.has(parseDate(r.Date).getDay())) continue;
     const seats = num(pickD('RemainingSeats'));
     if (f.pax > 1 && seats && seats < f.pax) continue;   // 0 means the program doesn't say, so keep it
+    if (FEATURES.length && FEATURES.some(x => x.filter && x.filter({ r, src, miles, direct, cab, seats, taxes: num(pickD('TotalTaxes')), cur: r.TaxesCurrency || '', date: r.Date }) === false)) continue;
     const bt = bestTrip(r.AvailabilityTrips, CABIN_BY[cab].api, f, miles);
     if (bt.drop) { if (bt.noData) out.noData++; continue; }
     out.push({
@@ -3006,6 +3574,7 @@ function render() {
   renderCalendar(offers);
   renderSortbar();
   renderList(offers, counts);
+  featureHook('onRender', { offers });
 }
 function renderRoute(p) {
   $('#route-h').innerHTML = esc(p.o) + '<span class="ar">' + PLANE + '</span>' + esc(p.d);
@@ -3032,7 +3601,22 @@ function renderSummary(offers) {
 }
 
 /* ---------- 航班條件 (more filters, all on data already loaded: no API call) ---------- */
+// 機型 chips: 廣體機 first, then the types in these results, most common first (with how many trips use them)
+function acChips(api, chip, p) {
+  const seen = new Map();
+  for (const r of S.rows || []) for (const tr of r.AvailabilityTrips || []) {
+    if (String(tr.Cabin || '').toLowerCase() !== api) continue;
+    for (const a of new Set(planesOf(tr))) seen.set(a, (seen.get(a) || 0) + 1);
+  }
+  const pick = new Set(p.aircraft || []);
+  const types = [...new Set([...[...seen.keys()].sort((a, b) => seen.get(b) - seen.get(a)).slice(0, 12), ...pick])].filter(a => a !== 'wide');
+  if (!types.length) return '<span class="note0">' + t('這次搜尋沒有機型資料。') + '</span>';
+  return chip('aircraft', 'wide', t('廣體機'), pick.has('wide')) + types.map(a => chip('aircraft', a, esc(a) + (seen.get(a) ? '<small>' + seen.get(a) + '</small>' : ''), pick.has(a))).join('');
+}
+// the 稅金上限 label names the currency the cap is in
+const maxTaxLabel = () => { $('#maxtax-l').textContent = t('稅金上限（{0}）', (S.prefs.maxTax ? S.prefs.maxTaxCur : DISP()) === 'TWD' ? 'NT$' : 'US$'); };
 function renderTripFilters() {
+  maxTaxLabel();
   const p = S.prefs, api = CABIN_BY[p.cabin].api;
   const chip = (g, v, label, on) => '<button type="button" class="chip" data-tf="' + g + '" data-v="' + v + '" aria-pressed="' + on + '">' + label + '</button>';
   const group = (title, html) => '<div class="lbl">' + title + '</div><div class="chips">' + html + '</div>';
@@ -3051,13 +3635,15 @@ function renderTripFilters() {
     group(t('抵達時段'), BANDS.map(([x, a, b], i) => chip('arr', i, t(x) + '<small>' + t('{0}-{1} 點', a, b) + '</small>', p.arr.includes(i))).join('')) +
     group(t('轉機次數'), [[9, t('不限')], [1, t('最多 1 次')]].map(([v, x]) => chip('maxStops', v, x, (p.maxStops ?? 9) === v)).join('')) +
     group(t('總飛行時間'), [[0, t('不限')], [12, t('{0} 小時內', 12)], [16, t('{0} 小時內', 16)], [20, t('{0} 小時內', 20)], [24, t('{0} 小時內', 24)]].map(([v, x]) => chip('maxHours', v, x, (p.maxHours || 0) === v)).join('')) +
+    group(t('機型（至少一段是這個機型）'), acChips(api, chip, p)) +
     group(t('不要經過（點了就排除）'), via.length ? via.map(a => chip('noVia', a, esc(a) + (seen.get(a) ? '<small>' + seen.get(a) + '</small>' : ''), p.noVia.includes(a))).join('') : '<span class="note0">' + t('這次搜尋沒有轉機機場。') + '</span>');
   $('#tf-clear').hidden = !activeConds();
+  featureHook('onFilters', $('#tf-feat'));   // controls of feature filters (點數錢包...)
 }
 $('#tf').addEventListener('click', e => {
   const b = e.target.closest('[data-tf]');
   if (!b) return;
-  const g = b.dataset.tf, v = g === 'noVia' || g === 'myBanks' ? b.dataset.v : Number(b.dataset.v);
+  const g = b.dataset.tf, v = g === 'noVia' || g === 'myBanks' || g === 'aircraft' ? b.dataset.v : Number(b.dataset.v);
   if (Array.isArray(S.prefs[g])) {
     const i = S.prefs[g].indexOf(v);
     if (i < 0) S.prefs[g].push(v); else S.prefs[g].splice(i, 1);
@@ -3073,9 +3659,20 @@ $('#maxmi').addEventListener('input', e => {
   clearTimeout(maxMiTimer);
   maxMiTimer = setTimeout(() => { renderAlliances(); render(); }, 300);
 });
+let maxTaxTimer = 0;
+$('#maxtax').addEventListener('input', e => {
+  const v = parseFloat(e.target.value.replace(/[^\d.]/g, ''));
+  S.prefs.maxTax = v > 0 ? v : 0;
+  S.prefs.maxTaxCur = DISP();   // typed in the currency on screen
+  savePrefs();
+  maxTaxLabel();
+  clearTimeout(maxTaxTimer);
+  maxTaxTimer = setTimeout(() => { renderAlliances(); render(); }, 300);
+});
 $('#tf-clear').addEventListener('click', () => {
-  Object.assign(S.prefs, { pax: 1, wd: [], dep: [], arr: [], maxStops: 9, maxHours: 0, noVia: [], maxMiles: 0, myBanks: [] });
+  Object.assign(S.prefs, { pax: 1, wd: [], dep: [], arr: [], maxStops: 9, maxHours: 0, noVia: [], maxMiles: 0, myBanks: [], aircraft: [], maxTax: 0 });
   $('#maxmi').value = '';
+  $('#maxtax').value = '';
   savePrefs();
   renderAlliances();
   render();
@@ -3112,6 +3709,7 @@ $('#cal').addEventListener('click', e => {
   const b = e.target.closest('.day[data-d]');
   if (!b) return;
   S.day = S.day === b.dataset.d ? null : b.dataset.d;
+  S.combo = null;
   S.shown = 60;
   render();
   if (S.day) {
@@ -3127,7 +3725,7 @@ function renderSortbar() {
 $('#sortbar').addEventListener('click', e => {
   const b = e.target.closest('.chip');
   if (!b) return;
-  if (b.dataset.clear) S.day = null;
+  if (b.dataset.clear) { S.day = null; S.combo = null; }
   else { S.prefs.sort = b.dataset.sort; savePrefs(); }
   S.shown = 60;
   render();
@@ -3221,6 +3819,7 @@ async function toggleTrips(art) {
     }
     box.innerHTML = verifyHtml(art.dataset) + tripsHtml(res, src) + transferHtml(src, +art.dataset.miles) + cashHtml(art.dataset);
     box.dataset.loaded = '1';
+    featureHook('onDetails', art, box);
   } catch (err) {
     box.innerHTML = '<div class="terr">' + esc(err.message) + '</div>';
   }
@@ -3448,6 +4047,8 @@ function demoTripList(row) {
 function showApp() {
   $('#login').hidden = true;
   $('#app').hidden = false;
+  document.documentElement.classList.add('has-bar');
+  renderNav();
   const hh = () => document.documentElement.style.setProperty('--hh', $('.top').offsetHeight + 'px');
   hh();
   addEventListener('resize', hh);
@@ -3457,6 +4058,7 @@ function showApp() {
   if (location.hash === '#demo' && S.search) runSearch(S.search, true);
   loadFx().then(fresh => { if (fresh && S.rows) render(); });
   loadSaved();
+  featureHook('onAuth');
 }
 function init() {
   langNames(); translateStatic();   // a saved English choice applies before anything is drawn
@@ -3468,6 +4070,7 @@ function init() {
   $('#direct').checked = S.prefs.direct;
   $('#carriers').value = S.prefs.carriers;
   $('#maxmi').value = S.prefs.maxMiles || '';
+  $('#maxtax').value = S.prefs.maxTax || '';
   $('#opt-mixed').checked = !!S.prefs.mixed;
   $('#opt-dyn').checked = !!S.prefs.dyn;
   const today = isoDate(new Date());
@@ -3501,7 +4104,23 @@ function init() {
       .catch(err => { if (err.kind === 'network') showApp(); else if (err.kind !== 'auth') showLogin(err.message); });
   } else showLogin('');
 }
-init();
+// The newer features, each in features/<name>.js, loaded in this order before init(). A test can load just some
+// with ?only=a,b (also files not listed yet), or none with ?only=. FEATURE_V changes on every release, so phones
+// fetch the new files.
+const FEATURE_FILES = ['release', 'wallet', 'bonuses', 'notes', 'explore', 'year', 'hotels', 'push', 'digest', 'usage'];
+const FEATURE_V = '3ab6beb1b9';
+function loadFeatures() {
+  const only = new URLSearchParams(location.search).get('only');
+  const files = only == null ? FEATURE_FILES : only.split(',').filter(x => /^[a-z0-9-]{1,30}$/.test(x));   // a test may load one not listed yet
+  return Promise.all(files.map(f => new Promise(done => {
+    const sc = document.createElement('script');
+    sc.src = 'features/' + f + '.js?v=' + FEATURE_V;
+    sc.async = false;   // keep the list order
+    sc.onload = sc.onerror = () => done();
+    document.body.appendChild(sc);
+  })));
+}
+loadFeatures().then(init);
 </script>
 </body>
 </html>

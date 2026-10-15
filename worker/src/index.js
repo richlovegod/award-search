@@ -11,6 +11,7 @@
 // Secrets: SEATS_KEY, INVITE_KEY, CF_API_TOKEN (Email Routing Addresses: Edit, to add alert recipients).
 // Vars: ALLOWED_ORIGINS, SITE_URL, CF_ACCOUNT, MAIL_FROM. A cron trigger runs the alerts (see "email alerts").
 import { EmailMessage } from 'cloudflare:email';
+import { FEATURES } from './features/index.js';
 
 const UPSTREAM = 'https://seats.aero/partnerapi';
 const PBKDF2_ITER = 100000;        // the most Workers allows; measured 19 to 26 ms CPU per hash (2026-10-13)
@@ -89,7 +90,7 @@ function corsHeaders(req, env) {
   const h = {
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Authorization, Content-Type',
-    'Access-Control-Expose-Headers': 'X-RateLimit-Remaining, X-RateLimit-Limit',
+    'Access-Control-Expose-Headers': 'X-RateLimit-Remaining, X-RateLimit-Limit, X-Rooms-RateLimit-Remaining, X-Rooms-RateLimit-Limit',
     'Access-Control-Max-Age': '86400',
     'Vary': 'Origin',
   };
@@ -371,6 +372,7 @@ function removeUser(env, uid) {
     env.DB.prepare('DELETE FROM saved_searches WHERE user_id = ?').bind(uid),
     env.DB.prepare('DELETE FROM alerts WHERE user_id = ?').bind(uid),
     env.DB.prepare('DELETE FROM usage WHERE user_id = ?').bind(uid),
+    ...FEATURES.flatMap(f => (f.onDeleteUser ? [].concat(f.onDeleteUser(env, uid)) : [])),   // each feature's own rows
     env.DB.prepare('UPDATE invites SET used_by = NULL WHERE used_by = ?').bind(uid),
     env.DB.prepare('DELETE FROM users WHERE id = ?').bind(uid),
   ]);
@@ -564,6 +566,15 @@ function cleanSearch(p) {
     if (!DAY.test(p.rt.s) || !DAY.test(p.rt.e)) return null;
     out.rt = { s: p.rt.s, e: p.rt.e };
   }
+  // 多城市: up to three more one-way legs, each with its own airports and range
+  if (p.mc != null) {
+    if (!Array.isArray(p.mc) || !p.mc.length || p.mc.length > 3 || p.rt) return null;
+    out.mc = [];
+    for (const L of p.mc) {
+      if (!L || !AIRPORTS.test(L.o) || !AIRPORTS.test(L.d) || !DAY.test(L.s) || !DAY.test(L.e)) return null;
+      out.mc.push({ o: L.o, d: L.d, s: L.s, e: L.e });
+    }
+  }
   if (p.mixed) out.mixed = 1;
   if (p.dyn) out.dyn = 1;
   return out;
@@ -573,7 +584,7 @@ function cleanSeen(v) {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
   const out = {};
   for (const [k, n] of Object.entries(v)) {
-    if (!/^[01][YWJF]\d{4}-\d{2}-\d{2}[a-z0-9]{2,20}$/.test(k) || !Number.isFinite(n) || n < 0 || n > 1e7) return null;
+    if (!/^[0-3][YWJF]\d{4}-\d{2}-\d{2}[a-z0-9]{2,20}$/.test(k) || !Number.isFinite(n) || n < 0 || n > 1e7) return null;
     out[k] = Math.round(n);
   }
   const s = JSON.stringify(out);
@@ -651,6 +662,9 @@ const MAIL_WORDS = {
     intro: (name, cab, max, n) => `你設的提醒「${name}」找到 ${n} 筆新的或更便宜的位子（${cab}，${max} 哩以下）：`,
     day: (md, w) => `${md}（${w}）`, miles: x => `${x} 哩`, seats: n => `剩 ${n} 位`, direct: '直飛', was: x => `降價，原本 ${x} 哩`,
     more: n => `另外還有 ${n} 筆，到網站看。`, open: '打開網站看全部結果', manage: '暫停或刪除這個提醒',
+    rtSubject: (route, cab, n, min) => `✈️ ${route} ${cab}來回：${n} 組新的日期，最低合計 ${min} 哩`,
+    rtIntro: (name, cab, max, n) => `你設的來回提醒「${name}」找到 ${n} 組新的或更便宜的日期組合（${cab}，來回合計 ${max} 哩以下）：`,
+    out: '去', back: '回', total: x => `合計 ${x} 哩`, moreRt: n => `另外還有 ${n} 組，到網站看。`,
     note: '資料是 seats.aero 的快取，可能是幾小時前的。訂位前請到航空公司網站確認。',
   },
   en: {
@@ -659,6 +673,9 @@ const MAIL_WORDS = {
     intro: (name, cab, max, n) => `Your alert "${name}" found ${n} new or cheaper award${n === 1 ? '' : 's'} (${cab}, up to ${max} miles):`,
     day: (md, w) => `${w} ${md}`, miles: x => `${x} miles`, seats: n => `${n} seat${n === 1 ? '' : 's'} left`, direct: 'nonstop', was: x => `was ${x}`,
     more: n => `${n} more on the site.`, open: 'See all results on the site', manage: 'Pause or delete this alert',
+    rtSubject: (route, cab, n, min) => `✈️ ${route} ${cab} round trip: ${n} new date pair${n === 1 ? '' : 's'} from ${min} miles in total`,
+    rtIntro: (name, cab, max, n) => `Your round-trip alert "${name}" found ${n} new or cheaper date pair${n === 1 ? '' : 's'} (${cab}, up to ${max} miles in total):`,
+    out: 'Out', back: 'Back', total: x => `${x} miles in total`, moreRt: n => `${n} more pairs on the site.`,
     note: "From seats.aero's cache, which can be a few hours old. Check with the airline before you book.",
   },
 };
@@ -666,7 +683,7 @@ const num = v => (typeof v === 'number' ? v : parseInt(v, 10)) || 0;
 const fmtN = n => Number(n).toLocaleString('en-US');
 const daysBetween = (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000);
 const escHtml = v => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const routeText = a => a.o.split(',').join('/') + ' → ' + a.d.split(',').join('/');
+const routeText = a => a.o.split(',').join('/') + (a.rs ? ' ⇄ ' : ' → ') + a.d.split(',').join('/');
 
 function cleanAlert(b) {
   const today = utcDay();
@@ -680,12 +697,18 @@ function cleanAlert(b) {
     sources = [...new Set(b.sources)].join(',');
   }
   const seats = b.seats == null ? 1 : b.seats;
-  if (!Number.isInteger(b.max_miles) || b.max_miles < 1000 || b.max_miles > 2000000 || !Number.isInteger(seats) || seats < 1 || seats > 9) return null;
-  return { o, d, s: b.s, e: b.e, cabin: b.cabin, sources, max_miles: b.max_miles, direct: b.direct ? 1 : 0, seats,
+  if (!Number.isInteger(b.max_miles) || b.max_miles < 1000 || b.max_miles > 4000000 || !Number.isInteger(seats) || seats < 1 || seats > 9) return null;
+  // 來回: a return range, starting no earlier than the outbound one; max_miles is then the total of both directions
+  let rs = null, re = null;
+  if (b.rs != null || b.re != null) {
+    if (!DAY.test(b.rs) || !DAY.test(b.re) || b.re < b.rs || b.re < today || b.rs < b.s || daysBetween(b.rs, b.re) > ALERT_DAYS_MAX || daysBetween(today, b.rs) > 400) return null;
+    rs = b.rs; re = b.re;
+  } else if (b.max_miles > 2000000) return null;
+  return { o, d, s: b.s, e: b.e, rs, re, cabin: b.cabin, sources, max_miles: b.max_miles, direct: b.direct ? 1 : 0, seats,
     label: String(b.label || '').trim().slice(0, 40) || null, lang: b.lang === 'en' ? 'en' : 'zh' };
 }
 const alertOut = a => ({
-  id: a.id, o: a.o, d: a.d, s: a.s, e: a.e, cabin: a.cabin, sources: a.sources ? a.sources.split(',') : null, max_miles: a.max_miles,
+  id: a.id, o: a.o, d: a.d, s: a.s, e: a.e, rs: a.rs || null, re: a.re || null, cabin: a.cabin, sources: a.sources ? a.sources.split(',') : null, max_miles: a.max_miles,
   direct: !!a.direct, seats: a.seats, label: a.label, lang: a.lang, status: a.status, created_at: a.created_at,
   checked_at: a.checked_at, check_note: a.check_note, found: a.found, sent_at: a.sent_at, sent_count: a.sent_count,
 });
@@ -784,6 +807,35 @@ async function sendAlertMail(env, a, fresh, sent) {
   await sendMail(env, a.email, L.from, L.subject(route, cab, fresh.length, fmtN(fresh[0].miles)), text, html);
 }
 
+// one email for the new or cheaper date pairs of a round-trip alert
+async function sendRtMail(env, a, fresh, sent) {
+  const L = MAIL_WORDS[a.lang] || MAIL_WORDS.zh, cab = L.cabin[a.cabin], route = routeText(a);
+  const site = env.SITE_URL || 'https://award.ginochang.com/';
+  const day = x => L.day(+x.date.slice(5, 7) + '/' + +x.date.slice(8, 10), L.wd[new Date(x.date + 'T00:00:00Z').getUTCDay()]);
+  const side = (w, x) => w + ' ' + day(x) + ' ' + (PROGRAM_NAME[x.src] || x.src) + ' ' + L.miles(fmtN(x.miles)) + (taxText(x) ? ' + ' + taxText(x) : '') + (x.k in sent ? ' (' + L.was(fmtN(sent[x.k])) + ')' : '');
+  const shown = fresh.slice(0, 15);
+  const intro = L.rtIntro(a.label || route, cab, fmtN(a.max_miles), fresh.length);
+  const more = fresh.length > shown.length ? L.moreRt(fresh.length - shown.length) : '';
+  const openUrl = site + '#/alert/' + a.id, manageUrl = site + '#/alerts';
+  const text = [intro, '', ...shown.map(p => L.total(fmtN(p.total)) + '\n  ' + side(L.out, p.x) + '\n  ' + side(L.back, p.y)), ...(more ? ['', more] : []), '',
+    L.open + ': ' + openUrl, L.manage + ': ' + manageUrl, '', L.note].join('\n');
+  const ink = '#3E3A39', soft = '#6B6461';
+  const cell = 'padding:8px 4px 0;border-top:1px dashed ' + ink + ';vertical-align:top';
+  const line = (w, x) => '<div style="color:' + soft + ';font-size:13px;padding:1px 0"><b style="color:' + ink + '">' + escHtml(w) + '</b> ' + escHtml(day(x)) + ' · ' + escHtml(PROGRAM_NAME[x.src] || x.src) + ' · ' +
+    escHtml(L.miles(fmtN(x.miles))) + (taxText(x) ? ' + ' + escHtml(taxText(x)) : '') + (x.k in sent ? ' · <b style="color:#A33A2A;white-space:nowrap">' + escHtml(L.was(fmtN(sent[x.k]))) + '</b>' : '') + '</div>';
+  const html = '<div style="background:#FFFCF6;padding:16px;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,\'PingFang TC\',\'Noto Sans TC\',sans-serif;color:' + ink + '">' +
+    '<div style="max-width:560px;margin:0 auto;background:#FFFFFF;border:3px solid ' + ink + ';border-radius:18px;padding:18px 18px 14px">' +
+    '<div style="font-size:20px;font-weight:bold;margin:0 0 6px">✈️ ' + escHtml(route) + ' ' + escHtml(cab) + '</div>' +
+    '<p style="margin:0 0 10px;font-size:15px;line-height:1.5">' + escHtml(intro) + '</p>' +
+    '<table role="presentation" style="width:100%;border-collapse:collapse;font-size:14px;line-height:1.45">' +
+    shown.map(p => '<tr><td style="' + cell + ';padding-bottom:8px"><b>' + escHtml(L.total(fmtN(p.total))) + '</b>' + line(L.out, p.x) + line(L.back, p.y) + '</td></tr>').join('') +
+    '</table>' + (more ? '<p style="margin:8px 0 0;font-size:14px">' + escHtml(more) + '</p>' : '') +
+    '<p style="margin:16px 0 10px"><a href="' + escHtml(openUrl) + '" style="display:inline-block;background:#F2A497;color:' + ink + ';border:3px solid ' + ink + ';border-radius:999px;padding:8px 18px;text-decoration:none;font-weight:bold">' + escHtml(L.open) + '</a></p>' +
+    '<p style="margin:0;font-size:12px;line-height:1.5;color:' + soft + '">' + escHtml(L.note) + '<br><a href="' + escHtml(manageUrl) + '" style="color:' + ink + '">' + escHtml(L.manage) + '</a></p>' +
+    '</div></div>';
+  await sendMail(env, a.email, L.from, L.rtSubject(route, cab, fresh.length, fmtN(fresh[0].total)), text, html);
+}
+
 // One check of one alert: a narrow search, the awards that meet it, and an email when any are new or cheaper
 // (send = false only for an address not verified yet). a = an alerts row plus the account's email, role, daily_limit.
 async function checkAlert(env, ctx, a, send) {
@@ -793,31 +845,69 @@ async function checkAlert(env, ctx, a, send) {
     await env.DB.prepare('UPDATE alerts SET checked_at = ?, check_note = ? WHERE id = ?').bind(t, why, a.id).run();
     return { id: a.id, note: why };
   };
-  const stop = await budgetCheck(env, s, {}, 1);
+  const stop = await budgetCheck(env, s, {}, a.rs ? 2 : 1);
   if (stop) return stopAt((await stop.json()).error);
-  // cheapest first, so a reply cut at 1,000 rows (a wide alert: 92 days, several airports) keeps the awards that matter
-  const qs = new URLSearchParams({ origin_airport: a.o, destination_airport: a.d, start_date: from, end_date: a.e, cabins: CABIN_API[a.cabin], take: '1000', order_by: 'lowest_mileage' });
-  if (a.sources) qs.set('sources', a.sources);
-  const r = await fetch(UPSTREAM + '/search?' + qs, {
-    headers: { 'Partner-Authorization': env.SEATS_KEY, accept: 'application/json', 'User-Agent': 'award-search (personal use)' },
-  });
-  spend(env, ctx, s, 1);
-  passOn(r, env, {}, ctx);   // keeps the key's remaining count, as a search does
-  if (!r.ok) return stopAt('upstream_' + r.status);
-  const body = await r.json();
-  const hits = alertHits(body.data || [], a, from);
+  // one direction: cheapest first, so a reply cut at 1,000 rows (a wide alert: 92 days, several airports) keeps the
+  // awards that matter; each search is 1 call charged to the account
+  const leg = async (o, d, s1, e1) => {
+    const qs = new URLSearchParams({ origin_airport: o, destination_airport: d, start_date: s1, end_date: e1, cabins: CABIN_API[a.cabin], take: '1000', order_by: 'lowest_mileage' });
+    if (a.sources) qs.set('sources', a.sources);
+    const r = await fetch(UPSTREAM + '/search?' + qs, {
+      headers: { 'Partner-Authorization': env.SEATS_KEY, accept: 'application/json', 'User-Agent': 'award-search (personal use)' },
+    });
+    spend(env, ctx, s, 1);
+    passOn(r, env, {}, ctx);   // keeps the key's remaining count, as a search does
+    if (!r.ok) return { err: 'upstream_' + r.status };
+    const body = await r.json();
+    return { hits: alertHits(body.data || [], { ...a, e: e1 }, s1), more: !!body.hasMore };
+  };
+  if (a.rs) return checkRoundTrip(env, ctx, a, send, leg, stopAt, t, today, from);
+  const L = await leg(a.o, a.d, from, a.e);
+  if (L.err) return stopAt(L.err);
+  const hits = L.hits, body = { hasMore: L.more };
   const sent = a.sent ? JSON.parse(a.sent) : {};
   const fresh = hits.filter(x => !(x.k in sent) || x.miles < sent[x.k]);
   let mailed = false;
   if (fresh.length && send) {
     try { await sendAlertMail(env, a, fresh, sent); } catch (e) { console.error('alert mail', e && e.message); return stopAt('mail_failed'); }
     mailed = true;
+    await alertHit(env, ctx, a, fresh);   // push notifications and the like (features/)
     for (const x of fresh) sent[x.k] = x.miles;
   }
   const keep = Object.entries(sent).filter(([k]) => k.slice(0, 10) >= today).slice(-SENT_KEYS_MAX);   // past dates go
   await env.DB.prepare('UPDATE alerts SET checked_at = ?, check_note = ?, found = ?, sent = ?' + (mailed ? ', sent_at = ?, sent_count = sent_count + 1' : '') + ' WHERE id = ?')
     .bind(t, body.hasMore ? 'more' : null, hits.length, JSON.stringify(Object.fromEntries(keep)), ...(mailed ? [t] : []), a.id).run();
   return { id: a.id, found: hits.length, fresh: fresh.length, mailed, top: hits.slice(0, 20).map(({ k, ...x }) => x) };
+}
+
+// 來回: the cheapest award of each day in each direction, paired (return at least a day after the outbound) under
+// the total ceiling; a pair is new when either of its awards is new or cheaper than what was last emailed
+function rtPairs(outHits, backHits, max) {
+  const best = hits => { const m = new Map(); for (const x of hits) { const y = m.get(x.date); if (!y || x.miles < y.miles) m.set(x.date, x); } return [...m.values()]; };
+  const outs = best(outHits), backs = best(backHits), pairs = [];
+  for (const x of outs) for (const y of backs) if (y.date > x.date && x.miles + y.miles <= max) pairs.push({ x, y, total: x.miles + y.miles });
+  return pairs.sort((p, q) => p.total - q.total || (p.x.date < q.x.date ? -1 : p.x.date > q.x.date ? 1 : 0));
+}
+async function checkRoundTrip(env, ctx, a, send, leg, stopAt, t, today, from) {
+  const rfrom = a.rs > today ? a.rs : today;
+  const [L1, L2] = [await leg(a.o, a.d, from, a.e), await leg(a.d, a.o, rfrom, a.re)];
+  if (L1.err || L2.err) return stopAt(L1.err || L2.err);
+  const pairs = rtPairs(L1.hits, L2.hits, a.max_miles);
+  const sent = a.sent ? JSON.parse(a.sent) : {};
+  const isNew = x => !(x.k in sent) || x.miles < sent[x.k];
+  const fresh = pairs.filter(p => isNew(p.x) || isNew(p.y));
+  let mailed = false;
+  if (fresh.length && send) {
+    try { await sendRtMail(env, a, fresh, sent); } catch (e) { console.error('alert mail', e && e.message); return stopAt('mail_failed'); }
+    mailed = true;
+    await alertHit(env, ctx, a, fresh.map(p => ({ ...p.x, back: p.y, total: p.total })));
+    for (const p of fresh) { sent[p.x.k] = Math.min(sent[p.x.k] ?? Infinity, p.x.miles); sent[p.y.k] = Math.min(sent[p.y.k] ?? Infinity, p.y.miles); }
+  }
+  const keep = Object.entries(sent).filter(([k]) => k.slice(0, 10) >= today).slice(-SENT_KEYS_MAX);
+  await env.DB.prepare('UPDATE alerts SET checked_at = ?, check_note = ?, found = ?, sent = ?' + (mailed ? ', sent_at = ?, sent_count = sent_count + 1' : '') + ' WHERE id = ?')
+    .bind(t, L1.more || L2.more ? 'more' : null, pairs.length, JSON.stringify(Object.fromEntries(keep)), ...(mailed ? [t] : []), a.id).run();
+  const brief = x => ({ date: x.date, src: x.src, miles: x.miles, from: x.from, to: x.to });
+  return { id: a.id, rt: true, found: pairs.length, fresh: fresh.length, mailed, pairs: pairs.slice(0, 20).map(p => ({ out: brief(p.x), back: brief(p.y), total: p.total })) };
 }
 
 // the cron's work: end alerts whose dates have passed, then check the most overdue one(s)
@@ -848,8 +938,8 @@ async function alerts(req, env, ctx, s, p, m, h) {
     if (!a) return json({ error: 'param' }, 400, h);
     const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM alerts WHERE user_id = ? AND status != 'ended'").bind(s.id).first();
     if (n.n >= ALERTS_MAX) return json({ error: 'too_many', max: ALERTS_MAX }, 400, h);
-    const ins = await env.DB.prepare('INSERT INTO alerts (user_id, o, d, s, e, cabin, sources, max_miles, direct, seats, label, lang, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .bind(s.id, a.o, a.d, a.s, a.e, a.cabin, a.sources, a.max_miles, a.direct, a.seats, a.label, a.lang, now()).run();
+    const ins = await env.DB.prepare('INSERT INTO alerts (user_id, o, d, s, e, rs, re, cabin, sources, max_miles, direct, seats, label, lang, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .bind(s.id, a.o, a.d, a.s, a.e, a.rs, a.re, a.cabin, a.sources, a.max_miles, a.direct, a.seats, a.label, a.lang, now()).run();
     return json({ id: ins.meta.last_row_id }, 201, h);
   }
   if ((mm = /^\/me\/alerts\/(\d{1,12})$/.exec(p)) && m === 'PUT') {
@@ -860,7 +950,7 @@ async function alerts(req, env, ctx, s, p, m, h) {
       sets.push('status = ?'); vals.push(b.status);
     }
     if (b.max_miles !== undefined) {
-      if (!Number.isInteger(b.max_miles) || b.max_miles < 1000 || b.max_miles > 2000000) return json({ error: 'param' }, 400, h);
+      if (!Number.isInteger(b.max_miles) || b.max_miles < 1000 || b.max_miles > 4000000) return json({ error: 'param' }, 400, h);
       sets.push('max_miles = ?'); vals.push(b.max_miles);
     }
     if (b.lang !== undefined) { sets.push('lang = ?'); vals.push(b.lang === 'en' ? 'en' : 'zh'); }
@@ -962,6 +1052,42 @@ async function quota(env, s, h) {
   return json(q ? { remaining: q.remaining, limit: q.quota_limit || 1000, at: q.at, me } : { remaining: null, limit: 1000, at: null, me }, 200, h);
 }
 
+/* ---------- feature modules (features/index.js) ---------- */
+// The shared toolbox every feature module gets as `lib`.
+const lib = {
+  UPSTREAM, OWNER_RESERVE, USER_DAILY, LIMITS, AIRPORTS, DAY, CABIN_API, PROGRAM_NAME, NO_TAX,
+  json, readJson, readBig, now, utcDay, daysBetween, num, fmtN, escHtml, routeText, randomToken, sha256, b64url, unb64url,
+  tooMany, bump, budgetCheck, spend, passOn, usedToday, limitOf, sendMail, mailInfo,
+  seatsHeaders: env => ({ 'Partner-Authorization': env.SEATS_KEY, accept: 'application/json', 'User-Agent': 'award-search (personal use)' }),
+};
+// the first feature route that matches, or null; auth 'public' routes are tried before the session check
+async function featureRoute(phase, req, env, ctx, s, url, h) {
+  const p = url.pathname, method = req.method;
+  for (const f of FEATURES) for (const r of f.routes || []) {
+    if (r.method !== method || (phase === 'public') !== (r.auth === 'public')) continue;
+    let m = null;
+    if (typeof r.path === 'string') { if (r.path !== p) continue; } else if (!(m = r.path.exec(p))) continue;
+    if (r.auth === 'owner' && s.role !== 'owner') return json({ error: 'forbidden' }, 403, h);
+    return await r.handler({ req, env, ctx, s, url, h, m, lib });
+  }
+  return null;
+}
+// the hourly cron's work, one feature at a time so one failure does not stop the rest
+async function runHourly(env, ctx, at) {
+  const out = {};
+  for (const [i, f] of FEATURES.entries()) {
+    if (!f.hourly) continue;
+    try { out[f.name || i] = await f.hourly({ env, ctx, lib, at }); } catch (e) { console.error('hourly', f.name || i, e && e.stack || e); out[f.name || i] = 'error'; }
+  }
+  return out;
+}
+async function alertHit(env, ctx, alert, fresh) {
+  for (const f of FEATURES) {
+    if (!f.onAlertHit) continue;
+    try { await f.onAlertHit({ env, ctx, lib, alert, fresh }); } catch (e) { console.error('onAlertHit', e && e.stack || e); }
+  }
+}
+
 /* ---------- router ---------- */
 
 export default {
@@ -976,6 +1102,8 @@ export default {
       if (p === '/auth/login' && m === 'POST') return await login(req, env, h);
       if (p === '/auth/reset' && m === 'GET') return await resetCheck(url, env, h);
       if (p === '/auth/reset' && m === 'POST') return await resetPassword(req, env, h);
+      const pub = await featureRoute('public', req, env, ctx, null, url, h);
+      if (pub) return pub;
 
       // everything below needs a signed-in session
       const s = await currentSession(req, env);
@@ -1004,6 +1132,9 @@ export default {
       if (p.startsWith('/me/alerts')) { const r = await alerts(req, env, ctx, s, p, m, h); if (r) return r; }
       if (p === '/me/mail' && m === 'GET') return await mailCheck(env, s, h);
       if (p === '/me/mail' && m === 'POST') return await mailVerify(env, s, h);
+      const fr = await featureRoute('session', req, env, ctx, s, url, h);
+      if (fr) return fr;
+      if (p === '/admin/hourly/run' && m === 'POST' && s.role === 'owner') return json({ ran: await runHourly(env, ctx, now()) }, 200, h);   // staging has no cron
       if (p.startsWith('/admin/')) {
         if (s.role !== 'owner') return json({ error: 'forbidden' }, 403, h);
         return await admin(req, env, s, url, h, ctx);
@@ -1014,8 +1145,10 @@ export default {
       return json({ error: 'server' }, 500, h);
     }
   },
-  // the cron trigger (wrangler.toml): the most overdue alert gets its check
+  // the cron triggers (wrangler.toml): every 10 minutes the most overdue alert gets its check; at :05 every hour
+  // the feature modules' hourly work (digests, release-date reminders, clean-up)
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runAlerts(env, ctx).catch(e => console.error('alerts', e && e.stack || e)));
+    if (event.cron === '5 * * * *') ctx.waitUntil(runHourly(env, ctx, Math.floor(event.scheduledTime / 1000)));
+    else ctx.waitUntil(runAlerts(env, ctx).catch(e => console.error('alerts', e && e.stack || e)));
   },
 };
