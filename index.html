@@ -1170,7 +1170,8 @@ const EN = {
   "撤銷": "Revoke",
   "收藏最多 20 個，先刪掉一些再收藏。": "You can save up to 20 searches. Delete some before saving more.",
   "改密碼": "Change password",
-  "改每日上限": "Change daily limit",
+  "改機票上限": "Change flight limit",
+  "機票：": "Flights: ",
   "數字都是假的": "All numbers are fake",
   "新": "New",
   "新加坡": "Singapore",
@@ -2290,12 +2291,12 @@ async function loadAdmin() {
     const tags = (x.role === 'owner' ? '<span class="tag own">' + t('管理員') + '</span>' : '') + (x.status !== 'active' ? '<span class="tag off">' + t('已停用') + '</span>' : '') + (self ? '<span class="tag me">' + t('你') + '</span>' : '') +
       (x.role !== 'owner' && !x.alerts_ok ? '<span class="tag off">' + t('提醒已關') + '</span>' : '');
     const acts = '<button type="button" class="btn ghost" data-reset="' + x.id + '">' + t('產生重設連結') + '</button>' + (self ? '' :
-      '<button type="button" class="btn ghost" data-limit="' + x.id + '" data-cur="' + (x.daily_limit ?? '') + '">' + t('改每日上限') + '</button>' +
+      '<button type="button" class="btn ghost" data-limit="' + x.id + '" data-cur="' + (x.daily_limit ?? '') + '">' + t('改機票上限') + '</button>' +
       (x.role === 'owner' ? '' : '<button type="button" class="btn ghost" data-alerts="' + x.id + '" data-to="' + (x.alerts_ok ? 0 : 1) + '">' + (x.alerts_ok ? t('關閉提醒') : t('開啟提醒')) + '</button>') +
       '<button type="button" class="btn ghost" data-status="' + x.id + '" data-to="' + (x.status === 'active' ? 'disabled' : 'active') + '">' + (x.status === 'active' ? t('停用') : t('啟用')) + '</button>' +
       '<button type="button" class="btn warn" data-del="' + x.id + '" data-email="' + esc(x.email) + '">' + t('刪除') + '</button>');
     // today's seats.aero calls against the account's cap (the owner has none)
-    const use = '<span>' + (x.limit == null ? t('今天用了 {0} 次（不限）', x.used_today) : x.daily_limit == null ? t('今天用了 {0} 次／上限 {1}（預設）', x.used_today, x.limit) : t('今天用了 {0} 次／上限 {1}', x.used_today, x.limit)) + '</span>';
+    const use = '<span>' + t('機票：') + (x.limit == null ? t('今天用了 {0} 次（不限）', x.used_today) : x.daily_limit == null ? t('今天用了 {0} 次／上限 {1}（預設）', x.used_today, x.limit) : t('今天用了 {0} 次／上限 {1}', x.used_today, x.limit)) + '</span>';
     const al = '<span>' + t('提醒：{0} 個', x.alerts || 0) + (x.mail_verified_at ? t('（Email 已驗證）') : '') + '</span>';
     return '<div class="rowi col"><div class="main"><b>' + esc(x.email) + tags + '</b><small>' + use + al + '<span>' + t('註冊：{0}', fmtDay(x.created_at)) + '</span><span>' + t('最近登入：{0}', since(x.last_login_at)) + '</span><span>' + t('裝置：{0} 台', x.devices) + '</span></small></div>' +
       '<div class="acts">' + acts + '</div><div class="out" id="reset-out-' + x.id + '"></div></div>';
@@ -4113,7 +4114,7 @@ function init() {
 // with ?only=a,b (also files not listed yet), or none with ?only=. FEATURE_V changes on every release, so phones
 // fetch the new files.
 const FEATURE_FILES = ['release', 'wallet', 'bonuses', 'notes', 'explore', 'year', 'hotels', 'push', 'digest', 'usage'];
-const FEATURE_V = '3ab6beb1b9';
+const FEATURE_V = '19df33329f';
 function loadFeatures() {
   const only = new URLSearchParams(location.search).get('only');
   const files = only == null ? FEATURE_FILES : only.split(',').filter(x => /^[a-z0-9-]{1,30}$/.test(x));   // a test may load one not listed yet

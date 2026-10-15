@@ -1,8 +1,9 @@
 // 飯店 (hotel award search through rooms.aero), Gino 2026-10-15. rooms.aero is seats.aero's hotel site: it takes the
 // same Pro key (SEATS_KEY) and keeps its own quota of 1,000 calls per UTC day, separate from the flights one, so it
 // gets its own budget here, built like the flights one in ../index.js (budgetCheck, spend, passOn):
-//   rooms_usage  calls per account per UTC day; invited accounts get ROOMS_DAILY each, the owner has no cap.
-//                users.daily_limit is not used: the admin page sets it as the account's seats.aero calls only
+//   rooms_usage  calls per account per UTC day; invited accounts get ROOMS_DAILY each unless users.rooms_limit
+//                (migration 0014, the admin page's 改飯店上限) says otherwise; the owner has no cap.
+//                users.daily_limit is the account's seats.aero calls only
 //   rooms_quota  rooms.aero's remaining count, from the X-RateLimit-* headers of the latest call (one row)
 // Invited accounts also stop when rooms.aero has ROOMS_RESERVE calls or fewer left today, keeping the rest for the owner.
 // Unlike the flights budget, an invited account's call is taken from its cap in one statement before the fetch (and
@@ -97,10 +98,9 @@ const STATE_SQL = 'SELECT (SELECT calls FROM rooms_usage WHERE user_id = ? AND d
   '(SELECT at FROM rooms_quota WHERE id = 1) AS at';
 const roomsState = (env, s, day) => env.DB.prepare(STATE_SQL).bind(s.id, day).first();
 const midnight = day => Math.floor(Date.parse(day + 'T00:00:00Z') / 1000);
-// an account's hotel calls a day: no cap for the owner, ROOMS_DAILY for every invited account (100 each, as the
-// spec says). The admin's per-account daily limit is left out on purpose: the admin page asks for it as seats.aero
-// calls only, and an account is cut off altogether by disabling it, which also ends its sessions.
-const capOf = s => (s.role === 'owner' ? null : ROOMS_DAILY);
+// an account's hotel calls a day: no cap for the owner; for an invited account its own rooms_limit (0 to 1000, set
+// from the admin page), else ROOMS_DAILY. s is a session or a users row: both carry role and rooms_limit.
+const capOf = s => (s.role === 'owner' ? null : s.rooms_limit ?? ROOMS_DAILY);
 // one call taken from the account's cap in a single statement: no row comes back when the cap is reached, so two
 // searches at the same moment (two tabs, two phones) cannot both take the last call
 const TAKE_SQL = 'INSERT INTO rooms_usage (user_id, day, calls) VALUES (?, ?, 1) ' +
@@ -173,12 +173,31 @@ async function quota({ env, s, h, lib }) {
   return lib.json(st && st.at != null ? { remaining: st.remaining, limit: st.quota_limit || 1000, at: st.at, me } : { remaining: null, limit: 1000, at: null, me }, 200, h);
 }
 
+// GET /admin/rooms (owner): every account's hotel calls today and the cap that applies, for the admin page
+async function adminRooms({ env, h, lib }) {
+  const r = await env.DB.prepare('SELECT u.id, u.role, u.rooms_limit, (SELECT calls FROM rooms_usage g WHERE g.user_id = u.id AND g.day = ?) AS used FROM users u')
+    .bind(lib.utcDay()).all();
+  return lib.json({ default_limit: ROOMS_DAILY, reserve: ROOMS_RESERVE,
+    users: r.results.map(u => ({ id: u.id, used: u.used || 0, rooms_limit: u.rooms_limit, limit: capOf(u) })) }, 200, h);
+}
+// POST /admin/users/:id/rooms-limit (owner): { limit } = a whole number from 0 to 1000, or null for the default.
+// The owner's own row is never changed (it has no cap).
+async function setRoomsLimit({ req, env, h, m, lib }) {
+  const v = (await lib.readJson(req)).limit;
+  if (v !== null && !(Number.isInteger(v) && v >= 0 && v <= 1000)) return lib.json({ error: 'param' }, 400, h);
+  const r = await env.DB.prepare("UPDATE users SET rooms_limit = ? WHERE id = ? AND role != 'owner'").bind(v, Number(m[1])).run();
+  return r.meta.changes ? lib.json({ ok: true }, 200, h) : lib.json({ error: 'not_found' }, 404, h);
+}
+
 export const routes = [
   // query: location (or sw_lat, sw_lng, ne_lat, ne_lng), start_date, end_date, nights, source, max_points, take, skip
   // answers rooms.aero's reply as it is, plus X-Rooms-RateLimit-Remaining and X-Rooms-RateLimit-Limit
   { method: 'GET', path: '/hotels/search', auth: 'user', handler: search },
   // { remaining, limit, at, me: { used, limit, reserve } }
   { method: 'GET', path: '/hotels/quota', auth: 'user', handler: quota },
+  // { default_limit, reserve, users: [{ id, used, rooms_limit, limit }] }
+  { method: 'GET', path: '/admin/rooms', auth: 'owner', handler: adminRooms },
+  { method: 'POST', path: /^\/admin\/users\/(\d+)\/rooms-limit$/, auth: 'owner', handler: setRoomsLimit },
 ];
 
 export function onDeleteUser(env, uid) {

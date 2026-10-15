@@ -206,7 +206,7 @@ async function currentSession(req, env) {
   if (!m) return null;
   const sid = await sha256(m[1]);
   const s = await env.DB.prepare(
-    'SELECT s.id AS sid, s.expires_at, s.last_seen_at, u.id, u.email, u.role, u.status, u.created_at, u.daily_limit ' +
+    'SELECT s.id AS sid, s.expires_at, s.last_seen_at, u.id, u.email, u.role, u.status, u.created_at, u.daily_limit, u.rooms_limit ' +
     'FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.id = ?').bind(sid).first();
   if (!s || s.expires_at < now() || s.status !== 'active') return null;
   if (now() - s.last_seen_at > 3600) {   // at most one write an hour per device

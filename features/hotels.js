@@ -575,6 +575,39 @@ function pressSrc(k) {
   for (const b of $$('#hotels-body .hotels-progs [data-src]')) b.setAttribute('aria-pressed', String(b.dataset.src ? HS.f.src.includes(b.dataset.src) : !HS.f.src.length));
 }
 
+/* ---------- admin: each account's hotel calls today and its 改飯店上限 button ---------- */
+// The core admin page draws the account rows; this adds, to each, a 飯店 line under the seats.aero one and a button
+// beside 改機票上限 (none on the owner's own row, which has no cap). Rows are found by their 產生重設連結 button,
+// which every row has. A redraw while /admin/rooms is on its way just gets the lines on the next call.
+async function adminRows() {
+  let a;
+  try { a = await call('GET', '/admin/rooms'); } catch (e) { return; }   // a Worker without the route: nothing to add
+  for (const x of a.users) {
+    const reset = document.querySelector('#admin-body [data-reset="' + x.id + '"]');
+    const row = reset && reset.closest('.rowi');
+    if (!row || row.querySelector('.rooms-use')) continue;
+    const line = t('飯店：') + (x.limit == null ? t('今天用了 {0} 次（不限）', x.used) : x.rooms_limit == null ? t('今天用了 {0} 次／上限 {1}（預設）', x.used, x.limit) : t('今天用了 {0} 次／上限 {1}', x.used, x.limit));
+    const first = row.querySelector('.main small span');
+    if (first) first.insertAdjacentHTML('afterend', '<span class="rooms-use">' + esc(line) + '</span>');
+    const lim = row.querySelector('[data-limit]');
+    if (lim && x.limit != null) lim.insertAdjacentHTML('afterend', '<button type="button" class="btn ghost" data-rlimit="' + x.id + '" data-cur="' + (x.rooms_limit ?? '') + '" data-def="' + a.default_limit + '">' + esc(t('改飯店上限')) + '</button>');
+  }
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest && e.target.closest('[data-rlimit]');
+  if (!b) return;
+  const def = +b.dataset.def || 100;
+  const v = prompt(t('這個帳號每天最多可以搜尋幾次飯店（rooms.aero 額度）？') + '\n' + t('輸入 0 到 1000；留空 = 預設 {0} 次。', def), b.dataset.cur);
+  if (v === null) return;
+  const limit = v.trim() === '' ? null : Number(v.trim());
+  if (limit !== null && !(Number.isInteger(limit) && limit >= 0 && limit <= 1000)) { toast(t('請輸入 0 到 1000 的整數，或留空')); return; }
+  try {
+    await call('POST', '/admin/users/' + b.dataset.rlimit + '/rooms-limit', { limit });
+    toast(limit === null ? t('飯店上限已改回預設 {0} 次', def) : t('飯店每日上限已改成 {0} 次', limit));
+    loadAdmin();
+  } catch (err) { toast(err.message); }
+});
+
 addFeature({
   id: 'hotels',
   title: '飯店',
@@ -716,8 +749,15 @@ addFeature({
     'rooms.aero 暫時有問題（HTTP {0}），等一下再試。': 'rooms.aero is having trouble (HTTP {0}). Try again in a moment.',
     'rooms.aero 回傳的資料看不懂，等一下再試。': "Couldn't read the data from rooms.aero. Try again in a moment.",
     '飯店搜尋還沒開通，要等管理員更新伺服器。': "Hotel search isn't switched on yet: the owner has to update the server.",
+    '飯店：': "Hotels: ",
+    '改飯店上限': "Change hotel limit",
+    '這個帳號每天最多可以搜尋幾次飯店（rooms.aero 額度）？': "How many hotel searches (rooms.aero calls) can this account make per day?",
+    '輸入 0 到 1000；留空 = 預設 {0} 次。': "Enter 0 to 1000, or leave blank for the default of {0}.",
+    '飯店上限已改回預設 {0} 次': "Hotel limit back to the default of {0}",
+    '飯店每日上限已改成 {0} 次': "Hotel daily limit set to {0}",
   },
   show,
+  onAdminPage() { adminRows(); },
   // another account signed in: its own meter. Opening the site on #/hotels draws the page (and asks for the meter)
   // just before this runs, so the same account asks nothing more.
   onAuth() {
