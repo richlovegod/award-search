@@ -190,6 +190,10 @@ details.danger[open] summary{margin-bottom:8px}
 .lang-btn:active{transform:scale(.95)}
 .lcard{position:relative}
 .lang-login{position:absolute;top:12px;right:12px}
+/* in the header, top right (2026-10-15, Gino: "語言切換…擺在網站的最上面"): a round button the size the account
+   button had there before it became the 我的 tab, so the title keeps its room */
+.top .lang-top{width:38px;height:38px;min-height:0;padding:0;border:var(--line);border-radius:50%;display:grid;place-items:center;font-size:13px;line-height:1;transition:transform .12s ease-out}
+.top .lang-top:active{transform:scale(.92)}
 /* top bar */
 .top{position:sticky;top:0;z-index:20;background:var(--paper);border-top:7px solid var(--water);border-bottom:var(--line)}
 .top .in{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:8px;padding:calc(6px + env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) 6px max(12px,env(safe-area-inset-left))}
@@ -642,6 +646,7 @@ html[lang=en] .brand{font-size:18px}
       <span>里程機位搜尋</span>
     </a>
     <button type="button" id="quota" class="quota" hidden><span class="qt"></span><span class="qbar" aria-hidden="true"><i></i></span></button>
+    <button type="button" class="lang-btn lang-top" id="lang-top" aria-label="English / 中文">EN</button>
   </div></header>
 
   <main class="wrap">
