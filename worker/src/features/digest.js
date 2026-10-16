@@ -74,7 +74,7 @@ const NAMES = {
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const WORDS = {
   zh: {
-    from: '里程機位搜尋', cab: { J: '商務艙', F: '頭等艙' }, sep: '、',
+    from: '吉諾機票研究所', cab: { J: '商務艙', F: '頭等艙' }, sep: '、',
     date: d => +d.slice(5, 7) + '/' + +d.slice(8, 10),
     subject: (date, codes, cab, min, n) => `✈️ 每日精選 ${date}：${codes} 出發，${cab}直飛 ${min} 哩起` + (n ? `，${n} 個新的或降價` : ''),
     title: date => `✈️ 每日精選 ${date}`,
@@ -88,7 +88,7 @@ const WORDS = {
     open: '打開網站', manage: '暫停或修改每日精選信',
   },
   en: {
-    from: 'Award Search', cab: { J: 'Business', F: 'First' }, sep: ', ', low: { J: 'business', F: 'first' },
+    from: 'Gino’s Ticket Lab', cab: { J: 'Business', F: 'First' }, sep: ', ', low: { J: 'business', F: 'first' },
     date: d => MONTHS[+d.slice(5, 7) - 1] + ' ' + +d.slice(8, 10),
     subject: (date, codes, cab, min, n) => `✈️ Daily digest for ${date}: nonstop ${cab} from ${min} miles out of ${codes}` + (n ? `, ${n} new or cheaper` : ''),
     title: date => `✈️ Daily digest for ${date}`,

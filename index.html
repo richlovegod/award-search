@@ -10,9 +10,12 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="機位搜尋">
+<meta name="apple-mobile-web-app-title" content="機票研究所">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>里程機位搜尋</title>
+<title>吉諾機票研究所</title>
+<meta name="description" content="哩程與機票探索實驗室">
+<meta property="og:title" content="吉諾機票研究所">
+<meta property="og:description" content="哩程與機票探索實驗室">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cg stroke='%233E3A39' stroke-width='3'%3E%3Crect x='6' y='9' width='28' height='24' rx='9' fill='%23F2A497'/%3E%3Ccircle cx='14.5' cy='19' r='4' fill='%23F6D27A'/%3E%3Ccircle cx='25.5' cy='19' r='4' fill='%23F6D27A'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -65,6 +68,7 @@ svg{display:block}
 .lcard .pic{border:var(--line);border-radius:26px;background:var(--water-t);padding:18px 0 8px;margin-bottom:16px;overflow:hidden}
 .lcard .pic svg{width:150px;height:auto;margin:0 auto}
 .lcard h1{font-size:27px;margin:0 0 2px}
+.lcard .ltag{margin:0 0 10px;font-size:13px;color:var(--ink2);letter-spacing:.06em}
 .lcard p{margin:0 0 14px;font-size:14px}
 .lcard .err{min-height:22px;margin:10px 0 0;font-size:14px;color:#A33A2A}
 
@@ -596,6 +600,15 @@ html.kb .toast{bottom:calc(var(--kbh,0px) + 12px)}
 .vhead h2:focus{outline:none}
 /* English runs wider than Chinese: words in fixed boxes get smaller type, and a long title ends in … */
 .brand span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.brand .bt{display:flex;flex-direction:column;line-height:1.2}
+.brand .bs{font-size:11px;color:var(--ink2);letter-spacing:.06em;margin-top:2px}
+html[lang=en] .brand .bs{font-size:10.5px;letter-spacing:0}
+/* measured 2026-10-16 with a three-digit meter (Used 141/1,000): the English tagline needs 414 px, the English title
+   16.5 px type below 390 and 15 px below 375; the Chinese title gets 17.5 px below 375. Below 359 px only the logo shows. */
+@media (max-width:413px){html[lang=en] .brand .bs{display:none}}
+@media (max-width:389px){html[lang=en] .brand .bn{font-size:16.5px}}
+@media (max-width:374px){.brand .bn{font-size:17.5px} html[lang=en] .brand .bn{font-size:15px}}
+@media (max-width:359px){.brand .bt{display:none}}
 html[lang=en] .seg button{font-size:clamp(12px,3.7vw,16px)}
 html[lang=en] .al4 .chip{font-size:clamp(12px,3.7vw,15px);gap:4px}
 html[lang=en] .df .dv{font-size:clamp(15px,4.4vw,18px)}
@@ -611,7 +624,8 @@ html[lang=en] .brand{font-size:18px}
   <div class="lcard">
     <button type="button" class="lang-btn lang-login" aria-label="English / 中文">EN</button>
     <div class="pic" aria-hidden="true"><svg viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"><path d="M0 66q30-10 60 0t60 0v14H0z" fill="#B9DAA5"/><g class="float"><path d="M46 12v6"/><circle cx="46" cy="11" r="1.6" fill="#3E3A39"/><rect x="32" y="18" width="28" height="24" rx="9" fill="#F2A497"/><circle cx="40.5" cy="28" r="4.2" fill="#F6D27A"/><circle cx="51.5" cy="28" r="4.2" fill="#F6D27A"/><path d="M42.5 36q3.5 3 7 0"/><path d="M37 50l3-5M55 50l-3-5"/></g><g class="sway"><rect x="68" y="34" width="22" height="18" rx="4" fill="#F6D27A"/><path d="M72 34v-6a7 7 0 0 1 14 0v6"/><circle cx="79" cy="42" r="2.4" fill="#3E3A39"/><path d="M79 44v4"/></g></g></svg></div>
-    <h1>里程機位搜尋</h1>
+    <h1>吉諾機票研究所</h1>
+    <p class="ltag">哩程與機票探索實驗室</p>
     <p id="lsub">用 Email 登入。新帳號要有邀請碼。</p>
     <div class="atabs" id="atabs" role="tablist" aria-label="登入或註冊">
       <button type="button" role="tab" id="tab-in" aria-selected="true">登入</button>
@@ -643,7 +657,7 @@ html[lang=en] .brand{font-size:18px}
   <header class="top"><div class="in">
     <a class="brand" href="#/" id="home" aria-label="回首頁">
       <svg class="logo float" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g fill="none" stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"><path d="M20 3v6"/><circle cx="20" cy="3" r="1.5" fill="#3E3A39"/><rect x="6" y="9" width="28" height="24" rx="9" fill="#F2A497"/><circle cx="14.5" cy="19" r="4.2" fill="#F6D27A"/><circle cx="25.5" cy="19" r="4.2" fill="#F6D27A"/><path d="M16.5 27q3.5 3 7 0"/><path d="M11 38l3-5M29 38l-3-5"/></g></svg>
-      <span>里程機位搜尋</span>
+      <span class="bt"><span class="bn">吉諾機票研究所</span><span class="bs">哩程與機票探索實驗室</span></span>
     </a>
     <button type="button" id="quota" class="quota" hidden><span class="qt"></span><span class="qbar" aria-hidden="true"><i></i></span></button>
     <button type="button" class="lang-btn lang-top" id="lang-top" aria-label="English / 中文">EN</button>
@@ -1012,7 +1026,7 @@ const EN = {
   "← 我的帳號": "← My account",
   "★ 已收藏": "★ Saved",
   "☆ 收藏這個搜尋": "☆ Save this search",
-  "✈️ {0} 邀請你一起用「里程機位搜尋」！": "✈️ {0} invites you to join Award Seat Search!",
+  "✈️ {0} 邀請你一起用「吉諾機票研究所」！": "✈️ {0} invites you to join Gino’s Ticket Lab!",
   "、": ", ",
   "。": ". ",
   "一般帳號": "Member",
@@ -1205,7 +1219,7 @@ const EN = {
   "查不到：{0}": "Search failed: {0}",
   "核對中…": "Checking…",
   "核對好了，但重新讀取失敗：{0}": "Checked, but reloading failed: {0}",
-  "機位搜尋": "Award Search",
+  "機票研究所": "Ticket Lab",
   "歡迎回來": "Welcome back",
   "每哩約 {0}": "About {0} per mile",
   "每哩約 {0}（已扣稅金約 {1}）": "About {0} per mile (after subtracting about {1} in taxes)",
@@ -1339,9 +1353,10 @@ const EN = {
   "還沒有邀請碼。": "No invite codes yet.",
   "還沒用，{0} 前有效": "Not used yet, expires {0}",
   "那台裝置已登出": "That device is signed out",
-  "里程機位<br>搜尋": "Award Seat<br>Search",
-  "里程機位搜尋": "Award Search",
-  "里程機位搜尋邀請": "Award Seat Search invite",
+  "吉諾<br>機票研究所": "Gino’s<br>Ticket Lab",
+  "吉諾機票研究所": "Gino’s Ticket Lab",
+  "吉諾機票研究所邀請": "Gino’s Ticket Lab invite",
+  "哩程與機票探索實驗室": "Exploring miles and award tickets",
   "重設連結": "Reset link",
   "金額": "Show in",
   "金額幣別": "Currency",
@@ -1667,9 +1682,9 @@ function langNames() {
   applyNames();
   WD = LANG === 'en' ? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] : '日一二三四五六';
   document.documentElement.lang = LANG === 'en' ? 'en' : 'zh-Hant-TW';
-  document.title = t('里程機位搜尋');
+  document.title = t('吉諾機票研究所');
   const appName = $('meta[name="apple-mobile-web-app-title"]');
-  if (appName) appName.content = t('機位搜尋');
+  if (appName) appName.content = t('機票研究所');
   for (const b of $$('.lang-btn')) b.textContent = LANG === 'en' ? '中文' : 'EN';
 }
 function setLang(l) {
@@ -2127,7 +2142,7 @@ function route() {
   if (page === 'admin') loadAdmin();
   markTab(fh ? (fh[0].nav && fh[0].nav.tab) || 'flights' : page === 'account' || page === 'admin' ? 'me' : page === 'alerts' ? 'alerts' : 'flights');
   const title = fh ? fh[0].title : { account: '我的', alerts: '我的提醒', admin: '管理' }[page];
-  document.title = (title ? t(title) + '｜' : '') + t('里程機位搜尋');
+  document.title = (title ? t(title) + (LANG === 'en' ? ' | ' : '｜') : '') + t('吉諾機票研究所');
   const key = page === 'search' ? '#/' : h;
   if (ROUTE_NOW !== key) {
     if (ROUTE_NOW) SCROLL_AT[ROUTE_NOW] = y0;   // read before the views changed (a shorter page clamps scrollY)
@@ -2246,7 +2261,7 @@ const INVITER = 'Gino';   // the owner's name in invite messages
 // the sign-up link opens the 註冊 tab with the code already filled in
 const joinUrl = code => location.origin + location.pathname + '#join=' + code.replace('-', '');
 function inviteText(code, exp) {
-  return t('✈️ {0} 邀請你一起用「里程機位搜尋」！', INVITER) + '\n\n' +
+  return t('✈️ {0} 邀請你一起用「吉諾機票研究所」！', INVITER) + '\n\n' +
     t('用哩程換機票，最難的是找到有位子的那一天。這個小網站一次查二十幾個哩程計畫，月曆一眼看出哪天最便宜 🗓️') + '\n\n' +
     t('👉 點這裡註冊：{0}', joinUrl(code)) + '\n' +
     t('🎟️ 邀請碼：{0}（{1} 前有效，只能用一次）', code, fmtDay(exp)) + '\n\n' +
@@ -2261,7 +2276,7 @@ function passHtml(code, exp) {
       '<div class="pass-h"><b>' + t('邀請函') + '</b><span>BOARDING PASS</span></div>' +
       '<div class="pass-row"><span><small>' + t('邀請人') + '</small>' + esc(INVITER) + '</span><span><small>' + t('乘客') + '</small>' + t('你的朋友') + '</span><span><small>' + t('有效到') + '</small>' + fmtDay(exp) + '</span></div>' +
       '<div class="pass-code"><small>' + t('邀請碼') + '</small>' + esc(code) + '</div>' +
-    '</div><div class="pass-stub">' + MASCOT + '<span>' + t('里程機位<br>搜尋') + '</span></div></div>' +
+    '</div><div class="pass-stub">' + MASCOT + '<span>' + t('吉諾<br>機票研究所') + '</span></div></div>' +
     '<p class="pass-note">' + t('按「複製邀請」會複製下面這段，貼到 LINE 或簡訊就可以了：') + '</p>' +
     '<pre class="pass-msg">' + esc(inviteText(code, exp)) + '</pre>' +
     '<div class="acts pass-acts">' + inviteBtns(code, exp, 'pri') + '</div>';
@@ -2324,7 +2339,7 @@ $('#admin-body').addEventListener('click', async e => {
     if (b.dataset.copy) { await navigator.clipboard.writeText(b.dataset.copy); toast(t('已複製')); }
     else if (b.dataset.invite) { await navigator.clipboard.writeText(inviteText(b.dataset.invite, +b.dataset.exp)); toast(t('邀請訊息已複製，貼給朋友就可以了')); }
     else if (b.dataset.share) {
-      try { await navigator.share({ title: t('里程機位搜尋邀請'), text: inviteText(b.dataset.share, +b.dataset.exp) }); }
+      try { await navigator.share({ title: t('吉諾機票研究所邀請'), text: inviteText(b.dataset.share, +b.dataset.exp) }); }
       catch (err) { if (err.name !== 'AbortError') throw err; }   // closing the share sheet is not an error
     }
     else if (b.dataset.revoke) { await call('DELETE', '/admin/invites/' + b.dataset.revoke); toast(t('邀請碼已撤銷')); loadAdmin(); }
@@ -3213,7 +3228,7 @@ $('#share-btn').addEventListener('click', async () => {
   const p = S.search, url = shareUrl(p);
   const text = t('{0} → {1}，{2} 到 {3}', p.o, p.d, md(p.s), md(p.e)) + (p.rt ? t('，回 {0} 到 {1}', md(p.rt.s), md(p.rt.e)) : '');
   if (canShare()) {
-    try { await navigator.share({ title: t('里程機位搜尋'), text, url }); return; } catch (err) { if (err.name === 'AbortError') return; }
+    try { await navigator.share({ title: t('吉諾機票研究所'), text, url }); return; } catch (err) { if (err.name === 'AbortError') return; }
   }
   try { await navigator.clipboard.writeText(url); toast(t('連結已複製。對方要登入這個網站才看得到結果')); }
   catch { prompt(t('複製這個連結：'), url); }

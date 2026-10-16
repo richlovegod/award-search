@@ -1,4 +1,4 @@
-// Service worker for 里程機位搜尋 (award.ginochang.com), 2026-10-15. Registered by features/push.js; scope '/'.
+// Service worker for 吉諾機票研究所 (award.ginochang.com), 2026-10-15. Registered by features/push.js; scope '/'.
 // 1. The installable web app: a page load goes to the network first (with navigation preload, so it does not wait
 //    for this worker to start), and keeps the latest copy of the page; when the network fails (offline) or has not
 //    answered in 4 seconds (a weak signal), that copy is shown. Nothing else is touched: the Worker's API is on
@@ -32,7 +32,7 @@ self.addEventListener('activate', e => {
 // a page to show when offline and nothing is cached yet
 const offline = () => new Response(
   '<!doctype html><html lang="zh-Hant-TW"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
-  '<title>里程機位搜尋</title><body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#FFFCF6;color:#3E3A39;font:17px/1.6 -apple-system,BlinkMacSystemFont,\'PingFang TC\',sans-serif;text-align:center;padding:24px">' +
+  '<title>吉諾機票研究所</title><body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#FFFCF6;color:#3E3A39;font:17px/1.6 -apple-system,BlinkMacSystemFont,\'PingFang TC\',sans-serif;text-align:center;padding:24px">' +
   '<div style="border:3px solid #3E3A39;border-radius:22px;padding:18px 20px;max-width:320px;background:#FCF1D3"><p style="margin:0 0 8px">現在沒有網路。連上之後再打開一次。</p>' +
   '<p lang="en" style="margin:0;font-size:15px">You are offline. Open the site again once you are back online.</p></div></body></html>',
   { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
@@ -91,7 +91,7 @@ self.addEventListener('push', e => {
   const opts = { body: text(d.body, 400), icon: ICON, data: { url: siteUrl(d.url) } };
   if (tag) { opts.tag = tag; opts.renotify = true; }   // a newer push for the same alert replaces the old one and still alerts
   // every push must show something (userVisibleOnly), so a payload we can't read still gets a plain notice
-  e.waitUntil(self.registration.showNotification(text(d.title, 120) || '機位搜尋', opts));
+  e.waitUntil(self.registration.showNotification(text(d.title, 120) || '吉諾機票研究所', opts));
 });
 
 self.addEventListener('notificationclick', e => {

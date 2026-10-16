@@ -1,6 +1,7 @@
 {
-  "name": "里程機位搜尋",
-  "short_name": "機位搜尋",
+  "name": "吉諾機票研究所",
+  "short_name": "機票研究所",
+  "description": "哩程與機票探索實驗室",
   "lang": "zh-TW",
   "start_url": "/",
   "scope": "/",
@@ -8,7 +9,15 @@
   "background_color": "#FFFCF6",
   "theme_color": "#FFFCF6",
   "icons": [
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
   ]
 }

@@ -657,7 +657,7 @@ const PROGRAM_NAME = {
 const NO_TAX = new Set(['qatar', 'turkish', 'singapore']);   // seats.aero has no tax data for these
 const MAIL_WORDS = {
   zh: {
-    from: '里程機位搜尋', cabin: { Y: '經濟艙', W: '豪華經濟艙', J: '商務艙', F: '頭等艙' }, wd: '日一二三四五六',
+    from: '吉諾機票研究所', cabin: { Y: '經濟艙', W: '豪華經濟艙', J: '商務艙', F: '頭等艙' }, wd: '日一二三四五六',
     subject: (route, cab, n, min) => `✈️ ${route} ${cab}：${n} 筆新的位子，最低 ${min} 哩`,
     intro: (name, cab, max, n) => `你設的提醒「${name}」找到 ${n} 筆新的或更便宜的位子（${cab}，${max} 哩以下）：`,
     day: (md, w) => `${md}（${w}）`, miles: x => `${x} 哩`, seats: n => `剩 ${n} 位`, direct: '直飛', was: x => `降價，原本 ${x} 哩`,
@@ -668,7 +668,7 @@ const MAIL_WORDS = {
     note: '資料是 seats.aero 的快取，可能是幾小時前的。訂位前請到航空公司網站確認。',
   },
   en: {
-    from: 'Award Search', cabin: { Y: 'economy', W: 'premium economy', J: 'business', F: 'first' }, wd: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    from: 'Gino’s Ticket Lab', cabin: { Y: 'economy', W: 'premium economy', J: 'business', F: 'first' }, wd: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
     subject: (route, cab, n, min) => `✈️ ${route} ${cab}: ${n} new award${n === 1 ? '' : 's'} from ${min} miles`,
     intro: (name, cab, max, n) => `Your alert "${name}" found ${n} new or cheaper award${n === 1 ? '' : 's'} (${cab}, up to ${max} miles):`,
     day: (md, w) => `${w} ${md}`, miles: x => `${x} miles`, seats: n => `${n} seat${n === 1 ? '' : 's'} left`, direct: 'nonstop', was: x => `was ${x}`,

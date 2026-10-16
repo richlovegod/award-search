@@ -159,7 +159,7 @@ export const routes = [
 const ymd = iso => +iso.slice(0, 4) + '/' + +iso.slice(5, 7) + '/' + +iso.slice(8, 10);
 const WORDS = {
   zh: {
-    from: '里程機位搜尋', title: '開票提醒', intro: '你設的開票提醒到了：',
+    from: '吉諾機票研究所', title: '開票提醒', intro: '你設的開票提醒到了：',
     // kind: exact, range (sources disagree) or approx (one source); late: the open date was before today
     line: (p, date, open, late, kind, r) => (kind === 'exact' ? (late ? `${p} 從 ${open} 起開放` : `今天 ${p} 開放`) : (late ? `${p} 可能從 ${open} 起開放` : `今天 ${p} 可能開放`)) +
       ` ${date} 的位子了` + (kind === 'range' ? `（各來源說提前 ${r.lo} 到 ${r.hi} 天）` : kind === 'approx' ? `（約提前 ${r.days} 天）` : `（提前 ${r.days} 天）`),
@@ -169,7 +169,7 @@ const WORDS = {
     note: '開票日是從公開資料整理的，實際可能差一兩天。轉點數或訂位前，先到航空公司網站確認還有位子。', manage: '管理開票提醒',
   },
   en: {
-    from: 'Award Search', title: 'Release reminders', intro: 'Your release reminders are due:',
+    from: 'Gino’s Ticket Lab', title: 'Release reminders', intro: 'Your release reminders are due:',
     line: (p, date, open, late, kind, r) => (kind === 'exact' ? (late ? `${p} has been open for ${date} since ${open}` : `${p} opens seats for ${date} today`)
       : (late ? `${p} may have opened ${date} on ${open}` : `${p} may open seats for ${date} today`)) +
       (kind === 'range' ? ` (sources say ${r.lo} to ${r.hi} days ahead)` : kind === 'approx' ? ` (about ${r.days} days ahead)` : ` (${r.days} days ahead)`),
