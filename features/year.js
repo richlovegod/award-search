@@ -30,6 +30,40 @@
   const codes = v => String(v || '').toUpperCase().split(/[\s,]+/).filter(x => /^[A-Z0-9]{2}$/.test(x)).slice(0, 4).join(' ');
   const ap = v => (/^[A-Z]{3}$/.test(v || '') ? v : '');
   const shown = () => { const v = $('#view-year'); return !!v && !v.hidden; };
+  // A failed call is kept as the recipe of its words (api()'s Chinese template and its values, as explore.js does), not
+  // as the words, so a language switch redraws it in the new language. errOf reads the words in the language api() made
+  // them in, so it runs right after the catch. The reset time (marked by its place) is worked out again at each draw.
+  const API_MSGS = [
+    ['你今天的 {0} 次額度用完了，{1}重置。', 1],
+    ['今天整個網站的額度快用完了，剩下的先留給管理員，{0}重置。', 0],
+    ['今天的 1,000 次查詢額度用完了，{0}重置。', 0],
+    ['seats.aero 暫時有問題（HTTP {0}），等一下再試。'],
+    ['seats.aero 不接受這把 API key（{0}），需要重新產生一把。'],
+    ['搜尋條件的格式不對。'], ['連不上中繼站，請檢查網路後再試一次。'], ['seats.aero 回傳的資料看不懂，等一下再試。'],
+    ['seats.aero 的 Pro 訂閱已經過期，續訂之後才查得到。'],
+  ];
+  const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  function errOf(err) {
+    const msg = String((err && err.message) || err || '');
+    for (const [zh, reset] of API_MSGS) {
+      const order = [];
+      const re = new RegExp('^' + reEsc(t(zh)).replace(/\\\{(\d+)\\\}/g, (m, i) => { order.push(+i); return '([\\s\\S]*?)'; }) + '$');
+      const hit = re.exec(msg);
+      if (!hit) continue;
+      const args = [];
+      order.forEach((i, j) => { args[i] = hit[j + 1]; });
+      return { zh, args, reset };
+    }
+    return { text: msg };   // words from somewhere else stay as they came
+  }
+  function errText(e) {
+    if (!e) return '';
+    if (typeof e === 'string') return e;   // a year saved before errors were kept this way (up to 6 hours old)
+    if (!e.zh) return e.text;
+    const a = e.args.slice();
+    if (e.reset != null) a[e.reset] = resetText();
+    return a.length ? t(e.zh, ...a) : t(e.zh);
+  }
 
   /* ---------- the year's data: one entry per route and cabin ---------- */
   const newEntry = (o, d, c, s, e, x = '') => ({ v: 1, t: 0, o, d, c, x, s, e, calls: 0, rows: 0, trunc: false, last: '', err: '', from: '', src: [], days: {}, multi: o.includes(',') || d.includes(',') });
@@ -85,7 +119,7 @@
     for (const k of cabs) {
       const E = out[k], part = trunc && last && E.days[last];
       if (part) { E.rows -= part.length; delete E.days[last]; }
-      Object.assign(E, { t: at, calls: k === c ? pages : 0, trunc, last: upto, err: err ? err.message : '', from: k === c ? '' : c });
+      Object.assign(E, { t: at, calls: k === c ? pages : 0, trunc, last: upto, err: err ? errOf(err) : '', from: k === c ? '' : c });
     }
     if (trunc) for (const k of cabs) if (k !== c) delete out[k];   // a cut-off economy year says nothing sure about the others
     return out;
@@ -226,7 +260,7 @@
       return '<p class="year-prog" id="year-prog" role="status">' + progText() + '</p><div class="skel"></div><div class="skel"></div>';
     }
     // said above an earlier year too, so a failed 重新查整年 never looks like it worked
-    const head = (Y.err && Y.err.key === key ? '<div class="banner bad year-err" role="alert"><b>' + t('查不到') + '</b>' + esc(Y.err.msg) +
+    const head = (Y.err && Y.err.key === key ? '<div class="banner bad year-err" role="alert"><b>' + t('查不到') + '</b>' + esc(errText(Y.err.e)) +
         (E ? '<span class="year-was">' + t('{0}查到的結果還在下面。', since(Math.floor(E.t / 1000))) + '</span>' : '') + '</div>' : '') +
       (Y.busy ? '<p class="note0 year-busy">' + t('另一個整年查詢還在讀取，讀完才能再查。') + '</p>' : '');
     if (!E) return head + '<div class="empty">' + MASCOT + t('按「查整年」，看未來 12 個月每天的最低里程。') + '</div>';
@@ -254,7 +288,7 @@
     const age = since(Math.floor(E.t / 1000));
     const how = E.from ? t('{0}查經濟艙時一起讀到的，沒有另外用額度', age) : E.calls === 1 ? t('{0}查的，用了 1 次額度', age) : t('{0}查的，用了 {1} 次額度', age, E.calls);
     h += '<p class="fresh">' + counts + t('。') + how + '</p>';
-    if (E.trunc) h += '<p class="fresh year-cut">' + (E.err ? t('讀到 {0} 就停了：{1}', ymd(E.last), esc(E.err)) : t('結果太多，只讀到 {0}。之後的日子可以點一天，再按「看航班細節」查那一週。', ymd(E.last))) + '</p>';
+    if (E.trunc) h += '<p class="fresh year-cut">' + (E.err ? t('讀到 {0} 就停了：{1}', ymd(E.last), esc(errText(E.err))) : t('結果太多，只讀到 {0}。之後的日子可以點一天，再按「看航班細節」查那一週。', ymd(E.last))) + '</p>';
     return h + '</div>';
   }
   function overviewHtml() {
@@ -373,7 +407,9 @@
     if (before != null) scrollBy(0, nb.getBoundingClientRect().top - before);
     nb.focus({ preventScroll: true });
     const p = $('#year-dd'), r = p && p.getBoundingClientRect(), top = $('.top') ? $('.top').offsetHeight : 64;
-    if (r && r.bottom > innerHeight) scrollBy({ top: Math.max(0, Math.min(r.bottom - innerHeight + 12, nb.getBoundingClientRect().top - top - 12)), behavior: glide() });
+    // the fixed tab bar covers the bottom of the screen (its height counts the home indicator), unless typing slid it away
+    const bar = $('#tabbar'), bottom = innerHeight - (bar && !document.documentElement.classList.contains('kb') ? bar.offsetHeight : 0);
+    if (r && r.bottom > bottom) scrollBy({ top: Math.max(0, Math.min(r.bottom - bottom + 12, nb.getBoundingClientRect().top - top - 12)), behavior: glide() });
   }
   function jumpTo(el) { if (el) el.scrollIntoView({ behavior: glide(), block: 'start' }); }
   async function run() {
@@ -391,10 +427,10 @@
       });
       const mine = got[c], old = getEntry(o, d, c, x);
       // a later page failed, and the earlier year is complete (or was read further): keep it, and say what went wrong
-      if (mine.err && old && !(old.trunc && old.last < mine.last)) Y.err = { key, msg: mine.err };
+      if (mine.err && old && !(old.trunc && old.last < mine.last)) Y.err = { key, e: mine.err };
       else for (const k of Object.keys(got)) putEntry(got[k]);
     } catch (err) {
-      if (err.kind !== 'auth') Y.err = { key, msg: err.message };
+      if (err.kind !== 'auth') Y.err = { key, e: errOf(err) };
     } finally {
       Y.busy = null;
       if (shown()) draw();
@@ -422,6 +458,7 @@
         if (c.dataset.yc === Y.c) return;
         Object.assign(Y, { c: c.dataset.yc, sel: null, err: null });
         history.replaceState(null, '', location.pathname + location.search + hashOf(Y.o, Y.d, Y.c));
+        ROUTE_NOW = location.hash;   // route() keeps each page's scroll under its hash: this page's hash just changed
         draw();
         return;
       }
@@ -432,19 +469,16 @@
         else if (a.dataset.yact === 'swap') {
           Object.assign(Y, { o: Y.d, d: Y.o, sel: null, err: null });
           history.replaceState(null, '', location.pathname + location.search + hashOf(Y.o, Y.d, Y.c));
+          ROUTE_NOW = location.hash;
           draw();
         }
         return;
       }
       const dd = e.target.closest('[data-yd]');
       if (dd) { select(Y.sel === dd.dataset.yd ? null : dd.dataset.yd, dd); return; }
+      // 整年最低: the calendar is below the chip, so select() alone scrolls the day and its panel into view above the tab bar
       const low = e.target.closest('[data-yday]');
-      if (low) {
-        select(low.dataset.yday);
-        const b = $('#year-cal [data-yd="' + low.dataset.yday + '"]');
-        if (b) b.scrollIntoView({ behavior: glide(), block: 'center' });
-        return;
-      }
+      if (low) { select(low.dataset.yday); return; }
       const mt = e.target.closest('[data-ym]');
       if (mt) { jumpTo(document.getElementById('year-m-' + mt.dataset.ym)); return; }
       const wk = e.target.closest('[data-yweek]');
@@ -659,6 +693,6 @@
     onRender() { ensureBtn(); },
     onAuth() { ensureBtn(); },
     // for tests: the pure parts
-    _test: { addRow, newEntry, fetchYear, getEntry, putEntry, summarize, cutOf, tiersOf, tierOf, optKey, weeksOf, bestWeek, monthsOf, keyOf, state: Y },
+    _test: { addRow, newEntry, fetchYear, getEntry, putEntry, summarize, cutOf, tiersOf, tierOf, optKey, weeksOf, bestWeek, monthsOf, keyOf, errOf, errText, state: Y },
   });
 })();

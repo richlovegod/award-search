@@ -281,6 +281,7 @@ function searchDate() {
   const rt = formRoute();
   if (!rt) return;
   location.hash = '#/';
+  route();   // show the search page now: a cached search scrolls to its results before hashchange runs
   fillForm({ o: rt.o, d: rt.d, s: DATE, e: addDays(DATE, 2) });
   const p = readForm();
   if (p) runSearch(p, false, true);

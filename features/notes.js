@@ -1588,7 +1588,8 @@
   const ALS = [['star', '星空聯盟'], ['oneworld', '寰宇一家'], ['skyteam', '天合聯盟'], ['none', '其他計畫']];
   const L = x => (x ? (LANG === 'en' ? x.en : x.zh) || '' : '');
   const has = k => !!NOTES.programs[k];
-  let open = null, query = '';
+  const open = new Set();   // every program folded open, kept across visits and redraws
+  let query = '';
 
   const ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#3E3A39" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round">' +
     '<path d="M5 3.8h10.5l3.5 3.5V20.2H5z" fill="#FCF1D3"/><path d="M15.5 3.8v3.5H19"/><path d="M8 11h8M8 14.2h8M8 17.4h5"/></g></svg>';
@@ -1607,16 +1608,22 @@
   }
   // the library: programs by alliance, each folded open on tap; a box narrows the list by name
   function draw(body) {
-    const q = query.trim().toLowerCase();
-    const keys = Object.keys(PROGRAMS).filter(has).filter(k => !q || (prog(k).name + ' ' + PROGRAMS[k][1] + ' ' + k).toLowerCase().includes(q));
-    const groups = ALS.map(([al, name]) => [name, keys.filter(k => PROGRAMS[k][2] === al)]).filter(g => g[1].length);
     body.innerHTML =
       '<p class="note0 nt-intro">' + esc(t('每一句都查過計畫官網或 2025 到 2026 年的里程網站，再另找一個來源核對；兩邊對不上的就沒寫進來。規則常改，訂位前請到官網確認。')) +
       (NOTES.as_of ? ' ' + esc(t('查證日期：{0}', NOTES.as_of)) : '') + '</p>' +
-      '<div class="field nt-find"><label for="nt-q">' + esc(t('找計畫')) + '</label><input id="nt-q" value="' + esc(query) + '" placeholder="' + esc(t('例：Aeroplan、長榮')) + '" autocomplete="off" enterkeyhint="search"></div>' +
+      '<div class="field nt-find"><label for="nt-q">' + esc(t('找計畫')) + '</label><input id="nt-q" value="' + esc(query) + '" placeholder="' + esc(t('例：Aeroplan、聯合')) + '" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search"></div>' +
+      '<div class="nt-list"></div>';
+    drawList(body);
+  }
+  // typing redraws only the list: a new box under the finger would end a 注音 or 拼音 word still being picked
+  function drawList(body) {
+    const q = query.trim().toLowerCase();
+    const keys = Object.keys(PROGRAMS).filter(has).filter(k => !q || (prog(k).name + ' ' + PROGRAMS[k][1] + ' ' + k).toLowerCase().includes(q));
+    const groups = ALS.map(([al, name]) => [name, keys.filter(k => PROGRAMS[k][2] === al)]).filter(g => g[1].length);
+    body.querySelector('.nt-list').innerHTML =
       (groups.length ? groups.map(([name, ks]) => '<h3 class="nt-h">' + esc(t(name)) + '</h3>' + ks.map(k => {
         const p = prog(k);
-        return '<details class="acard nt-p" data-k="' + k + '"' + (open === k ? ' open' : '') + '><summary>' + logo(p.code) + '<span class="nt-n">' + esc(p.name) +
+        return '<details class="acard nt-p" data-k="' + k + '"' + (open.has(k) ? ' open' : '') + '><summary>' + logo(p.code) + '<span class="nt-n">' + esc(p.name) +
           '<small>' + esc(PROGRAMS[k][1]) + '</small></span><span class="nt-c" aria-hidden="true">＋</span></summary>' + bodyHtml(k) + '</details>';
       }).join('')).join('') : '<p class="note0">' + esc(t('找不到這個計畫。')) + '</p>');
   }
@@ -1672,7 +1679,7 @@
         "Every sentence comes from the program's own pages or 2025-2026 points sites and was checked against a second source; anything the two did not agree on was left out. Rules change often, so confirm on the program's site before booking.",
       '查證日期：{0}': 'Checked {0}.',
       '找計畫': 'Find a program',
-      '例：Aeroplan、長榮': 'e.g. Aeroplan, EVA',
+      '例：Aeroplan、聯合': 'e.g. Aeroplan, United',
       '星空聯盟': 'Star Alliance',
       '寰宇一家': 'oneworld',
       '天合聯盟': 'SkyTeam',
@@ -1685,21 +1692,22 @@
       '{0} 個計畫': '{0} programs',
     },
     show(m, body) {
-      if (m[1] && has(m[1])) open = m[1];
+      // what is open on screen now (a toggle event may still be on its way when a redraw comes this quickly)
+      for (const d of body.querySelectorAll('.nt-p')) { if (d.open) open.add(d.dataset.k); else open.delete(d.dataset.k); }
+      // ?k= opens that program (and clears an old search that would hide it) only on arriving at the link: a language
+      // switch draws the same hash again and keeps what was opened and typed (route() sets ROUTE_NOW after show())
+      const arrive = m[1] && has(m[1]) && ROUTE_NOW !== m[0];
+      if (arrive) { open.add(m[1]); query = ''; }
       draw(body);
-      if (m[1] && has(m[1])) { const el = body.querySelector('.nt-p[data-k="' + m[1] + '"]'); if (el) setTimeout(() => el.scrollIntoView({ block: 'start' }), 0); }
+      if (arrive) { const el = body.querySelector('.nt-p[data-k="' + m[1] + '"]'); if (el) setTimeout(() => el.scrollIntoView({ block: 'start' }), 0); }
       if (!body.dataset.wired) {
         body.dataset.wired = '1';
         body.addEventListener('input', e => {
           if (e.target.id !== 'nt-q') return;
           query = e.target.value;
-          const at = e.target.selectionStart;
-          draw(body);
-          const q = $('#nt-q');
-          q.focus();
-          try { q.setSelectionRange(at, at); } catch {}
+          drawList(body);
         });
-        body.addEventListener('toggle', e => { const d = e.target.closest && e.target.closest('.nt-p'); if (d) open = d.open ? d.dataset.k : open === d.dataset.k ? null : open; }, true);
+        body.addEventListener('toggle', e => { const d = e.target.closest && e.target.closest('.nt-p'); if (d) { if (d.open) open.add(d.dataset.k); else open.delete(d.dataset.k); } }, true);
       }
     },
     onDetails(art, box) {

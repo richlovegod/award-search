@@ -30,10 +30,12 @@ const LOOKUPS_PER_RUN = 6;            // fresh destination lookups that brought 
 const TRIES_PER_RUN = 9;              // fresh lookups tried per run, failed ones included
 // D1 queries. The free plan allows 50 per invocation, and runHourly calls every module's hourly hook in one
 // invocation: in the 14:05 UTC run release.js sends too (1 clean-up batch of 2, 1 read, 1 update per account: at
-// most 13 with its 10 accounts) and bonuses.js deletes (1), so with this module's 27 the run stays at 41. This module keeps to DB_MAX, counted as it goes: 1 select,
-// up to LOOKUP_Q per fresh lookup (explore.js through lib: budgetCheck reads 2 rows for an invited account and none
-// for the owner, spend and passOn write 1 each; a KV cache hit costs none), and SEND_Q per account (the claim, and
-// giving it back when the mail fails). One account with 6 fresh airports always fits: 1 + 6 x 4 + 2 = 27.
+// most 13 with its 10 accounts), and bonuses.js and push.js delete (1 each), so with this module's 27 the run stays
+// at 42. This module keeps to DB_MAX, counted as it goes: 1 select, up to LOOKUP_Q per fresh lookup (explore.js
+// through lib: budgetCheck makes 2 queries for an invited account (the quota read and the take) and none for the
+// owner; then passOn and spend count 1 each (spend writes nothing after a take), or, when seats.aero cannot be
+// reached, giveBack writes 1 for an invited account; a KV cache hit costs none), and SEND_Q per account (the claim,
+// and giving it back when the mail fails). One account with 6 fresh airports always fits: 1 + 6 x 4 + 2 = 27.
 const LOOKUP_Q = 4;
 const SEND_Q = 2;
 const DB_MAX = 27;
@@ -201,13 +203,14 @@ const mark = (rows, prev) => rows.map(x => {
   const was = prev == null ? null : priceIn(prev, x.to);
   return { ...x, fresh: prev != null && was == null, was: was != null && x.miles < was ? was : null };
 });
-// the lib explore.js gets for one lookup: the same, but it adds the D1 queries of budgetCheck, spend and passOn to
-// q.used as they happen, and notes whether a seats.aero call was spent
+// the lib explore.js gets for one lookup: the same, but it adds the D1 queries of budgetCheck, spend, giveBack and
+// passOn to q.used as they happen, and notes whether a seats.aero call was spent
 function metered(lib, q, note) {
   return {
     ...lib,
     budgetCheck: (env, s, h, cost) => { if (s && s.role !== 'owner') q.used += 2; return lib.budgetCheck(env, s, h, cost); },
     spend: (env, ctx, s, n) => { if (n) { q.used++; note.spent = true; } return lib.spend(env, ctx, s, n); },
+    giveBack: (env, ctx, s) => { if (s && s.held) q.used++; return lib.giveBack(env, ctx, s); },   // writes only when a call was taken
     passOn: (r, env, h, ctx) => { q.used++; return lib.passOn(r, env, h, ctx); },
   };
 }
@@ -405,10 +408,13 @@ export const routes = [
     handler: async ({ env, ctx, s, h, lib }) => {
       if (!(await allowed(env, s))) return lib.json({ error: 'alerts_off' }, 403, h);
       const key = 'rl:digest:' + s.id;
-      if (await lib.tooMany(env, key, TEST_LIMIT)) return lib.json({ error: 'rate' }, 429, h);
+      if (await lib.tooMany(env, key, TEST_LIMIT)) return lib.json({ error: 'rate' }, 429, h);   // over already: nothing written
       const g = await env.DB.prepare('SELECT g.*, u.email, u.role, u.daily_limit, u.mail_verified_at FROM digests g JOIN users u ON u.id = g.user_id WHERE g.user_id = ?').bind(s.id).first();
       if (!g) return lib.json({ error: 'not_found' }, 404, h);
-      await lib.bump(env, key, TEST_LIMIT);
+      // counted before the work, and this attempt's own count decides: tests sent at the same moment all pass the check
+      // above, but bump counts each in one statement. It answers the room left under the limit it is given (never below
+      // 0), so with one more than TEST_LIMIT it is 0 only for an attempt past the limit.
+      if (!(await lib.bump(env, key, [TEST_LIMIT[0] + 1, TEST_LIMIT[1]]))) return lib.json({ error: 'rate' }, 429, h);
       const at = lib.now(), c = await collect(env, ctx, lib, g, new Map(), null);
       const preview = c.sections.map(x => ({ from: x.from, cab: x.cab, count: x.count, top: x.rows.slice(0, 3).map(r => ({ to: r.to, miles: r.miles })) }));
       const answer = extra => lib.json({ failed: c.failed, preview, ...extra }, 200, h);

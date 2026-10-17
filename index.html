@@ -679,7 +679,7 @@ html[lang=en] .brand{font-size:18px}
         <button type="button" class="swap" id="swap" aria-label="交換出發和抵達" title="交換出發和抵達">交換</button>
         <div class="field ap">
           <label for="to">抵達</label>
-          <input id="to" placeholder="例：SEA" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="done">
+          <input id="to" placeholder="例：SEA" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="search">
           <div class="names" id="to-names"></div>
         </div>
         <div class="sugg" id="sugg" hidden></div>
@@ -905,9 +905,11 @@ const EN = {
   "取消": "Cancel",
   "請選日期。": "Pick the dates.",
   "最晚出發不能早於最早出發。": "The latest date can't be before the earliest.",
+  "提醒以 UTC 日期計算，這一天在 UTC 已經過了。最晚日期請選明天或之後。": "Alerts count days in UTC, where this day has already passed. Set the latest date to tomorrow or later.",
   "請輸入最多幾哩，例如 80000。": "Enter the most miles you would pay, e.g. 80000.",
   "提醒建好了，大約每 3 小時檢查一次": "Alert created. It is checked about every 3 hours",
   "提醒建好了。還要驗證 Email 才會寄信，到「我的提醒」完成": "Alert created. Verify your email so it can send: see My alerts",
+  "提醒建好了": "Alert created",
   "暫停中": "Paused",
   "日期已過，不再檢查": "Dates passed, no longer checked",
   "還沒檢查，10 分鐘內會開始": "Not checked yet; starts within 10 minutes",
@@ -963,6 +965,7 @@ const EN = {
   "找不到這個提醒，可能已經刪掉了": "Alert not found. It may have been deleted",
   "這個提醒的日期已經過了": "This alert's dates have passed",
   "已套用提醒的條件：{0}，{1} 哩以下": "Applied the alert's filters: {0}, up to {1} miles",
+  "另有 {0} 筆被你之前設的篩選藏起來，可以到「更多篩選」清除": "{0} more hidden by filters you set earlier. Clear them in More filters",
   "1 週": "1 wk",
   "2 週": "2 wk",
   "3 小時內剛更新過，不用核對": "Updated in the last 3 hours, no need to check",
@@ -980,13 +983,15 @@ const EN = {
   "seats.aero 回傳的資料看不懂，等一下再試。": "Couldn't read the data from seats.aero. Try again in a moment.",
   "seats.aero 找不到這筆，重新搜尋看看": "seats.aero can't find this result. Try searching again.",
   "seats.aero 暫時有問題（HTTP {0}），等一下再試。": "seats.aero is having trouble (HTTP {0}). Try again in a moment.",
-  "seats.aero 正在向航空公司重查，最多等 2 分鐘": "seats.aero is re-checking with the airline. This can take up to 2 minutes.",
+  "seats.aero 正在向航空公司重查，最多等 5 分鐘": "seats.aero is re-checking with the airline. This can take up to 5 minutes.",
   "seats.aero 正在處理這個計畫的問題": "seats.aero is working on a problem with this program",
   "seats.aero 沒有這筆的航班細節。": "No flight details from seats.aero for this one.",
   "seats.aero 的 Pro 訂閱已經過期，續訂之後才查得到。": "The seats.aero Pro subscription has expired. Renew it to search again.",
   "seats.aero 的資料是 {0}的": "seats.aero data was {0}",
   "seats.aero 還在排隊，等一下再按一次看看": "This is still in the seats.aero queue. Wait a moment and tap again.",
+  "seats.aero 還在排隊，這次沒等到結果": "This is still in the seats.aero queue. No result this time.",
   "seats.aero 還在查，等一下再按一次看看": "seats.aero is still checking. Wait a moment and tap again.",
+  "seats.aero 還在查，這次沒等到結果": "seats.aero is still checking. No result this time.",
   "seats.aero 那邊有時候很忙，15 分鐘後可以再試": "seats.aero is sometimes busy. Try again in 15 minutes.",
   "seats.aero 預設會藏起來": "seats.aero hides these by default",
   "{0} <b>{1}</b> 筆，<b>{2}</b> 天有位": "{0}: <b>{1}</b> results, <b>{2}</b> days with seats",
@@ -1031,6 +1036,7 @@ const EN = {
   "✈️ {0} 邀請你一起用「吉諾機票研究所」！": "✈️ {0} invites you to join Gino’s Ticket Lab!",
   "、": ", ",
   "。": ". ",
+  "一次最多 {0} 個機場（現在有 {1} 個），請少選幾個。": "Up to {0} airports at a time (you have {1}). Please pick fewer.",
   "一般帳號": "Member",
   "上午": "Morning",
   "上次看 {0}": "Last viewed {0}",
@@ -1196,6 +1202,7 @@ const EN = {
   "新帳號要有邀請碼才能註冊。每個碼只能用一次，{0} 天後失效。": "New accounts need an invite code to sign up. Each code works once and expires after {0} days.",
   "日期範圍最多 3 個月，請縮短一點。": "The date range can be 3 months at most. Please shorten it.",
   "日本": "Japan",
+  "晚一點再搜尋一次看看": "Try searching again later.",
   "晚上": "Evening",
   "更多篩選": "More filters",
   "更新": "updated",
@@ -1220,6 +1227,7 @@ const EN = {
   "查不到": "Search failed",
   "查不到：{0}": "Search failed: {0}",
   "核對中…": "Checking…",
+  "核對好了，但已經換了別的搜尋": "Checked, but you've moved on to another search.",
   "核對好了，但重新讀取失敗：{0}": "Checked, but reloading failed: {0}",
   "機票研究所": "Ticket Lab",
   "歡迎回來": "Welcome back",
@@ -1271,9 +1279,11 @@ const EN = {
   "管理": "Admin",
   "管理員": "Owner",
   "結束示範": "End demo",
+  "結果不完整，讀到一半就停了：{0}": "Results are incomplete: loading stopped partway. {0}",
   "結果太多，只拿到前 5,000 筆，請縮短日期。": "Too many results: only the first 5,000 were loaded. Try a shorter date range",
   "經 {0}": "via {0}",
   "總飛行時間": "Total flight time",
+  "繼續核對": "Keep checking",
   "美國": "United States",
   "至少 10 個字。可以直接用 iPhone 建議的強密碼。": "At least 10 characters. You can just use the strong password your iPhone suggests.",
   "至少一半航程在這個艙等": "At least half the trip in this cabin",
@@ -1294,7 +1304,7 @@ const EN = {
   "註冊：{0}": "Signed up: {0}",
   "試試附近的機場（例如 TPE 加上 TSA），或換個日期。": "Try nearby airports too (for example, TPE plus TSA) or other dates.",
   "語言": "Language",
-  "請 seats.aero 馬上向航空公司重查一次，約用 2 次額度": "Asks seats.aero to re-check with the airline now. Uses about 2 calls of your daily quota.",
+  "請 seats.aero 馬上向航空公司重查一次，最多用 3 次額度": "Asks seats.aero to re-check with the airline now. Uses up to 3 calls of your daily quota.",
   "請管理員到「管理」頁幫你產生重設連結，連結 30 分鐘內有效。": "Ask the owner to create a reset link for you on the Admin page. The link works for 30 minutes.",
   "請輸入 0 到 1000 的整數，或留空": "Enter a whole number from 0 to 1000, or leave it blank",
   "請輸入 Email 和密碼。": "Enter your email and password.",
@@ -1636,7 +1646,7 @@ const S = {
     disp: 'USD' }, load('award-prefs', {})),   // disp: the currency money is shown in (USD or TWD)
   search: null, legs: null, leg: 0,   // the whole search (one or two legs) and which leg is on screen
   saved: [], seen: null, seenAt: 0,   // 收藏, and what the matching one held at the last look
-  verified: {},                       // 即時核對 results by availability ID, for this search
+  verified: {},                       // 即時核對 results by availability ID + cabin, for this search
   params: null, rows: null, truncated: false, fetchedAt: 0, demo: false, day: null, shown: 60,
   trips: new Map(),
 };
@@ -1849,20 +1859,31 @@ let ME = null;        // { email, role } of the signed-in account
 let MODE = 'in';      // 'in' = 登入, 'up' = 註冊
 let RESET_TOKEN = '';
 // "記住我" keeps the session token in localStorage (survives closing Safari); otherwise sessionStorage.
-const getToken = () => localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY) || '';
+// Each tab reads it once and sends only that one: the tab's ME, 提醒 and wallet belong to that account, so a
+// sign-in in another tab must not turn its requests into the new account's.
+let TOKEN = sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY) || '';
+const getToken = () => TOKEN;
 function setToken(t, remember) {
+  // one sign-in per browser: the ones this replaces (this tab's, and the one the browser remembers) end on the
+  // server too, instead of staying live for 30 days under 登入中的裝置 (each sent with its own header)
+  for (const old of new Set([TOKEN, localStorage.getItem(TOKEN_KEY), sessionStorage.getItem(TOKEN_KEY)]))
+    if (old && old !== t) fetch(RELAY + '/auth/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + old } }).catch(() => {});
   clearToken();
+  localStorage.removeItem(TOKEN_KEY);   // the remembered one goes even when another tab signed it in
+  forgetAccount();
+  TOKEN = t;
   (remember ? localStorage : sessionStorage).setItem(TOKEN_KEY, t);
 }
 function clearToken() {
-  localStorage.removeItem(TOKEN_KEY);
+  if (localStorage.getItem(TOKEN_KEY) === TOKEN) localStorage.removeItem(TOKEN_KEY);   // (not a newer sign-in from another tab)
   sessionStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem('award-token');   // the old single-password token
+  TOKEN = '';
 }
 // A JSON request to the Worker. Throws ApiError carrying the Chinese message for its error code.
 async function call(method, path, body) {
-  const headers = { 'Content-Type': 'application/json' };
-  if (getToken()) headers.Authorization = 'Bearer ' + getToken();
+  const headers = { 'Content-Type': 'application/json' }, sent = getToken();
+  if (sent) headers.Authorization = 'Bearer ' + sent;
   let r;
   try {
     r = await fetch(RELAY + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
@@ -1870,10 +1891,11 @@ async function call(method, path, body) {
     throw new ApiError('network', t('連不上伺服器，請檢查網路。'));
   }
   const b = await r.json().catch(() => ({}));
-  if (r.ok) return b;
+  if (r.ok) { if (!ME) recheckMe(); return b; }   // (the network answers again after an offline start: see recheckMe)
   let msg = ERR[b.error] ? t(ERR[b.error]) : t('出了點問題（HTTP {0}）。', r.status);
   if (b.error === 'login' && b.left > 0 && b.left < 5) msg += t('再錯 {0} 次，這個帳號會鎖 15 分鐘。', b.left);
-  if (b.error === 'auth' && !path.startsWith('/auth/')) logout(t(ERR.auth), false);
+  // (only while the tab is still on the token this request carried: a sign-in since then must not be signed out)
+  if (b.error === 'auth' && !path.startsWith('/auth/') && sent && sent === getToken()) logout(t(ERR.auth), false);
   throw new ApiError(b.error || 'http', msg);
 }
 function shakeIt(el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
@@ -1902,7 +1924,15 @@ $('#tab-in').addEventListener('click', () => setMode('in'));
 $('#tab-up').addEventListener('click', () => setMode('up'));
 $('#forgot').addEventListener('click', () => { $('#forgot-t').hidden = !$('#forgot-t').hidden; });
 $('#af').addEventListener('input', () => { $('#lerr').textContent = ''; });   // an old error goes away once you start fixing it
-$('#rf').addEventListener('input', () => { $('#rerr').textContent = ''; });
+$('#rf').addEventListener('input', () => { if (!$('#rgo').disabled) $('#rerr').textContent = ''; });   // (a dead link's message stays: its button is off)
+// the keyboard's 下一個 (enterkeyhint="next") goes on to the next box. On its own, Enter submits the form: 出發
+// would run a search with the old 抵達, and Email would 登入 with no password. (The Enter that confirms 注音 or 拼音
+// is left alone.)
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || e.defaultPrevented || e.isComposing || e.keyCode === 229) return;
+  const id = e.target.id, next = id === 'em' ? 'pw' : id === 'from' ? 'to' : /^m\do$/.test(id) ? id.slice(0, 2) + 'd' : '';
+  if (next) { e.preventDefault(); $('#' + next).focus(); }
+});
 document.addEventListener('click', e => {   // 顯示 / 隱藏 on any password field
   const b = e.target.closest('.eye');
   if (!b) return;
@@ -1929,11 +1959,26 @@ function showLogin(msg) {
   setTimeout(() => ($('#em').value ? $('#pw') : $('#em')).focus(), 50);
 }
 function logout(msg, remote = true) {
-  if (remote && getToken()) call('POST', '/auth/logout').catch(() => {});   // the header is read before the token is cleared
+  // modules hear of it once the Worker has answered, through onSignOut({ ended }): ended is false when it could not
+  // be told (offline, a 5xx), so that sign-in stays live there until it expires, with its pushes to this device
+  // (nothing is said once another sign-in has started on this tab)
+  const told = remote && getToken() ? call('POST', '/auth/logout').then(() => true, err => err.kind === 'auth') : Promise.resolve(true);   // the header is read before the token is cleared
+  told.then(ended => { if (!getToken()) featureHook('onSignOut', { ended }); });
   clearToken();
   ME = null;
+  forgetAccount();
   showLogin(msg);
 }
+// what the page still holds for the account that signed out (setToken() runs it too), so the next account on this
+// tab does not see it while its own loads
+function forgetAccount() {
+  ALERTS = null; ALERTS_SEQ++; $('#alerts-body').innerHTML = '';   // 我的提醒, with the modules' cards on it (an answer on its way is dropped)
+  MEQ = null; clearTimeout(meqTimer);   // its own usage meter
+  S.saved = []; renderSaved(); renderSaveBtn();   // 我的收藏
+}
+// a sign-out or a new sign-in in another tab ends the session this tab shares with it (both end it on the server):
+// start again from what the browser holds now (the new sign-in, or the sign-in card), not at this tab's next request
+addEventListener('storage', e => { if (e.key === TOKEN_KEY && TOKEN && e.oldValue === TOKEN && !$('#app').hidden) location.reload(); });
 $('#af').addEventListener('submit', async e => {
   e.preventDefault();
   const email = $('#em').value.trim(), password = $('#pw').value, remember = $('#rem').checked;
@@ -2013,16 +2058,25 @@ $('#rf').addEventListener('submit', async e => {
     $('#rgo').disabled = false;
   }
 });
-$('#rback').addEventListener('click', () => { clearHash(); if (getToken()) showApp(); else showLogin(''); });
+// a page opened on a reset link never read the session this browser keeps, so 回到登入 checks it first, as at start
+// (the button waits for the answer: a second tap would open the app twice)
+$('#rback').addEventListener('click', () => {
+  clearHash();
+  if (!getToken()) return showLogin('');
+  if (ME) return showApp();   // (the link came to a tab that had the app open)
+  $('#rback').disabled = true;
+  resumeSession().finally(() => { $('#rback').disabled = false; });
+});
 
 /* ---------- feature modules (features/*.js) ---------- */
 // Newer features live in their own files and register here, so each can be built and tested on its own:
 //   addFeature({ id, title: '探索' (Chinese; give its English in en), route: '#/explore' or a RegExp on the hash,
 //     back: '#/' (the back link's target; false for none), nav: { tab, order } (where the navigation lists it),
 //     css: '...', en: { 中文: 'English' }, show(match, body) draws the page into body, and any of the hooks
-//     onLang(), onAuth(), onRender({ offers }), onDetails(art, box), onAccountPage(el, me), onAlertsPage(el, state),
-//     onAdminPage(el, users), onFilters(el) (controls in 更多篩選), filter(x) (false hides the award; x = { r, src,
-//     miles, direct, cab, seats, taxes, cur, date }) })
+//     onLang(), onAuth(), onSignOut({ ended }) (after a sign-out, once the Worker answered; ended is false when it
+//     could not be told, so that sign-in stays live there), onRender({ offers }), onDetails(art, box),
+//     onAccountPage(el, me), onAlertsPage(el, state), onAdminPage(el, users), onFilters(el) (controls in 更多篩選),
+//     filter(x) (false hides the award; x = { r, src, miles, direct, cab, seats, taxes, cur, date }) })
 // A feature page is <section id="view-<id>" class="page">; its static text is Chinese and translateStatic()
 // switches it, like the rest of the page.
 const FEATURES = [];
@@ -2145,7 +2199,7 @@ function route() {
   markTab(fh ? (fh[0].nav && fh[0].nav.tab) || 'flights' : page === 'account' || page === 'admin' ? 'me' : page === 'alerts' ? 'alerts' : 'flights');
   const title = fh ? fh[0].title : { account: '我的', alerts: '我的提醒', admin: '管理' }[page];
   document.title = (title ? t(title) + (LANG === 'en' ? ' | ' : '｜') : '') + t('吉諾機票研究所');
-  const key = page === 'search' ? '#/' : h;
+  const key = page === 'search' ? '#/' : location.hash;   // read after show(), which may rewrite it (12 個月 fills in a short #/year)
   if (ROUTE_NOW !== key) {
     if (ROUTE_NOW) SCROLL_AT[ROUTE_NOW] = y0;   // read before the views changed (a shorter page clamps scrollY)
     ROUTE_NOW = key;
@@ -2189,7 +2243,7 @@ async function loadAccount() {
   box.innerHTML = '<div class="skel"></div>';
   let m;
   try { m = await call('GET', '/me'); } catch (err) { box.innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; return; }
-  ME = { email: m.email, role: m.role };
+  meKnown(m);   // (maybe the first answer since an offline start)
   const devices = m.sessions.map(x => '<div class="rowi"><div class="main"><b>' + esc(x.device || t('不明的裝置')) + '</b><small>' +
       (x.country ? '<span>' + esc(t(COUNTRY[x.country] || x.country)) + '</span>' : '') + '<span>' + t('最後使用：{0}', since(x.last_seen_at)) + '</span><span>' + t('登入：{0}', fmtDay(x.created_at)) + '</span></small></div>' +
       '<div class="acts">' + (x.id === m.current ? '<span class="tag me">' + t('這台') + '</span>' : '<button type="button" class="btn ghost" data-sess="' + esc(x.id) + '">' + t('登出') + '</button>') + '</div></div>').join('');
@@ -2250,10 +2304,8 @@ $('#acct-body').addEventListener('submit', async e => {
     if (!confirm(t('確定要永久刪除這個帳號嗎？'))) return;
     try {
       await call('DELETE', '/me', { password });
-      clearToken();
-      ME = null;
       location.hash = '';
-      showLogin(t('帳號已刪除。'));
+      logout(t('帳號已刪除。'), false);   // (the Worker already ended every session of the account)
     } catch (err) { setMsg('del-msg', err.message); }
   }
 });
@@ -2388,7 +2440,10 @@ const ALERT_ERR = {
   rate: '驗證信一小時最多寄 3 次，請晚一點再試。',
 };
 const alertErr = err => (ALERT_ERR[err.kind] ? t(ALERT_ERR[err.kind], ALERTS ? ALERTS.max : 10) : err.message);
-const alertsState = async () => (ALERTS = await call('GET', '/me/alerts'));
+// only the newest request's answer is kept: one sent before a 刪除 or 暫停 that comes back after it would put the old
+// list back (forgetAccount() moves ALERTS_SEQ on too, so an answer for the account that signed out is dropped)
+let ALERTS_SEQ = 0;
+const alertsState = async () => { const n = ++ALERTS_SEQ; const r = await call('GET', '/me/alerts'); if (n === ALERTS_SEQ) ALERTS = r; return ALERTS; };
 const cabName = k => (CABINS.find(c => c.k === k) || { name: k }).name;
 const dayW = iso => t('{0}（{1}）', md(iso), WD[parseDate(iso).getDay()]);
 function renderAlertBtn() {
@@ -2397,12 +2452,15 @@ function renderAlertBtn() {
 $('#alert-btn').addEventListener('click', () => {
   if ($('#alert-form').hidden) openAlertForm(); else $('#alert-form').hidden = true;
 });
+let ALERT_LEG = null;   // the leg the open form was filled from (a search started since may have replaced S.legs)
 // the form, filled from the search on screen: its direction and dates, the cabin, the programs left ticked, the
 // cheapest award now as the ceiling (or the 最多里程 filter), nonstop and seats from the filters
 // after a 來回 search it can watch both directions together (rt, the default) or only the direction on screen
 function openAlertForm(rtMode) {
   const two = !!(S.search && S.search.rt) && S.legs.length > 1 && !!S.legs[1].rows, rt = two && rtMode !== false;
-  const L = rt ? S.legs[0] : (S.legs[S.leg] || S.legs[0]), f = filt(), today = isoDate(new Date());
+  const L = rt ? S.legs[0] : (S.legs[S.leg] || S.legs[0]), f = filt(), today = isoDate(new Date()), utc = new Date().toISOString().slice(0, 10);
+  const eMin = utc > today ? utc : today;   // a last day must not be over in UTC either: the Worker counts alert days in UTC
+  ALERT_LEG = L;
   let max = '';
   if (rt) { const c = combos().list; max = c.length ? c[0].total : ''; }
   else { const low = Math.min(...offersOf(S.rows || [], S.prefs.cabin, f).map(o => o.miles)); max = f.maxMiles || (isFinite(low) ? low : ''); }
@@ -2416,9 +2474,9 @@ function openAlertForm(rtMode) {
     (two ? seg('af-mode', t('提醒方式'), [['rt', t('來回都要有位子'), rt], ['ow', S.leg ? t('只看回程') : t('只看去程'), !rt]]) : '') +
     '<p class="note0">' + route + (two && !rt ? '　' + (L.p.back ? t('回程') : t('去程')) : '') + '</p>' +
     '<div class="af2"><div class="field"><label for="af-s">' + (rt ? t('去程最早') : t('最早日期')) + '</label><input type="date" id="af-s" value="' + L.p.s + '" min="' + today + '"></div>' +
-    '<div class="field"><label for="af-e">' + (rt ? t('去程最晚') : t('最晚日期')) + '</label><input type="date" id="af-e" value="' + L.p.e + '" min="' + today + '"></div></div>' +
+    '<div class="field"><label for="af-e">' + (rt ? t('去程最晚') : t('最晚日期')) + '</label><input type="date" id="af-e" value="' + L.p.e + '" min="' + eMin + '"></div></div>' +
     (rt ? '<div class="af2"><div class="field"><label for="af-rs">' + t('回程最早') + '</label><input type="date" id="af-rs" value="' + R.s + '" min="' + today + '"></div>' +
-      '<div class="field"><label for="af-re">' + t('回程最晚') + '</label><input type="date" id="af-re" value="' + R.e + '" min="' + today + '"></div></div>' : '') +
+      '<div class="field"><label for="af-re">' + t('回程最晚') + '</label><input type="date" id="af-re" value="' + R.e + '" min="' + eMin + '"></div></div>' : '') +
     seg('af-cab', t('艙等'), CABINS.map(c => [c.k, c.name, c.k === S.prefs.cabin])) +
     '<div class="field"><label for="af-max">' + (rt ? t('來回合計最多幾哩') : t('最多幾哩')) + '</label><input id="af-max" inputmode="numeric" autocomplete="off" enterkeyhint="done" value="' + max + '" placeholder="' + t('例：80000') + '"></div>' +
     (f.off.size ? '<p class="lblx">' + t('要檢查的計畫') + '</p>' + seg('af-src', t('要檢查的計畫'), [['kept', t('目前勾選的 {0} 個', kept.length), true], ['all', t('所有計畫'), false]])
@@ -2442,13 +2500,16 @@ $('#alert-form').addEventListener('click', e => {
 });
 $('#alert-form').addEventListener('submit', async e => {
   e.preventDefault();
-  const today = isoDate(new Date()), e2 = $('#af-e').value;
+  const today = isoDate(new Date()), utc = new Date().toISOString().slice(0, 10), e2 = $('#af-e').value;
   let s1 = $('#af-s').value;
   const max = parseInt($('#af-max').value.replace(/[^\d]/g, ''), 10);
   const msg = x => setMsg('af-msg', x);
   if (!s1 || !e2) return msg(t('請選日期。'));
   if (e2 < s1) return msg(t('最晚出發不能早於最早出發。'));
   if (e2 < today) return msg(t('這些日期已經過了。'));
+  // west of UTC in the evening, the local today is already over in UTC, where the Worker counts alert days (a start
+  // can stay local: the Worker searches from its own date at the earliest)
+  if (e2 < utc) return msg(t('提醒以 UTC 日期計算，這一天在 UTC 已經過了。最晚日期請選明天或之後。'));
   if (s1 < today) s1 = today;
   if (daysBetween(s1, e2) > MAX_DAYS) return msg(t('日期範圍最多 3 個月，請縮短一點。'));
   const rt = !!$('#af-rs');
@@ -2459,26 +2520,30 @@ $('#alert-form').addEventListener('submit', async e => {
     if (!rs || !re) return msg(t('請選回程日期。'));
     if (re < rs) return msg(t('回程最晚不能早於回程最早。'));
     if (re < today) return msg(t('這些日期已經過了。'));
+    if (re < utc) return msg(t('提醒以 UTC 日期計算，這一天在 UTC 已經過了。最晚日期請選明天或之後。'));
+    if (re < s1) return msg(t('回程不能早於去程。'));   // (moving its start up to the outbound's, below, would put it past its end)
     if (rs < s1) rs = s1;
     if (daysBetween(rs, re) > MAX_DAYS) return msg(t('日期範圍最多 3 個月，請縮短一點。'));
   }
   const src = $('#af-src [aria-checked=true]'), off = new Set(S.prefs.off);
-  const L = rt ? S.legs[0] : (S.legs[S.leg] || S.legs[0]);
+  const L = ALERT_LEG;   // the route the form shows, not a search started since
   const body = {
     o: L.p.o, d: L.p.d, s: s1, e: e2, cabin: $('#af-cab [aria-checked=true]').dataset.v, max_miles: max, ...(rt ? { rs, re } : {}),
     sources: src && src.dataset.v === 'kept' ? Object.keys(PROGRAMS).filter(k => !off.has(k)) : null,
     direct: $('#af-direct').checked, seats: +$('#af-seats').value, label: $('#af-label').value.trim(), lang: LANG,
+    mixed: !!L.p.mixed, dyn: !!L.p.dyn,   // the options of the search on screen (S.prefs may have been switched since)
   };
   const go = e.target.querySelector('[type=submit]');
   go.disabled = true;
-  try {
-    await call('POST', '/me/alerts', body);
-    $('#alert-form').hidden = true;
-    const st = await alertsState();
-    if (st.mail.state === 'verified') toast(t('提醒建好了，大約每 3 小時檢查一次'));
-    else { toast(t('提醒建好了。還要驗證 Email 才會寄信，到「我的提醒」完成')); location.hash = '#/alerts'; }
-  } catch (err) { msg(alertErr(err)); }
+  try { await call('POST', '/me/alerts', body); }
+  catch (err) { msg(alertErr(err)); return; }
   finally { go.disabled = false; }
+  $('#alert-form').hidden = true;
+  // the alert exists now, even when reading the list again fails: the last list read tells the Email's state, and
+  // with none, 我的提醒 reads it again (and lists the new alert, or says why it can't)
+  const st = await alertsState().catch(() => ALERTS);
+  if (st && st.mail.state === 'verified') toast(t('提醒建好了，大約每 3 小時檢查一次'));
+  else { toast(st ? t('提醒建好了。還要驗證 Email 才會寄信，到「我的提醒」完成') : t('提醒建好了')); location.hash = '#/alerts'; }
 });
 
 // what the last check of an alert says
@@ -2496,7 +2561,8 @@ function alertState(a) {
 function alertRow(a) {
   const route = n(esc(a.o.split(',').join('/')) + (a.rs ? ' ⇄ ' : ' → ') + esc(a.d.split(',').join('/')));
   const bits = [a.label ? route : '', a.rs ? t('去 {0} 到 {1}', md(a.s), md(a.e)) : t('{0} 到 {1}', md(a.s), md(a.e)), a.rs ? t('回 {0} 到 {1}', md(a.rs), md(a.re)) : '', esc(cabName(a.cabin)),
-    a.rs ? t('來回合計 {0} 哩以下', fmtMiles(a.max_miles)) : t('{0} 哩以下', fmtMiles(a.max_miles)), a.sources ? t('{0} 個計畫', a.sources.length) : t('所有計畫'), a.direct ? t('只要直飛') : '', a.seats > 1 ? t('至少 {0} 位', a.seats) : ''];
+    a.rs ? t('來回合計 {0} 哩以下', fmtMiles(a.max_miles)) : t('{0} 哩以下', fmtMiles(a.max_miles)), a.sources ? t('{0} 個計畫', a.sources.length) : t('所有計畫'), a.direct ? t('只要直飛') : '', a.seats > 1 ? t('至少 {0} 位', a.seats) : '',
+    a.mixed ? t('包含混艙') : '', a.dyn ? t('包含動態高價位子') : ''];
   const tag = a.status === 'paused' ? '<span class="tag pause">' + t('暫停中') + '</span>' : a.status === 'ended' ? '<span class="tag off">' + t('已結束') + '</span>' : '';
   const sent = a.sent_count ? t('已寄 {0} 封，最近一次 {1}', a.sent_count, whenShort(a.sent_at)) : t('還沒寄過信');
   const live = a.status !== 'ended';
@@ -2541,7 +2607,7 @@ async function loadAlerts() {
   const box = $('#alerts-body');
   if (!ALERTS) box.innerHTML = '<div class="skel"></div>';
   try { await alertsState(); } catch (err) { box.innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; return; }
-  renderAlerts();
+  if (ALERTS) renderAlerts();   // (null: signed out meanwhile)
 }
 // 立即檢查's answer, under its alert
 function runHtml(r) {
@@ -2557,15 +2623,20 @@ $('#alerts-body').addEventListener('click', async e => {
   const b = e.target.closest('button');
   if (!b) return;
   const mail = b.id === 'mail-send' || b.id === 'mail-check';
+  // (ALERTS is null after a sign-out while the answer was on its way: forgetAccount() cleared 我的提醒)
   try {
     if (b.id === 'mail-send') {
       b.disabled = true;
-      ALERTS.mail = await call('POST', '/me/mail');
+      const m = await call('POST', '/me/mail');
+      if (!ALERTS) return;
+      ALERTS.mail = m;
       renderAlerts();
       setMsg('mail-msg', ALERTS.mail.state === 'verified' ? t('這個 Email 已經驗證過了') : t('驗證信寄出了，去信箱找 Cloudflare 的信'), true);
     } else if (b.id === 'mail-check') {
       b.disabled = true;
-      ALERTS.mail = await call('GET', '/me/mail');
+      const m = await call('GET', '/me/mail');
+      if (!ALERTS) return;
+      ALERTS.mail = m;
       renderAlerts();
       const ok = ALERTS.mail.state === 'verified';
       setMsg('mail-msg', ok ? t('驗證好了！之後的提醒會寄到這裡') : t('Cloudflare 說還沒點，請再看一下信箱（也看看垃圾郵件匣）'), ok);
@@ -2574,6 +2645,7 @@ $('#alerts-body').addEventListener('click', async e => {
       b.textContent = t('檢查中…');
       const r = await call('POST', '/me/alerts/' + b.dataset.arun + '/run');
       await alertsState();
+      if (!ALERTS) return;
       renderAlerts();
       $('#arun-' + b.dataset.arun).innerHTML = runHtml(r);
       loadQuota();
@@ -2588,6 +2660,7 @@ $('#alerts-body').addEventListener('click', async e => {
       loadAlerts();
     } else if (b.dataset.agoto) openAlertSearch(+b.dataset.agoto);
   } catch (err) {
+    if (mail && !ALERTS) return;   // (its card is gone with the account: no toast over the sign-in card)
     b.disabled = false;
     if (b.dataset.arun) b.textContent = t('立即檢查');
     if (mail && $('#mail-msg')) setMsg('mail-msg', alertErr(err)); else toast(alertErr(err));
@@ -2596,33 +2669,45 @@ $('#alerts-body').addEventListener('click', async e => {
 // 看結果, or a link in an alert email: search the alert with its cabin, nonstop, programs and ceiling applied
 async function openAlertSearch(id) {
   try { if (!ALERTS || !ALERTS.alerts.some(x => x.id === id)) await alertsState(); } catch (err) { toast(err.message); return; }
+  if (!ALERTS) return;
   const a = ALERTS.alerts.find(x => x.id === id), today = isoDate(new Date());
-  history.replaceState(null, '', location.pathname + location.search + (a && a.e < today ? '#/alerts' : '#/'));
+  // over: ended by the Worker, or out of days (a round trip once its last return day has come, outbound days or not)
+  const over = a && (a.status === 'ended' || a.e < today || (a.re && a.re <= today));
+  history.replaceState(null, '', location.pathname + location.search + (over ? '#/alerts' : '#/'));
   route();
   if (!a) { toast(t('找不到這個提醒，可能已經刪掉了')); return; }
-  if (a.e < today) { toast(t('這個提醒的日期已經過了')); return; }
+  if (over) { toast(t('這個提醒的日期已經過了')); return; }
   Object.assign(S.prefs, { cabin: a.cabin, direct: a.direct, maxMiles: a.rs ? 0 : a.max_miles, pax: a.seats > 1 ? Math.min(a.seats, 6) : 1,
-    off: a.sources ? Object.keys(PROGRAMS).filter(k => !a.sources.includes(k)) : [] });
+    off: a.sources ? Object.keys(PROGRAMS).filter(k => !a.sources.includes(k)) : [], mixed: !!a.mixed, dyn: !!a.dyn });
   savePrefs();
   $('#direct').checked = S.prefs.direct;
+  $('#opt-mixed').checked = S.prefs.mixed; $('#opt-dyn').checked = S.prefs.dyn;
   $('#maxmi').value = S.prefs.maxMiles || '';
   renderProgramList();
+  renderAlliances();   // the boxes, the alliance chips and the 更多篩選 summary follow the alert's programs
   fillForm({ o: a.o, d: a.d, s: a.s < today ? today : a.s, e: a.e, ...(a.rs ? { rt: { s: a.rs < today ? today : a.rs, e: a.re } } : {}) });
   const p = readForm();
   if (!p) return;
   toast(a.rs ? t('已套用提醒的條件：{0}，來回合計 {1} 哩以下', cabName(a.cabin), fmtMiles(a.max_miles)) : t('已套用提醒的條件：{0}，{1} 哩以下', cabName(a.cabin), fmtMiles(a.max_miles)));
   await runSearch(p, false, true);
   if (a.rs && S.search === p) { S.combosOpen = true; renderLegs(); }
+  // filters the alert doesn't have (航班條件, 航空公司, 稅金上限) stay as the user left them, but its email listed awards
+  // without them: say how many they hide
+  if (S.search !== p) return;
+  const f = filt(), bare = Object.assign({}, f, { carriers: new Set(), wd: new Set(), dep: new Set(), arr: new Set(), maxStops: 9, maxHours: 0, noVia: new Set(), myBanks: new Set(), aircraft: new Set(), maxTax: 0 });
+  const hid = S.legs.reduce((k, L) => k + (L.rows ? offersOf(L.rows, S.prefs.cabin, bare).length - offersOf(L.rows, S.prefs.cabin, f).length : 0), 0);
+  if (hid > 0) toast(t('另有 {0} 筆被你之前設的篩選藏起來，可以到「更多篩選」清除', hid));
 }
 
 /* ---------- API ---------- */
 class ApiError extends Error { constructor(kind, msg) { super(msg); this.kind = kind; } }
 // GET a relay path, or POST `payload` as JSON (only /refresh does)
 async function api(path, payload) {
+  const sent = getToken();
   let r;
   try {
-    r = await fetch(RELAY + path, payload === undefined ? { headers: { Authorization: 'Bearer ' + getToken() } }
-      : { method: 'POST', headers: { Authorization: 'Bearer ' + getToken(), 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    r = await fetch(RELAY + path, payload === undefined ? { headers: { Authorization: 'Bearer ' + sent } }
+      : { method: 'POST', headers: { Authorization: 'Bearer ' + sent, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
   } catch {
     throw new ApiError('network', t('連不上中繼站，請檢查網路後再試一次。'));
   }
@@ -2633,10 +2718,11 @@ async function api(path, payload) {
   let body = null;
   try { body = JSON.parse(text); } catch {}
   if (r.ok) {
+    if (!ME) recheckMe();   // (as in call())
     if (!body) throw new ApiError('bad', t('seats.aero 回傳的資料看不懂，等一下再試。'));
     return body;
   }
-  if (body && body.error === 'auth') { logout(t(ERR.auth), false); throw new ApiError('auth', t(ERR.auth)); }
+  if (body && body.error === 'auth') { if (sent && sent === getToken()) logout(t(ERR.auth), false); throw new ApiError('auth', t(ERR.auth)); }   // (as in call())
   if (body && body.error === 'param') throw new ApiError('param', t('搜尋條件的格式不對。'));
   // the account's own daily budget, or the reserve kept for the owner (see the Worker's budgetCheck)
   if (body && body.error === 'user_quota') throw new ApiError('quota', t('你今天的 {0} 次額度用完了，{1}重置。', body.limit, resetText()));
@@ -2711,23 +2797,57 @@ function cacheGet(k) {
   if (v && Date.now() - v.t < CACHE_MIN * 60000) { MEM.set(k, v); return v; }
   return null;
 }
+// sessionStorage holds about 5 MB and a month of TPE-SEA is about 2.5 MB, so a new entry first clears out expired ones,
+// then, while it still doesn't fit, the oldest ones that are not part of the search on screen. Each entry starts
+// {"t":<ms>, so its age is read without parsing megabytes of rows.
+// cacheSweep() clears out the expired ones (from memory too) and returns the others, oldest first, as [key, t]. It also
+// runs once each entry has expired, and at startup, so dead results don't keep the room the 飯店 results need.
+function cacheSweep() {
+  const now = Date.now(), live = at => now - at < CACHE_MIN * 60000, kept = [];
+  for (const [x, c] of MEM) if (!live(c.t)) MEM.delete(x);
+  try {
+    const old = [];
+    for (let i = 0; i < sessionStorage.length; i++) { const x = sessionStorage.key(i); if (x && x.startsWith('award-c:')) old.push(x); }
+    for (const x of old) {
+      const at = +(/^\{"t":(\d+)/.exec(sessionStorage.getItem(x)) || [])[1] || 0;
+      if (live(at)) kept.push([x, at]); else sessionStorage.removeItem(x);
+    }
+  } catch { /* no sessionStorage */ }
+  return kept.sort((a, b) => a[1] - b[1]);
+}
 function cacheSet(k, v) {
+  const kept = cacheSweep();
   MEM.set(k, v);
-  try { sessionStorage.setItem(k, JSON.stringify(v)); } catch { /* too big for sessionStorage; memory still has it */ }
+  setTimeout(cacheSweep, CACHE_MIN * 60000 + 1000);   // (once this one has expired)
+  try {
+    const text = JSON.stringify(v), shown = new Set((S.legs || []).map(L => cacheKey(L.p))), spare = kept.filter(([x]) => x !== k && !shown.has(x));
+    for (;;) {
+      try { sessionStorage.setItem(k, text); return; } catch {
+        if (!spare.length || text.length > 5242880) return;   // nothing left to clear, or too big even alone: memory still has it
+        sessionStorage.removeItem(spare.shift()[0]);
+      }
+    }
+  } catch { /* no sessionStorage; memory still has it */ }
 }
 
 /* ---------- airports ---------- */
 function resolve(text) {
-  const tokens = text.toUpperCase().split(/[\s,，、/]+/).filter(Boolean);
+  const bare = s => s.replace(/（.*?）/g, '');
+  const named = tok => PLACES.find(p => p.zh === tok || bare(p.zh) === tok || p.en.toUpperCase() === tok);
+  // places are split by commas, 、 or /; a name of several words (NEW YORK) counts whole before its words do
+  const tokens = text.toUpperCase().split(/[,，、/]+/).map(s => s.trim().replace(/\s+/g, ' ')).filter(Boolean)
+    .flatMap(s => (s.includes(' ') && named(s) ? [s] : s.split(' ')));
   const codes = [];
   for (const tok of tokens) {
     if (/^[A-Z]{3}$/.test(tok)) { codes.push(tok); continue; }
-    const bare = s => s.replace(/（.*?）/g, '');
-    const hit = PLACES.find(p => p.zh === tok || bare(p.zh) === tok || p.en.toUpperCase() === tok);
+    const hit = named(tok);
     if (hit) { codes.push(...hit.codes); continue; }
     return { codes: [], err: t('看不懂「{0}」，請輸入三碼機場代號，例如 TPE。', tok) };
   }
-  return { codes: [...new Set(codes)].slice(0, 10) };
+  // the box keeps every airport picked, so past 10 the search is refused rather than cut short without a word
+  const all = [...new Set(codes)];
+  if (all.length > 10) return { codes: [], err: t('一次最多 {0} 個機場（現在有 {1} 個），請少選幾個。', 10, all.length) };
+  return { codes: all };
 }
 function showNames(input) {
   const r = resolve(input.value);
@@ -2767,11 +2887,12 @@ for (const id of ['from', 'to']) {
   input.addEventListener('blur', () => setTimeout(() => { if (suggFor === input && document.activeElement !== input) $('#sugg').hidden = true; }, 150));
   input.addEventListener('keydown', e => { if (e.key === 'Escape') $('#sugg').hidden = true; });
 }
-$('#sugg').addEventListener('pointerdown', e => {
+// a row picks on click: on a phone a finger that lands on the list may be starting a scroll, and only a tap ends in
+// a click (a scroll ends in pointercancel). pointerdown only keeps the focus, and the keyboard, in the airport box.
+$('#sugg').addEventListener('pointerdown', e => { if (e.target.closest('button[data-codes]')) e.preventDefault(); });
+$('#sugg').addEventListener('click', e => {
   const b = e.target.closest('button[data-codes]');
-  if (!b) return;
-  e.preventDefault();
-  pick(b.dataset.codes);
+  if (b) pick(b.dataset.codes);
 });
 /* ---------- one way or round trip ---------- */
 // Award seats are booked one direction at a time, so a round trip is two one-way searches (twice the calls).
@@ -2789,7 +2910,7 @@ function renderMc(list) {
   if ($('#mlist').contains(sg)) { sg.hidden = true; $('#route').appendChild(sg); }   // the airport list must not go with the old rows
   $('#mlist').innerHTML = list.map((L, i) => {
     const k = i + 2;
-    const ap = (x, label, v) => '<div class="field ap"><label for="m' + k + x + '">' + label + '</label><input id="m' + k + x + '" value="' + esc(v || '') + '" placeholder="' + (x === 'o' ? t('例：NRT') : t('例：SEA')) + '" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="next"><div class="names" id="m' + k + x + '-names"></div></div>';
+    const ap = (x, label, v) => '<div class="field ap"><label for="m' + k + x + '">' + label + '</label><input id="m' + k + x + '" value="' + esc(v || '') + '" placeholder="' + (x === 'o' ? t('例：NRT') : t('例：SEA')) + '" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="' + (x === 'o' ? 'next' : 'search') + '"><div class="names" id="m' + k + x + '-names"></div></div>';
     const df = (x, label, v) => '<div class="field df"><label for="m' + k + x + '">' + label + '<small id="m' + k + x + 'y"></small></label><span class="dv" id="m' + k + x + 'v"></span><input type="date" id="m' + k + x + '" value="' + esc(v || '') + '" min="' + today + '"></div>';
     return '<div class="mleg" data-i="' + k + '"><div class="mhead"><b>' + t('第 {0} 段', k) + '</b><button type="button" class="mdel" data-del="' + i + '" aria-label="' + t('刪掉第 {0} 段', k) + '">✕</button></div>' +
       '<div class="mroute">' + ap('o', t('出發'), L.o) + '<span class="mto" aria-hidden="true">→</span>' + ap('d', t('抵達'), L.d) + '</div>' +
@@ -2906,7 +3027,11 @@ function showDates() {
   $('#r1').min = later($('#d1').value, today);
   $('#r2').min = later($('#r1').value, $('#r1').min);
 }
+// the chip row starts at this month; a home-screen app resumed after the 1st (no reload) still shows the old row,
+// so lighting the chips, or coming back on screen, draws it again first
+function monthsStale() { const b = $('#months .mchip'), n = new Date(); return !!b && (+b.dataset.y !== n.getFullYear() || +b.dataset.m !== n.getMonth() + 1); }
 function markMonths() {
+  if (monthsStale()) renderMonths();
   showDates();
   for (const b of $$('#months .mchip')) {
     const [s, e] = monthRange(+b.dataset.y, +b.dataset.m);
@@ -2919,12 +3044,14 @@ function markMonths() {
     b.classList.toggle('on', !!(d1 && d2 && r1 && r2) && r1 === plusDays(d1, k) && r2 === plusDays(d2, k));
   }
 }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && monthsStale()) markMonths(); });
 // A month chip sets the outbound range. With 來回 on, the return keeps its distance from the outbound,
 // so picking a later month never leaves the return behind it (and the return range stays within 3 months).
 $('#months').addEventListener('click', e => {
   const b = e.target.closest('.mchip');
   if (!b) return;
   const [s, t] = monthRange(+b.dataset.y, +b.dataset.m);
+  if (t < s) { markMonths(); return; }   // its month is over (the row is from before the 1st): draw this month's row instead
   const d1 = $('#d1').value, r1 = $('#r1').value, r2 = $('#r2').value;
   if (TRIP === 'rt' && d1 && r1 && r2) {
     const gap = Math.max(0, daysBetween(d1, r1)), len = Math.min(MAX_DAYS, Math.max(0, daysBetween(r1, r2)));
@@ -3083,8 +3210,11 @@ function readForm() {
     const re = $('#r2').value;
     if (!rs || !re) return formErr(t('請選回程日期的範圍。'));
     if (re < rs) return formErr(t('回程最晚不能早於回程最早。'));
-    if (rs < s) return formErr(t('回程不能早於去程。'));
+    // a start that has passed moves up to today before it is compared (as the outbound's did): a 收藏 or recent
+    // search whose return has begun is still a valid search
+    if (re < today) return formErr(t('這些日期已經過了。'));
     if (rs < today) rs = today;
+    if (rs < s) return formErr(t('回程不能早於去程。'));
     if (daysBetween(rs, re) > MAX_DAYS) return formErr(t('回程日期範圍最多 3 個月，請縮短一點。'));
     p.rt = { s: rs, e: re };
   }
@@ -3101,8 +3231,8 @@ function readForm() {
       if (!ls || !le) return formErr(t('第 {0} 段：請選日期的範圍。', k));
       if (le < ls) return formErr(t('第 {0} 段：最晚不能早於最早。', k));
       if (le < today) return formErr(t('第 {0} 段：這些日期已經過了。', k));
+      if (ls < today) ls = today;   // (before the compare, as for the return)
       if (ls < prev) return formErr(t('第 {0} 段不能早於前一段。', k));
-      if (ls < today) ls = today;
       if (daysBetween(ls, le) > MAX_DAYS) return formErr(t('第 {0} 段：日期範圍最多 3 個月，請縮短一點。', k));
       mc.push({ o: lo.codes.join(','), d: ld.codes.join(','), s: ls, e: le });
       prev = ls;
@@ -3134,40 +3264,49 @@ function setBusy(on) {
 }
 const cacheKey = lp => 'award-c:' + [lp.o, lp.d, lp.s, lp.e].join('|') + (lp.mixed ? '|m' : '') + (lp.dyn ? '|f' : '');
 const toResults = () => $('#results').scrollIntoView({ behavior: 'smooth', block: 'start' });
-// One leg: from the 15-minute cache, or from seats.aero (up to MAX_PAGES calls).
+// One leg: from the 15-minute cache, or from seats.aero (up to MAX_PAGES calls). A leg still loading is shared, so
+// searching it again meanwhile (a second tap, a 收藏 of the same route) waits for those pages instead of paying twice.
+const INFLIGHT = new Map();
 async function fetchLeg(lp) {
-  const hit = cacheGet(cacheKey(lp));
+  const k = cacheKey(lp), hit = cacheGet(k);
   if (hit) return { rows: hit.rows, truncated: hit.truncated, fetchedAt: hit.t };
+  if (!INFLIGHT.has(k)) INFLIGHT.set(k, fetchPages(lp).finally(() => INFLIGHT.delete(k)));
+  return INFLIGHT.get(k);
+}
+async function fetchPages(lp) {
   const rows = [];
-  let cursor = null, more = false, pages = 0;
+  let cursor = null, more = false, pages = 0, cut = '';
   do {
     // include_trips brings each row's flights along, so cards can show times without one more call per card
     const q = new URLSearchParams({ origin_airport: lp.o, destination_airport: lp.d, start_date: lp.s, end_date: lp.e, take: '1000', include_trips: 'true' });
     if (lp.mixed) q.set('min_cabin_pct', '50');      // default 100 hides mixed-cabin itineraries
     if (lp.dyn) q.set('include_filtered', 'true');    // seats.aero hides expensive dynamic awards unless asked
     if (cursor != null) { q.set('cursor', cursor); q.set('skip', rows.length); }
-    const res = await api('/search?' + q);
+    // a later page that fails (額度用完, seats.aero down, no signal) keeps the pages already paid for: the leg comes
+    // back with cut = the reason, and truncated still on
+    let res;
+    try { res = await api('/search?' + q); } catch (err) { if (!pages || err.kind === 'auth') throw err; cut = err.message; break; }
     rows.push(...(res.data || []));
     more = !!res.hasMore && res.cursor != null;
     cursor = res.cursor;
     pages++;
   } while (more && pages < MAX_PAGES);
   const t = Date.now();
-  cacheSet(cacheKey(lp), { t, rows, truncated: more });
-  return { rows, truncated: more, fetchedAt: t };
+  if (!cut) cacheSet(cacheKey(lp), { t, rows, truncated: more });   // (a cut leg isn't kept, so searching again fetches it whole)
+  return { rows, truncated: more, cut, fetchedAt: t };
 }
 // Show one leg's results; the filters, calendar and list all read S.params / S.rows.
 function useLeg(i) {
   const L = S.legs[i];
-  S.leg = i; S.params = L.p; S.rows = L.rows; S.truncated = L.truncated; S.fetchedAt = L.fetchedAt;
+  S.leg = i; S.params = L.p; S.rows = L.rows; S.truncated = L.truncated; S.cut = L.cut || ''; S.fetchedAt = L.fetchedAt;
   S.day = S.combo ? (i ? S.combo.d2 : S.combo.d1) : null; S.shown = 60;
   $('#alert-form').hidden = true;   // it was filled for the other direction
   render();
 }
 async function runSearch(p, demo, scroll) {
   const done = () => { if (scroll && S.search === p) toResults(); };
-  S.search = p; S.legs = legsOf(p).map(lp => ({ p: lp, rows: null, truncated: false, fetchedAt: 0, error: '' })); S.leg = 0;
-  S.params = S.legs[0].p; S.day = null; S.shown = 60; S.demo = !!demo; S.rows = null; S.truncated = false;
+  S.search = p; S.legs = legsOf(p).map(lp => ({ p: lp, rows: null, truncated: false, cut: '', fetchedAt: 0, error: '' })); S.leg = 0;
+  S.params = S.legs[0].p; S.day = null; S.shown = 60; S.demo = !!demo; S.rows = null; S.truncated = false; S.cut = '';
   S.combo = null; S.combosOpen = false;
   S.seen = null; S.seenAt = 0; S.verified = {};
   save('award-last', p);
@@ -3184,7 +3323,10 @@ async function runSearch(p, demo, scroll) {
   $('#sortbar').innerHTML = '';
   $('#list').innerHTML = '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
   $('#opt-rerun').hidden = true;
+  renderSaveBtn();   // (no rows yet: the last search's 收藏 and the rest would act on this one)
+  $('#alert-form').hidden = true;   // it was filled for the search this replaces
   if (demo) {
+    setBusy(false);   // (a search it replaces may still be loading)
     for (const L of S.legs) { L.rows = demoRows(L.p); L.fetchedAt = Date.now(); }
     useLeg(0);
     return done();
@@ -3202,11 +3344,11 @@ async function runSearch(p, demo, scroll) {
       if (S.search !== p) return;
       if (i === 0) { useLeg(0); done(); } else renderLegs();
     }
-    compareSaved(p);
+    if (!S.legs.some(L => L.cut)) compareSaved(p);   // (a leg cut short is not a full look, so it must not become the 收藏's last look)
   } catch (err) {
     if (S.search === p) { showError(err); done(); }
   } finally {
-    setBusy(false);
+    if (S.search === p) setBusy(false);   // a newer search still loading keeps 搜尋 off until it ends
   }
 }
 /* ---------- result tools: 分享 a link, ⬇ CSV, 日期組合 for round trips (no API call) ---------- */
@@ -3262,11 +3404,14 @@ $('#csv-btn').addEventListener('click', () => {
   const offers = offersOf(S.rows || [], S.prefs.cabin, filt()), list = S.day ? offers.filter(o => o.date === S.day) : offers;
   const q = v => { const x = String(v == null ? '' : v); return /[",\r\n]/.test(x) ? '"' + x.replace(/"/g, '""') + '"' : x; };
   const hm = x => (x ? String(x).slice(0, 16).replace('T', ' ') : '');
+  // (起飛 and 降落 are airport clocks, kept as written; UpdatedAt is a real UTC time, so 資料更新 is this device's time)
+  const at = x => { const ms = Date.parse(x); if (!ms) return ''; const d = new Date(ms); return isoDate(d) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); };
   const head = [t('日期'), t('星期'), t('出發'), t('抵達'), t('里程計畫'), t('艙等'), t('里程'), t('稅金'), t('幣別'), t('剩餘座位'), t('直飛'),
     t('航空公司'), t('起飛'), t('降落'), t('飛行時間（分鐘）'), t('轉機次數'), t('航班'), t('資料更新')];
+  // 直飛 as the card says it: 是 when this price is the nonstop's, else the nonstop's own price
   const rows = list.map(o => [o.date, WD[parseDate(o.date).getDay()], o.from, o.to, prog(o.src).name, CABIN_BY[S.prefs.cabin].name, o.miles,
-    o.taxes ? (o.taxes / 100).toFixed(2) : '', o.taxes ? o.cur || 'USD' : '', o.seats || '', o.direct ? t('是') : '', o.airlines.join(' '),
-    o.trip ? hm(o.trip.dep) : '', o.trip ? hm(o.trip.arr) : '', o.trip ? o.trip.mins || '' : '', o.trip ? o.trip.stops : '', o.trip ? o.trip.flights.join(' ') : '', hm(o.updated)]);
+    o.taxes ? (o.taxes / 100).toFixed(2) : '', o.taxes ? o.cur || 'USD' : '', o.seats || '', o.direct ? (o.dmiles && o.dmiles !== o.miles ? t('直飛另價 {0}', o.dmiles) : t('是')) : '', o.airlines.join(' '),
+    o.trip ? hm(o.trip.dep) : '', o.trip ? hm(o.trip.arr) : '', o.trip ? o.trip.mins || '' : '', o.trip ? o.trip.stops : '', o.trip ? o.trip.flights.join(' ') : '', at(o.updated)]);
   const text = '\ufeff' + [head, ...rows].map(r => r.map(q).join(',')).join('\r\n');   // the BOM lets Excel read the Chinese
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
@@ -3277,12 +3422,15 @@ $('#csv-btn').addEventListener('click', () => {
   toast(t('已匯出 {0} 筆', list.length));
 });
 // 日期組合: per direction the cheapest award of each day (this cabin and filters), then every pair with the return at
-// least a day after the outbound, cheapest first
+// least a day after the outbound lands, cheapest first. The landing day is the arrival date of the flight on the
+// outbound's card (an airport clock, read as text), never before the day it leaves (a westbound overnight lands a
+// day later); 停留 still counts departure to departure, like 待多久.
+const landDay = o => { const a = ((o.trip && o.trip.arr) || '').slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(a) && a > o.date ? a : o.date; };
 function combos() {
   const f = filt(), cab = S.prefs.cabin;
   const best = L => { const m = new Map(); for (const o of offersOf(L.rows || [], cab, f)) { const x = m.get(o.date); if (!x || o.miles < x.miles) m.set(o.date, o); } return m; };
   const out = best(S.legs[0]), back = best(S.legs[1]), list = [];
-  for (const [d1, a] of out) for (const [d2, b] of back) if (d2 > d1) list.push({ d1, d2, a, b, total: a.miles + b.miles, stay: daysBetween(d1, d2) });
+  for (const [d1, a] of out) for (const [d2, b] of back) if (d2 > landDay(a)) list.push({ d1, d2, a, b, total: a.miles + b.miles, stay: daysBetween(d1, d2) });
   list.sort((x, y) => x.total - y.total || (x.d1 < y.d1 ? -1 : x.d1 > y.d1 ? 1 : 0));
   return { out, back, list };
 }
@@ -3298,7 +3446,7 @@ function combosHtml() {
   if (ds1.length <= 14 && ds2.length <= 14) {
     grid = '<div class="cgrid-wrap"><table class="cgrid" aria-label="' + t('去程和回程日期的合計里程') + '"><thead><tr><th>' + t('去＼回') + '</th>' + ds2.map(d => '<th>' + md(d) + '</th>').join('') + '</tr></thead><tbody>' +
       ds1.map(d1 => '<tr><th>' + md(d1) + '</th>' + ds2.map(d2 => {
-        if (d2 <= d1) return '<td class="x"></td>';
+        if (d2 <= landDay(out.get(d1))) return '<td class="x"></td>';
         const v = out.get(d1).miles + back.get(d2).miles;
         return '<td class="' + (v === min ? 'best' : v <= min * 1.2 ? 'good' : '') + '"><button type="button" data-c1="' + d1 + '" data-c2="' + d2 + '" aria-label="' + t('去 {0} 回 {1}，合計 {2} 哩', md(d1), md(d2), fmtMiles(v)) + '">' + fmtMan(v) + '</button></td>';
       }).join('') + '</tr>').join('') + '</tbody></table></div>';
@@ -3306,24 +3454,37 @@ function combosHtml() {
   return '<p class="lbl">' + t('最便宜的 {0} 種組合（{1}）', Math.min(10, list.length), CABIN_BY[S.prefs.cabin].name) + '</p><div class="combos">' + top + '</div>' + grid;
 }
 /* ---------- 收藏 (saved searches, kept in D1 so every device has them) ---------- */
-// "seen" = lowest miles per leg + cabin + date + program at the last look; cards compare against it.
-const seenKey = (leg, cab, date, src) => leg + cab + date + src;
-function snapshot(legs) {
+// "seen" = lowest miles per leg + cabin + date + program at the last look; cards compare against it. A leg with more
+// than one airport on a side (TPE,TSA → NRT,HND) also keys by the airport pair, lowercased for the Worker's key check
+// (0J2026-11-05aeroplantsahnd), so each pair is compared with itself.
+const seenKey = (leg, cab, date, src, pair) => leg + cab + date + src + (pair || '');
+const seenPair = (lp, from, to) => (/,/.test(lp.o + lp.d) && from && to ? (from + to).toLowerCase() : '');
+function snapshot(legs, noPairs) {
   const out = {};
   legs.forEach((L, i) => {
     for (const r of L.rows || []) {
       const src = r.Source || (r.Route && r.Route.Source) || '';
       if (!/^[a-z0-9]{2,20}$/.test(src)) continue;
+      let pair = noPairs || !r.Route ? '' : seenPair(L.p, r.Route.OriginAirport, r.Route.DestinationAirport);
+      if (!/^[a-z0-9]{2,20}$/.test(src + pair)) pair = '';   // the Worker takes at most 20 letters after the date
       for (const c of CABINS) {
         const m = r[c.k + 'Available'] ? num(r[c.k + 'MileageCost']) : 0;
-        const k = seenKey(i, c.k, r.Date, src);
+        const k = seenKey(i, c.k, r.Date, src, pair);
         if (m && (!(k in out) || m < out[k])) out[k] = m;
       }
     }
   });
+  // over the Worker's 400 KB cap: one key per program again, as before the pairs (cards read both kinds)
+  if (!noPairs && JSON.stringify(out).length > 400000) return snapshot(legs, true);
   return out;
 }
-const savedOf = p => p && S.saved.find(x => searchKey(x.params) === searchKey(p));
+// a card's price at the last look: under its own airport pair, else under its program (a look from before the pairs)
+const seenOf = o => S.seen[seenKey(S.leg, S.prefs.cabin, o.date, o.src, seenPair(S.params, o.from, o.to))] ?? S.seen[seenKey(S.leg, S.prefs.cabin, o.date, o.src)];
+// a search as it runs today: readForm moves a start that has passed up to today, so a 收藏 or recent search from an
+// earlier day still matches its own re-run
+const liveKey = p => { const td = isoDate(new Date()), c = v => (v && v < td ? td : v);
+  return searchKey(Object.assign({}, p, { s: c(p.s), rt: p.rt && { s: c(p.rt.s), e: p.rt.e }, mc: p.mc && p.mc.map(L => Object.assign({}, L, { s: c(L.s) })) })); };
+const savedOf = p => p && S.saved.find(x => liveKey(x.params) === liveKey(p));
 const whenShort = t => { const d = new Date(t * 1000); return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); };
 async function loadSaved() {
   try { S.saved = (await call('GET', '/me/saved')).saved || []; } catch { S.saved = []; }
@@ -3343,7 +3504,7 @@ function renderSaved() {
 }
 function renderSaveBtn() {
   const b = $('#save-btn');
-  if (!S.search || !S.legs || !S.legs[0].rows) { b.hidden = true; return; }
+  if (!S.search || !S.legs || !S.legs[0].rows) { b.hidden = true; renderAlertBtn(); renderToolBtns(); return; }   // 提醒, 分享, CSV hide too
   const x = savedOf(S.search);
   b.querySelector('span').textContent = x ? t('已收藏') : t('收藏這個搜尋');
   b.setAttribute('aria-pressed', String(!!x));
@@ -3356,11 +3517,15 @@ $('#save-btn').addEventListener('click', async () => {
   try {
     if (x) {
       if (!confirm(t('取消收藏這個搜尋？'))) return;
-      await call('DELETE', '/me/saved/' + x.id);
+      // every copy of it: one saved again on a later day matches too (liveKey), so deleting only one leaves 已收藏 on
+      const k = liveKey(S.search);
+      for (const y of S.saved.filter(y => liveKey(y.params) === k)) await call('DELETE', '/me/saved/' + y.id);
       toast(t('已取消收藏'));
     } else {
       if (S.demo) { toast(t('示範資料不能收藏，請用真的搜尋')); return; }
-      await call('POST', '/me/saved', { params: S.search, seen: snapshot(S.legs) });
+      // no seen from a look that isn't full (a leg cut short, still loading or failed): the first full reopen stores
+      // it, instead of tagging every award this look lacked as 新
+      await call('POST', '/me/saved', { params: S.search, ...(S.legs.some(L => L.cut || !L.rows) ? {} : { seen: snapshot(S.legs) }) });
       toast(t('已收藏。下次打開會標出新出現和降價的位子'));
     }
   } catch (err) { toast(err.message); }
@@ -3399,19 +3564,22 @@ async function compareSaved(p) {
   } catch { /* the comparison is extra; the results are already on screen */ }
 }
 
-// Round trip: a tab per direction with its lowest miles (this cabin, these filters), and the two added up.
+// Round trip: a tab per direction with its lowest miles (this cabin, these filters), and the total of the cheapest
+// pair of dates that works together (the first 日期組合, so it never adds a return that leaves before the outbound).
 function renderLegs() {
   const box = $('#legs');
   if (!S.legs || S.legs.length < 2) { box.hidden = true; box.innerHTML = ''; return; }
   const f = filt(), cab = S.prefs.cabin;
   const low = L => { if (!L.rows) return null; const m = offersOf(L.rows, cab, f).map(o => o.miles); return m.length ? Math.min(...m) : 0; };
   const lows = S.legs.map(low), mc = !!(S.search && S.search.mc);
+  const top = !mc && lows[0] && lows[1] ? combos().list[0] : null;
   const tag = i => (mc ? t('第 {0} 段', i + 1) : i ? t('回程') : t('去程'));
   box.innerHTML = S.legs.map((L, i) => '<button type="button" role="tab" data-leg="' + i + '" aria-selected="' + (S.leg === i) + '"' + (L.rows ? '' : ' disabled') + '>' +
     '<small>' + tag(i) + '　' + t('{0} 到 {1}', md(L.p.s), md(L.p.e)) + '</small><b>' + esc(L.p.o) + ' → ' + esc(L.p.d) + '</b>' +
     '<small>' + (L.error ? t('查不到：{0}', esc(L.error)) : !L.rows ? t('讀取中…') : lows[i] ? t('{0}最低 {1} 哩', CABIN_BY[cab].name, fmtMiles(lows[i])) : t('{0}沒有位子', CABIN_BY[cab].name)) + '</small></button>').join('') +
     (mc ? mcTotalHtml(f, cab) : '') +
-    (!mc && lows[0] && lows[1] ? '<p class="sum2">' + t('來回最低合計 <b>{0}</b> 哩（{1}，兩段可以用不同計畫）', fmtMiles(lows[0] + lows[1]), CABIN_BY[cab].name) + '</p>' +
+    (!mc && lows[0] && lows[1] ? '<p class="sum2">' + (top ? t('來回最低合計 <b>{0}</b> 哩（{1}，兩段可以用不同計畫）', fmtMiles(top.total), CABIN_BY[cab].name)
+      : t('目前的條件下，沒有去程和回程都有位子的日期組合。')) + '</p>' +
       '<button type="button" class="btn ghost cmb-btn" data-act="combos" aria-expanded="' + !!S.combosOpen + '">' + t('📅 日期組合') + '</button>' +
       (S.combosOpen ? '<div class="cmb">' + combosHtml() + '</div>' : '') : '');
   box.hidden = false;
@@ -3491,8 +3659,8 @@ $('#banner').addEventListener('click', e => {
 
 /* ---------- recent searches ---------- */
 function addRecent(p) {
-  const k = searchKey(p);
-  const list = load('award-recent', []).filter(x => searchKey(x) !== k);
+  const k = liveKey(p);
+  const list = load('award-recent', []).filter(x => liveKey(x) !== k);
   list.unshift(p);
   save('award-recent', list.slice(0, 6));
   renderRecent();
@@ -3511,9 +3679,13 @@ function fillForm(p) {
   renderMc(p.mc || []);
   setTrip(p.rt ? 'rt' : p.mc ? 'mc' : 'ow');
 }
+// a tap moves its search to the front of the row at once, so the second tap of a double tap would land on another
+// search and pay for it too: a tap that soon after the last one is dropped
+let recentAt = -1e9;
 $('#recent').addEventListener('click', e => {
   const b = e.target.closest('button[data-i]');
-  if (!b) return;
+  if (!b || e.timeStamp - recentAt < 700) return;
+  recentAt = e.timeStamp;
   const p = load('award-recent', [])[+b.dataset.i];
   if (!p) return;
   fillForm(p);
@@ -3613,11 +3785,12 @@ function renderSummary(offers) {
     const newest = new Date(Math.max(...ts)).toISOString(), oldest = new Date(Math.min(...ts)).toISOString();
     fresh = t('資料更新：最新 {0}，最舊 {1}', ago(newest).replace(t('更新'), '').trim(), ago(oldest).replace(t('更新'), '').trim());
   }
-  if (S.truncated) fresh += (fresh ? t('。') : '') + t('結果太多，只拿到前 5,000 筆，請縮短日期。');
+  if (S.cut) fresh += (fresh ? t('。') : '') + t('結果不完整，讀到一半就停了：{0}', S.cut.replace(/[。.]\s*$/, ''));   // (the message's own stop goes: the next part adds one)
+  else if (S.truncated) fresh += (fresh ? t('。') : '') + t('結果太多，只拿到前 5,000 筆，請縮短日期。');
   if (offers.noData) fresh += (fresh ? t('。') : '') + t('另有 {0} 筆沒有航班細節，沒辦法檢查航班條件，先不列出', offers.noData);
   if (S.seen) {
-    const was = o => S.seen[seenKey(S.leg, S.prefs.cabin, o.date, o.src)];
-    const nw = offers.filter(o => was(o) == null).length, dn = offers.filter(o => was(o) != null && o.base < was(o)).length;
+    const was = seenOf;   // counted the way the cards tag them
+    const nw = offers.filter(o => was(o) == null).length, dn = offers.filter(o => was(o) != null && o.miles === o.base && o.base < was(o)).length;
     fresh = t('比上次（{0}）新出現 {1} 筆、降價 {2} 筆', whenShort(S.seenAt), nw, dn) + (fresh ? t('。') + fresh : '');
   }
   $('#fresh').textContent = fresh;
@@ -3758,9 +3931,10 @@ function cardHtml(o, showDate) {
   const tag = o.direct
     ? (o.dmiles && o.dmiles !== o.miles ? '<span class="tag">' + t('直飛另價 {0}', n(fmtMiles(o.dmiles))) + '</span>' : '<span class="tag d">' + t('直飛') + '</span>')
     : '<span class="tag">' + t('轉機') + '</span>';
-  // against the 收藏's last look: 新 = not there last time, 降 = cheaper than last time
-  const was = S.seen ? S.seen[seenKey(S.leg, S.prefs.cabin, o.date, o.src)] : undefined;
-  const since = !S.seen ? '' : was == null ? '<span class="tag nw">' + t('新') + '</span>' : o.base < was ? '<span class="tag dn">' + t('降 {0}', fmtMiles(was - o.base)) + '</span>' : '';
+  // against the 收藏's last look: 新 = not there last time, 降 = cheaper than last time (the look keeps the row's
+  // overall price, so a 只看直飛 card showing a different nonstop price gets no 降)
+  const was = S.seen ? seenOf(o) : undefined;
+  const since = !S.seen ? '' : was == null ? '<span class="tag nw">' + t('新') + '</span>' : o.miles === o.base && o.base < was ? '<span class="tag dn">' + t('降 {0}', fmtMiles(was - o.base)) + '</span>' : '';
   const tax = o.taxes ? '+ ' + moneyHtml(o.taxes, o.cur) : NO_TAX.has(o.src) ? t('稅金未提供') : '';
   const trip = o.trip, plus = trip ? dayDiff(trip.dep, trip.arr) : 0;
   // times, total time and connections of the flight the card describes (only when the search brought flights along)
@@ -3820,7 +3994,8 @@ $('#list').addEventListener('click', e => {
   if (more) { S.shown += 60; render(); return; }
   const cab = e.target.closest('[data-cab]');
   if (cab) { S.prefs.cabin = cab.dataset.cab; savePrefs(); render(); return; }
-  if (e.target.closest('[data-verify]')) { runVerify(e.target.closest('.offer')); return; }
+  const v = e.target.closest('[data-verify]');
+  if (v) { runVerify(v.closest('.offer'), v.dataset.verify === 'more'); return; }   // more: 繼續核對
   const head = e.target.closest('.ohead');
   if (head) toggleTrips(head.closest('.offer'));
 });
@@ -3835,11 +4010,15 @@ async function toggleTrips(art) {
   const id = art.dataset.id, src = art.dataset.src;
   box.innerHTML = '<div class="tload">' + t('讀取航班中…') + '</div>';
   try {
-    let res = S.trips.get(id);
-    if (!res) {
-      res = S.demo ? demoTrips(id, src) : await api('/trips/' + encodeURIComponent(id));
-      S.trips.set(id, res);
+    // the request is kept, not only its answer: opening the card again (or its copy after a redraw) while it loads
+    // waits for the same /trips call instead of paying for a second one; a call that fails is dropped, so a reopen retries
+    let p = S.trips.get(id);
+    if (!p) {
+      p = (S.demo ? Promise.resolve(demoTrips(id, src)) : api('/trips/' + encodeURIComponent(id)))
+        .catch(err => { if (S.trips.get(id) === p) S.trips.delete(id); throw err; });
+      S.trips.set(id, p);
     }
+    const res = await p;
     box.innerHTML = verifyHtml(art.dataset) + tripsHtml(res, src) + transferHtml(src, +art.dataset.miles) + cashHtml(art.dataset);
     box.dataset.loaded = '1';
     featureHook('onDetails', art, box);
@@ -3868,49 +4047,88 @@ function tripsHtml(res, src) {
 }
 /* ---------- 即時核對 (加強模式): ask seats.aero to re-check this row with the airline, then re-read it ---------- */
 // Measured 2026-10-14: queueing costs 1 call, polling costs nothing, a failure is refunded and the row can be
-// tried again after about 15 minutes, rows updated in the last 3 hours are not re-checked. Re-reading costs 1 call.
+// tried again after about 15 minutes, rows updated in the last 3 hours are not re-checked. Re-reading costs 1 call,
+// and reopening the card then reads its flights again (/trips, 1 call).
 const VERIFY_COOL = 15 * 60 * 1000;
+// IDs seats.aero took for a re-check whose new data this page has not read yet (still queued or processing when it
+// stopped asking, a lost connection, a failed re-read): a later press that finds one fresh reads it, as on success
+const VERIFY_LEFT = new Set();
+// when seats.aero took each ID still queued or processing (localStorage award-vpend): for 15 minutes from then,
+// 繼續核對 asks again as a poll (free, and allowed with the day's quota used up); after that a row it has finished
+// with may be queued and charged again, so a press then starts a new check
+const vpend = id => { const at = load('award-vpend', {})[id] || 0; return at + VERIFY_COOL > Date.now() ? at : 0; };
+function vmark(id, at) { const p = load('award-vpend', {}); if (at) p[id] = at; else delete p[id]; save('award-vpend', p); }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 function verifyHtml(d) {
   if (S.demo) return '';
-  const done = S.verified[d.id];
+  const done = S.verified[d.id + S.prefs.cabin];   // by ID and cabin: a result describes the cabin that was checked
   const hrs = (Date.now() - Date.parse(d.upd)) / 36e5;
   const cool = (load('award-vcool', {})[d.id] || 0) > Date.now();
   let h = '<div class="verify"><span class="vage">' + esc(done || t('seats.aero 的資料是 {0}的', ago(d.upd))) + '</span>';
   if (!done) {
     if (hrs < 3) h += '<small>' + t('3 小時內剛更新過，不用核對') + '</small>';
     else if (cool) h += '<small>' + t('剛才核對沒成功，15 分鐘後可以再試') + '</small>';
-    else h += '<button type="button" class="btn" data-verify="1">' + t('即時核對') + '</button><small>' + t('請 seats.aero 馬上向航空公司重查一次，約用 2 次額度') + '</small>';
+    // a check still out (the card was drawn again, or the page reloaded): asking again is a free poll, as in say()
+    else if (vpend(d.id)) h += '<button type="button" class="btn" data-verify="more">' + t('繼續核對') + '</button>';
+    else h += '<button type="button" class="btn" data-verify="1">' + t('即時核對') + '</button><small>' + t('請 seats.aero 馬上向航空公司重查一次，最多用 3 次額度') + '</small>';
   }
   return h + '</div>';
 }
-async function runVerify(art) {
+async function runVerify(art, more) {
   const d = art.dataset, id = d.id, box = art.querySelector('.verify');
-  const say = (msg, note) => { box.innerHTML = '<span class="vage">' + esc(msg) + '</span>' + (note ? '<small>' + esc(note) + '</small>' : ''); };
-  say(t('核對中…'), t('seats.aero 正在向航空公司重查，最多等 2 分鐘'));
-  let res, st = '';
+  // the leg and cabin the card was drawn from: by the end of the wait the screen may show others
+  const L = S.legs[S.leg], cab = S.prefs.cabin;
+  // more: 繼續核對, only a poll while the check it follows is under 15 minutes old (see vpend); took is when seats.aero
+  // took that check (this press, for a new one)
+  const was = vpend(id), poll = more && was > 0, took = was || Date.now();
+  // btn puts a button back, for an answer that may still come (繼續核對 while asking again is free, else 即時核對); a
+  // box drawn over while waiting gets a toast instead
+  const say = (msg, note, btn) => {
+    if (!box.isConnected) return toast(msg);
+    const free = btn && vpend(id) > 0;
+    box.innerHTML = '<span class="vage">' + esc(msg) + '</span>' + (btn ? '<button type="button" class="btn" data-verify="' + (free ? 'more">' + t('繼續核對') : '1">' + t('即時核對')) + '</button>' : '') + (note ? '<small>' + esc(note) + '</small>' : '');
+  };
+  const retry = err => ['network', 'upstream', 'bad'].includes(err.kind);   // not after quota, auth or a bad request
+  say(t('核對中…'), t('seats.aero 正在向航空公司重查，最多等 5 分鐘'));
+  let res, st = '', lost = 0;
   const status = () => ((res.items || []).find(x => x.availability_id === id) || {}).status || '';
   try {
-    res = await api('/refresh', { ids: [id] });
+    res = await api('/refresh', poll ? { ids: [id], poll: true } : { ids: [id] });
     st = status();
-    for (const w of [5, 10, 15, 20, 30, 40]) {   // asking again with the same ID is free
+    if (st === 'queued' || st === 'processing' || st === 'succeeded') VERIFY_LEFT.add(id);
+    if ((st === 'queued' || st === 'processing') && !was) vmark(id, took);
+    for (const w of [5, 10, 15, 20, 30, 40, 30, 30, 30, 30, 30]) {   // asking again with the same ID is free (4.5 minutes in all)
       if (res.complete || (st !== 'queued' && st !== 'processing')) break;
       await sleep(w * 1000);
-      res = await api('/refresh', { ids: [id], poll: true });
-      st = status();
+      // a poll lost to the network (Safari sent to the background, a weak signal) is asked again at the next wait
+      try { res = await api('/refresh', { ids: [id], poll: true }); st = status(); lost = 0; }
+      catch (err) { if (err.kind !== 'network' || ++lost > 1) throw err; }
     }
-  } catch (err) { say(t('沒辦法核對：{0}', err.message)); return; }
-  if (st === 'succeeded') {
+  } catch (err) { say(t('沒辦法核對：{0}', err.message), '', retry(err)); return; }
+  if (st !== 'queued' && st !== 'processing') vmark(id, 0);   // seats.aero is done with it: a press now is a new check
+  if (st === 'succeeded' || (st === 'fresh' && VERIFY_LEFT.has(id))) {   // fresh: a check left running has finished
+    // that leg, or, after the same search was run again meanwhile, its new copy holding this row
+    const L2 = S.legs && (S.legs.includes(L) ? L : S.legs.find(x => x.rows && cacheKey(x.p) === cacheKey(L.p) && x.rows.some(r => r.ID === id)));
+    const live = () => S.legs && S.legs.includes(L2);   // false once a new search has replaced this one
+    if (!L2) { toast(t('核對好了，但已經換了別的搜尋')); return; }   // (so no call is paid to re-read it)
     let msg;
-    try { msg = await reread(d); } catch (err) { say(t('核對好了，但重新讀取失敗：{0}', err.message)); return; }
+    try { msg = await reread(d, L2, cab); } catch (err) { say(t('核對好了，但重新讀取失敗：{0}', err.message), '', retry(err)); return; }
+    VERIFY_LEFT.delete(id);
     const when = new Date().toLocaleTimeString(LOC(), { hour: 'numeric', minute: '2-digit' });
-    S.verified[id] = t('剛核對（{0}）：{1}', when, msg);
+    msg = t('剛核對（{0}）：{1}', when, msg);
+    if (!live()) { toast(msg); return; }   // a new search came while reading
+    S.verified[id + cab] = msg;
+    if (S.legs[S.leg] !== L2) { renderLegs(); toast(msg); return; }   // the other tab: its lowest miles and 日期組合 change
     render();
-    const again = [...$$('#list .offer')].find(a => a.dataset.id === id);
-    if (again) toggleTrips(again); else toast(S.verified[id]);   // a card whose seats are gone has left the list
+    const again = S.prefs.cabin === cab && [...$$('#list .offer')].find(a => a.dataset.id === id);
+    if (again) toggleTrips(again); else toast(msg);   // a card whose seats are gone has left the list, or another cabin is on
     return;
   }
+  if (st !== 'queued' && st !== 'processing') VERIFY_LEFT.delete(id);   // it ended with no new data to read
   if (st === 'failed') { const c = load('award-vcool', {}); c[id] = Date.now() + VERIFY_COOL; save('award-vcool', c); }
+  // still queued or processing: 繼續核對 while asking again is free; later no button, since a press could queue it
+  // again (and a box drawn over gets a toast, with nothing to tap)
+  const go = (st === 'queued' || st === 'processing') && vpend(id) > 0 && box.isConnected;
   const M = {
     failed: [t('這次沒核對成功，額度已退回'), t('seats.aero 那邊有時候很忙，15 分鐘後可以再試')],
     fresh: [t('3 小時內剛更新過，不用核對')],
@@ -3918,15 +4136,16 @@ async function runVerify(art) {
     not_refreshable: [t('這個里程計畫不能即時核對')],
     not_found: [t('seats.aero 找不到這筆，重新搜尋看看')],
     insufficient_quota: [t('今天的額度不夠了'), t('{0}重置', resetText())],
-    queued: [t('seats.aero 還在排隊，等一下再按一次看看')],
-    processing: [t('seats.aero 還在查，等一下再按一次看看')],
+    queued: go ? [t('seats.aero 還在排隊，等一下再按一次看看')] : [t('seats.aero 還在排隊，這次沒等到結果'), t('晚一點再搜尋一次看看')],
+    processing: go ? [t('seats.aero 還在查，等一下再按一次看看')] : [t('seats.aero 還在查，這次沒等到結果'), t('晚一點再搜尋一次看看')],
   };
   const [a, b] = M[st] || [t('沒有拿到核對結果（{0}）', st || t('未知'))];
-  say(a, b);
+  say(a, b, go);
 }
-// read this one row again (same route, day and program), put it in place of the old one, and describe it
-async function reread(d) {
-  const L = S.legs[S.leg], lp = L.p, cab = S.prefs.cabin;
+// read this one row again (same route, day and program), put it in place of the old one in leg L, and describe it
+// in cabin cab (the leg and cabin the check was started from)
+async function reread(d, L, cab) {
+  const lp = L.p;
   const q = new URLSearchParams({ origin_airport: d.from, destination_airport: d.to, start_date: d.date, end_date: d.date, sources: d.src, take: '50', include_trips: 'true' });
   if (lp.mixed) q.set('min_cabin_pct', '50');
   if (lp.dyn) q.set('include_filtered', 'true');
@@ -3934,9 +4153,10 @@ async function reread(d) {
   const fresh = got.find(r => r.ID === d.id) || got.find(r => (r.Source || '') === d.src && r.Date === d.date && r.Route && r.Route.OriginAirport === d.from && r.Route.DestinationAirport === d.to);
   const i = L.rows.findIndex(r => r.ID === d.id), old = L.rows[i];
   if (fresh && i >= 0) L.rows[i] = fresh; else if (fresh) L.rows.push(fresh); else if (i >= 0) L.rows.splice(i, 1);
-  S.rows = L.rows;
   S.trips.delete(d.id);
-  cacheSet(cacheKey(lp), { t: L.fetchedAt, rows: L.rows, truncated: L.truncated });
+  // (changed in place, so S.rows has it when this leg is on screen; a search that replaced this one while reading
+  // may have stored newer rows under the same key)
+  if (!L.cut && S.legs && S.legs.includes(L)) cacheSet(cacheKey(lp), { t: L.fetchedAt, rows: L.rows, truncated: L.truncated });   // (a cut leg isn't kept, as in fetchPages)
   if (!fresh || !fresh[cab + 'Available']) return t('{0}已經沒有位子了', CABIN_BY[cab].name);
   const m = num(fresh[cab + 'MileageCost']), was = old ? num(old[cab + 'MileageCost']) : m, seats = num(fresh[cab + 'RemainingSeats']);
   return seats ? (was && was !== m ? t('還有位子（剩 {0} 位），{1} 哩（原本 {2} 哩）', seats, fmtMiles(m), fmtMiles(was)) : t('還有位子（剩 {0} 位），{1} 哩', seats, fmtMiles(m))) : (was && was !== m ? t('還有位子，{0} 哩（原本 {1} 哩）', fmtMiles(m), fmtMiles(was)) : t('還有位子，{0} 哩', fmtMiles(m)));
@@ -4014,7 +4234,8 @@ function demoRows(p) {
       const r = rng(date + src + o + d);
       if (r() < 0.4) continue;
       const al = PROGRAMS[src][2], cs = DEMO_CARRIERS[al];
-      const row = { ID: 'demo' + date.replace(/-/g, '') + src, Route: { OriginAirport: o, DestinationAirport: d, Source: src }, Date: date, Source: src, TaxesCurrency: 'USD',
+      // the route is in the ID too: a round trip's two legs (and one search after another) share dates and programs
+      const row = { ID: 'demo' + date.replace(/-/g, '') + src + o + d, Route: { OriginAirport: o, DestinationAirport: d, Source: src }, Date: date, Source: src, TaxesCurrency: 'USD',
         UpdatedAt: new Date(Date.now() - r() * 50 * 36e5).toISOString() };
       for (const [k, lo, hi, pr] of [['Y', 25, 45, 0.85], ['W', 45, 75, 0.35], ['J', 60, 130, 0.5], ['F', 110, 190, 0.12]]) {
         const ok = r() < pr, direct = ok && r() < 0.5, cost = Math.round(lo + r() * (hi - lo)) * 1000;
@@ -4083,6 +4304,39 @@ function showApp() {
   loadSaved();
   featureHook('onAuth');
 }
+// check the saved session is still valid before showing the app (at start, and from 回到登入): a stale one ends in
+// call(), which shows the sign-in card; offline, the app opens anyway. An answer that comes after another sign-in on
+// this tab (a reset link's own) is left alone.
+function resumeSession() {
+  const sent = getToken();
+  return call('GET', '/me')
+    .then(m => { if (getToken() === sent) { ME = { email: m.email, role: m.role }; showApp(); } })
+    .catch(err => { if (getToken() !== sent) return; if (err.kind === 'network') showApp(); else if (err.kind !== 'auth') showLogin(err.message); });
+}
+// the app opened offline (above) has no ME: an invited account's meter shows the whole key's count and the owner's
+// pages stay shut. Once the network answers again (it comes back on, the page comes back on screen, or a request
+// gets through), GET /me again: one at a time, dropped after a sign-out or another sign-in meanwhile, and silent when
+// it fails (a stale session already ends in call(); anything else waits for the next try).
+let ME_CHECK = null;
+function recheckMe() {
+  const sent = getToken();
+  if (ME || ME_CHECK || !sent || $('#app').hidden) return;
+  ME_CHECK = call('GET', '/me')
+    .then(m => { if (getToken() === sent && !$('#app').hidden) meKnown(m); }, () => {})
+    .finally(() => { ME_CHECK = null; });
+}
+addEventListener('online', recheckMe);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') recheckMe(); });
+// ME from an answer of GET /me. Known only now: the meter turns to the account's own count, and a page only the owner
+// may open is drawn again. (The modules' onAuth is not run a second time: digest's would start its card over while
+// it may be on screen.)
+function meKnown(m) {
+  const was = ME;
+  ME = { email: m.email, role: m.role };
+  if (was) return;
+  showQuota(); loadQuota();
+  if (/^#\/(admin|year)/.test(location.hash)) route();
+}
 function init() {
   langNames(); translateStatic();   // a saved English choice applies before anything is drawn
   renderMonths();
@@ -4096,17 +4350,25 @@ function init() {
   $('#maxtax').value = S.prefs.maxTax || '';
   $('#opt-mixed').checked = !!S.prefs.mixed;
   $('#opt-dyn').checked = !!S.prefs.dyn;
+  cacheSweep(); setTimeout(cacheSweep, CACHE_MIN * 60000 + 1000);   // what this tab kept before a reload: expired now, the rest once expired
   const today = isoDate(new Date());
   const last = load('award-last', null);
   if (last && last.e >= today) {
-    fillForm(Object.assign({}, last, { s: last.s < today ? today : last.s }));
+    // a start that has passed shows as today on every leg (readForm moves it up anyway), except on a return or later
+    // leg whose dates are all over: those stay, so the error says they have passed, not that 最晚 is before 最早
+    const up = L => Object.assign({}, L, { s: L.s < today && L.e >= today ? today : L.s });
+    fillForm(Object.assign({}, last, { s: last.s < today ? today : last.s, rt: last.rt && up(last.rt), mc: last.mc && last.mc.map(up) }));
     const p = readForm();
     if (p) {
-      // show the last results again if they are still in the 15-minute cache (no API call)
+      // show the last results again if they are still in the 15-minute cache (no API call), only with every leg there:
+      // a leg that failed or wasn't kept would sit on 讀取中… with nothing loading it (搜尋 then fetches only that one)
       S.search = p; S.legs = legsOf(p).map(lp => ({ p: lp, rows: null, truncated: false, fetchedAt: 0, error: '' })); S.leg = 0;
       S.params = S.legs[0].p;
-      for (const L of S.legs) { const hit = cacheGet(cacheKey(L.p)); if (hit) Object.assign(L, { rows: hit.rows, truncated: hit.truncated, fetchedAt: hit.t }); }
-      if (S.legs[0].rows) { $('#results').hidden = false; useLeg(0); }
+      const hits = S.legs.map(L => cacheGet(cacheKey(L.p)));
+      if (hits.every(Boolean)) {
+        S.legs.forEach((L, i) => Object.assign(L, { rows: hits[i].rows, truncated: hits[i].truncated, fetchedAt: hits[i].t }));
+        $('#results').hidden = false; useLeg(0);
+      }
     }
   } else {
     $('#from').value = 'TPE'; $('#to').value = 'SEA';
@@ -4121,17 +4383,14 @@ function init() {
   else if (join && !getToken()) startJoin(join[1]);
   else if (getToken()) {
     if (join) { clearHash(); toast(t('你已經登入了，這個邀請碼可以留給別人用')); }
-    // check the saved session is still valid before showing the app
-    call('GET', '/me')
-      .then(m => { ME = { email: m.email, role: m.role }; showApp(); })
-      .catch(err => { if (err.kind === 'network') showApp(); else if (err.kind !== 'auth') showLogin(err.message); });
+    resumeSession();
   } else showLogin('');
 }
 // The newer features, each in features/<name>.js, loaded in this order before init(). A test can load just some
 // with ?only=a,b (also files not listed yet), or none with ?only=. FEATURE_V changes on every release, so phones
 // fetch the new files.
 const FEATURE_FILES = ['release', 'wallet', 'bonuses', 'notes', 'explore', 'year', 'hotels', 'push', 'digest', 'usage'];
-const FEATURE_V = '19df33329f';
+const FEATURE_V = '955fe636d5';
 function loadFeatures() {
   const only = new URLSearchParams(location.search).get('only');
   const files = only == null ? FEATURE_FILES : only.split(',').filter(x => /^[a-z0-9-]{1,30}$/.test(x));   // a test may load one not listed yet

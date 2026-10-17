@@ -14,7 +14,7 @@
 export const name = 'push';
 
 const MAX_DEVICES = 10;                     // per account
-const TEST_LIMIT = [5, 3600];               // 測試推播: 5 an hour per account (KV counter)
+const TEST_LIMIT = [5, 3600];               // 測試推播: 5 an hour per account (D1 counter through lib.tooMany / lib.bump)
 const TTL_ALERT = 86400, TTL_TEST = 600;    // how long a push service keeps trying a phone that is off
 // push services the browsers use; the Worker only ever POSTs to these, so an endpoint can't aim it anywhere else
 const HOSTS = ['push.apple.com', 'fcm.googleapis.com', 'push.services.mozilla.com', 'notify.windows.com'];
@@ -224,9 +224,10 @@ const LIVE = 'JOIN sessions x ON x.id = p.session_id AND x.user_id = p.user_id A
 const nowOf = lib => (lib && typeof lib.now === 'function' ? lib.now() : Math.floor(Date.now() / 1000));
 const listSubs = (env, lib, uid) => env.DB.prepare('SELECT p.id, p.endpoint, p.p256dh, p.auth FROM push_subs p ' + LIVE + ' WHERE p.user_id = ?')
   .bind(nowOf(lib), uid).all().then(r => r.results || []);
-// for other feature modules: one notification { title, body, url, tag } to every signed-in device of one account.
-// Never throws; answers { sent, removed, failed } (all 0 when the account has no device or the VAPID secrets are
-// missing).
+// for other feature modules: one notification { title, body, url, tag, acct } to every signed-in device of one
+// account; acct (optional, the first 16 characters of lib.sha256 of the account's email) lets a tap open the window
+// signed in to that account (sw.js). Never throws; answers { sent, removed, failed } (all 0 when the account has no
+// device or the VAPID secrets are missing).
 export async function pushToUser(env, lib, uid, msg, opts) {
   try {
     const subs = await listSubs(env, lib, uid);
@@ -300,8 +301,8 @@ export const routes = [
     const b = await lib.readJson(req), subs = await listSubs(env, lib, s.id);
     if (!subs.length) return lib.json({ error: 'push_none' }, 400, h);
     await lib.bump(env, rl, TEST_LIMIT);
-    const W = TEST_WORDS[b.lang === 'en' ? 'en' : 'zh'];
-    const r = await sendAll(env, lib, subs, { title: W.title, body: W.body, url: (env.SITE_URL || 'https://award.ginochang.com/') + '#/alerts', tag: 'push-test' }, { ttl: TTL_TEST });
+    const W = TEST_WORDS[b.lang === 'en' ? 'en' : 'zh'], acct = (await lib.sha256(s.email)).slice(0, 16);
+    const r = await sendAll(env, lib, subs, { title: W.title, body: W.body, url: (env.SITE_URL || 'https://award.ginochang.com/') + '#/alerts', tag: 'push-test', acct }, { ttl: TTL_TEST });
     return lib.json({ devices: subs.length, ...r }, 200, h);
   } },
 ];
@@ -313,7 +314,10 @@ export async function onAlertHit({ env, ctx, lib, alert, fresh }) {
     if (!alert || !Array.isArray(fresh) || !fresh.length || !env.VAPID_PRIVATE_JWK || !env.VAPID_PUBLIC) return;
     const subs = await listSubs(env, lib, alert.user_id);
     if (!subs.length) return;
-    const job = sendAll(env, lib, subs, alertMessage(env, lib, alert, fresh)).catch(e => console.error('push alert', e && e.message));
+    // acct as in pushToUser; both callers in index.js add the email, and an alert without one still pushes, untagged
+    const msg = alertMessage(env, lib, alert, fresh);
+    if (alert.email) msg.acct = (await lib.sha256(alert.email)).slice(0, 16);
+    const job = sendAll(env, lib, subs, msg).catch(e => console.error('push alert', e && e.message));
     if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(job); else await job;
   } catch (e) {
     console.error('push onAlertHit', e && e.message);

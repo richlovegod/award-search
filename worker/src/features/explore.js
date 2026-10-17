@@ -131,6 +131,7 @@ export async function getDestinations(env, ctx, lib, kind, code, s) {
   let got;
   try { got = await fetchDest(env, ctx, lib, kind, code); } catch (e) {
     console.error('explore getDestinations', e && e.message);
+    if (s) lib.giveBack(env, ctx, s);   // the call budgetCheck took goes back (the router does it for the routes)
     return null;
   }
   if (s) lib.spend(env, ctx, s, 1);

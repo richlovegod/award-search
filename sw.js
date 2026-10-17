@@ -3,8 +3,9 @@
 //    for this worker to start), and keeps the latest copy of the page; when the network fails (offline) or has not
 //    answered in 4 seconds (a weak signal), that copy is shown. Nothing else is touched: the Worker's API is on
 //    another origin and is never cached, and every other request goes to the network exactly as without a worker.
-// 2. Push notifications for alerts: shows the Worker's { title, body, url, tag }; a tap brings the site's open
-//    window forward and moves it to the alert (features/push.js hears the message), or opens a new window.
+// 2. Push notifications for alerts: shows the Worker's { title, body, url, tag, acct }; a tap brings the site's open
+//    window forward (with several, the one signed in to the alert's account) and navigates it to the alert
+//    (features/push.js hears a message where that is refused), or opens a new window.
 // To retire it, replace this file with one that calls self.registration.unregister().
 'use strict';
 const VERSION = 'v1';
@@ -88,20 +89,60 @@ self.addEventListener('push', e => {
   }
   if (!d || typeof d !== 'object') d = {};
   const tag = text(d.tag, 64);
-  const opts = { body: text(d.body, 400), icon: ICON, data: { url: siteUrl(d.url) } };
+  // acct: which account the push is for (a short tag of its email), so a tap can find that account's window
+  const opts = { body: text(d.body, 400), icon: ICON, data: { url: siteUrl(d.url), acct: text(d.acct, 32) } };
   if (tag) { opts.tag = tag; opts.renotify = true; }   // a newer push for the same alert replaces the old one and still alerts
   // every push must show something (userVisibleOnly), so a payload we can't read still gets a plain notice
   e.waitUntil(self.registration.showNotification(text(d.title, 120) || '吉諾機票研究所', opts));
 });
 
+// which account a window is signed in to, as features/push.js answers it: the same tag the Worker sends as acct, or
+// '' when signed out; null when it does not answer within ms (still loading, asleep in the background, an older page)
+const WHO_MS = 300;
+function whoIs(win, ms) {
+  return new Promise(res => {
+    const timer = setTimeout(res, ms, null);
+    try {
+      const ch = new MessageChannel();
+      ch.port1.onmessage = m => { clearTimeout(timer); res(m.data && typeof m.data.acct === 'string' ? m.data.acct : null); };
+      win.postMessage({ type: 'push-who' }, [ch.port2]);
+    } catch { clearTimeout(timer); res(null); }
+  });
+}
+// where an open window goes for url: on the same page (/ and /index.html are one, as in features/push.js) only the
+// hash changes, so the window keeps its path and query and does not load again
+function moveTo(at, url) {
+  try {
+    const w = new URL(at), u = new URL(url), page = p => p.replace(/index\.html$/, '');
+    if (page(w.pathname) !== page(u.pathname)) return url;
+    w.hash = u.hash || '#';   // the home page has no hash: an empty one still changes only the hash
+    return w.href;
+  } catch { return url; }
+}
+
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  const url = siteUrl(e.notification.data && e.notification.data.url);
+  const data = e.notification.data || {};
+  const url = siteUrl(data.url);
   e.waitUntil((async () => {
-    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    const win = wins.find(w => { try { return new URL(w.url).origin === self.location.origin; } catch { return false; } });
+    const wins = (await self.clients.matchAll({ type: 'window', includeUncontrolled: true }))
+      .filter(w => { try { return new URL(w.url).origin === self.location.origin; } catch { return false; } });
+    // the most recently used window; with several (a computer, tabs signed in to different accounts) the one signed in
+    // to the push's account, else a signed-out one (it opens the alert after sign-in), but only when the first window
+    // said it is on another account (one that does not answer is kept, as before: it may be on the push's account).
+    // All are asked at once and briefly: Firefox allows focus() for only about a second after the tap
+    let win = wins[0];
+    if (data.acct && wins.length > 1) {
+      const who = await Promise.all(wins.map(w => whoIs(w, WHO_MS)));
+      win = wins[who.indexOf(data.acct)] || (who[0] === null ? null : wins[who.indexOf('')]) || win;
+    }
     if (win) {
       try { await win.focus(); } catch {}
+      // this worker moves the window itself: one still loading does not hear the message yet (features/push.js
+      // listens from 'load'). A window it does not control refuses navigate(); that one, and one already at the url
+      // (the page then opens the alert again), get the message
+      const to = moveTo(win.url, url);
+      if (to !== win.url && 'navigate' in win) { try { await win.navigate(to); return; } catch {} }
       win.postMessage({ type: 'push-open', url });
       return;
     }

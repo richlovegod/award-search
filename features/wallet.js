@@ -206,14 +206,28 @@
   }
   async function sync() {
     if (busy) { again = true; return; }
-    if (!ME || !getToken()) return;   // ME unknown (offline start): never send a copy that may be another account's
-    claim();
+    const tok = getToken();
+    if (!tok) return;
     busy = true;
-    const sent = {};
-    for (const k of dirty) sent[k] = bal[k] || 0;
-    const keys = Object.keys(sent), put = keys.length > 0, refused = [];
-    setStatus(put ? 'saving' : 'loading');
+    let who = owner, put = dirty.size > 0;
+    const sent = {}, refused = [];
+    const gone = () => owner !== who || !getToken();   // another account signed in here meanwhile, or nobody is now
     try {
+      if (ME) claim();
+      else {
+        // ME unknown (offline start): ask the Worker whose session this is first, so a copy that may be another
+        // account's is never sent. ME itself is left to the page.
+        setStatus(put ? 'saving' : 'loading');
+        const m = await call('GET', '/me');
+        if (getToken() !== tok) return;   // signed out or in meanwhile: that name is the old session's
+        if (!(m && m.email)) throw new ApiError('server', t(ERR.server));
+        claim(m.email);
+      }
+      who = owner;
+      for (const k of dirty) sent[k] = bal[k] || 0;
+      const keys = Object.keys(sent);
+      put = keys.length > 0;
+      setStatus(put ? 'saving' : 'loading');
       let r = null;
       if (!put) r = await call('GET', '/me/wallet');
       else {
@@ -223,29 +237,32 @@
           // PROGRAMS newer than the Worker's PROGRAM_NAME). Send the keys one at a time and keep the ones it takes.
           if (keys.length === 1) refused.push(keys[0]);
           else for (const k of keys) {
+            if (gone()) break;   // the rest would go out under another account's sign-in, or none
             try { r = await call('PUT', '/me/wallet', { balances: { [k]: sent[k] } }); } catch (e) { if (e.kind !== 'param') throw e; refused.push(k); }
           }
-          if (!r) r = await call('GET', '/me/wallet');   // none went through: show what the server has
+          if (!r && !gone()) r = await call('GET', '/me/wallet');   // none went through: show what the server has
         }
       }
+      if (gone()) return;   // not for the account here now: finally starts the new one's round
       for (const k of refused) dirty.delete(k);   // never resent; adopt() puts the server's value back on screen
       for (const [k, v] of Object.entries(sent)) if ((bal[k] || 0) === v) dirty.delete(k);
       loaded = true;
       adopt(r);
-      if (refused.length) setStatus('refused', refused.map(k => (PROGRAMS[k] ? prog(k).name : BANK_NAME[k] || k)).join(t('、')));
+      const lost = refused.filter(k => sent[k]);   // a refused 0 (清除全部 sends one for every key) took nothing away
+      if (lost.length) setStatus('refused', lost.map(k => (PROGRAMS[k] ? prog(k).name : BANK_NAME[k] || k)).join(t('、')));
       else setStatus(put ? 'saved' : 'idle');
     } catch (err) {
-      setStatus(put ? 'error' : 'loadErr', err.message);
+      if (!gone()) setStatus(put ? 'error' : 'loadErr', err.message);
     } finally {
       busy = false;
-      if (again) { again = false; if (dirty.size) sync(); }
+      if (again || gone()) { again = false; if (dirty.size || !loaded) sync(); }
     }
   }
   // The local copy belongs to the account that wrote it. When someone else is signed in now, drop it (unsent edits
   // too) before anything is drawn or sent; their own balances come from the server. A copy with no owner yet
   // (written before the first sign-in check) becomes this account's.
-  function claim() {
-    const me = ME && ME.email ? String(ME.email).toLowerCase() : '';
+  function claim(email = ME && ME.email) {   // email: the account the Worker named, while ME is unknown
+    const me = email ? String(email).toLowerCase() : '';
     if (!me || owner === me) return;
     const other = !!owner;
     owner = me;
@@ -532,7 +549,10 @@ details.wallet-pl[open] summary::after{content:"－"}
     if (!e.target.closest('#wallet-clear')) return;
     if (!hasAny()) { setStatus('idle'); return; }
     if (!confirm(t('把點數錢包的點數全部清掉？'))) return;
-    for (const k of Object.keys(bal)) dirty.add(k);
+    // every key the page knows, not only the ones on screen: the Worker changes only the keys sent, so a balance
+    // another device added since this one last read would survive the clear
+    for (const [k] of BANKS) dirty.add(k);
+    for (const k of Object.keys(PROGRAMS)) dirty.add(k);
     bal = {};
     persist();
     clearTimeout(timer);

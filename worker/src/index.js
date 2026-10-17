@@ -7,7 +7,8 @@
 //                and also kept AES-GCM encrypted (key: INVITE_KEY) so the admin page can show it again
 //   reset_links  the owner makes one-time links for anyone who forgot a password
 // Every account searches with the owner's seats.aero key (SEATS_KEY), so the site is for the owner's own accounts only.
-// Bindings: DB (D1 award-auth; also the quota row), KV (lockout counters), ALERT_MAIL (send_email, alert emails).
+// Bindings: DB (D1 award-auth; also the quota row and the lockout counters), KV (the explore module's cache),
+// ALERT_MAIL (send_email, alert emails).
 // Secrets: SEATS_KEY, INVITE_KEY, CF_API_TOKEN (Email Routing Addresses: Edit, to add alert recipients).
 // Vars: ALLOWED_ORIGINS, SITE_URL, CF_ACCOUNT, MAIL_FROM. A cron trigger runs the alerts (see "email alerts").
 import { EmailMessage } from 'cloudflare:email';
@@ -177,16 +178,31 @@ async function passwordProblem(password, email) {
   return null;
 }
 
-/* ---------- lockouts (KV counters that expire on their own) ---------- */
+/* ---------- lockouts (D1 counters in rate_counters, migration 0015) ---------- */
+// An attempt is checked and counted in one statement, so attempts sent at the same moment cannot all read the same
+// old count, and a failed write is an error (the router's 500), never a free attempt. Each counted attempt keeps the
+// counter ttl more seconds, as KV's expirationTtl did; once that has passed it starts over at 1.
+const COUNT_SQL = 'INSERT INTO rate_counters (k, n, expires_at) VALUES (?1, 1, ?2 + ?3) ' +
+  'ON CONFLICT(k) DO UPDATE SET n = CASE WHEN expires_at <= ?2 THEN 1 ELSE n + 1 END, expires_at = ?2 + ?3';
 
+// one attempt, counted unless the key is at max already: the count with this attempt, or null = refused (a refused
+// attempt changes nothing, so it never stretches the lock)
+async function take(env, key, [max, ttl]) {
+  const r = await env.DB.prepare(COUNT_SQL + ' WHERE expires_at <= ?2 OR n < ?4 RETURNING n').bind(key, now(), ttl, max).first();
+  return r ? r.n : null;
+}
+// one counted attempt given back (the password was right, so it was no failure)
+const uncount = (env, key) => env.DB.prepare('UPDATE rate_counters SET n = n - 1 WHERE k = ? AND n > 0').bind(key);
+
+// for limits checked first and counted after the work (/me/mail, feature modules)
 async function tooMany(env, key, [max]) {
-  return Number(await env.KV.get(key)) >= max;
+  const r = await env.DB.prepare('SELECT n FROM rate_counters WHERE k = ? AND expires_at > ?').bind(key, now()).first();
+  return !!r && r.n >= max;
 }
 
 async function bump(env, key, [max, ttl]) {
-  const n = Number(await env.KV.get(key)) + 1;
-  await env.KV.put(key, String(n), { expirationTtl: ttl }).catch(() => {});
-  return Math.max(0, max - n);
+  const r = await env.DB.prepare(COUNT_SQL + ' RETURNING n').bind(key, now(), ttl).first();
+  return Math.max(0, max - r.n);
 }
 
 /* ---------- sessions ---------- */
@@ -221,8 +237,8 @@ const publicUser = u => ({ email: u.email, role: u.role });
 
 async function register(req, env, h) {
   const ipKey = 'rl:reg:' + clientIp(req);
-  if (await tooMany(env, ipKey, LIMITS.register)) return json({ error: 'rate' }, 429, h);
-  await bump(env, ipKey, LIMITS.register);   // every attempt counts, so invite codes can't be guessed quickly
+  // every attempt counts, so invite codes can't be guessed quickly
+  if (await take(env, ipKey, LIMITS.register) == null) return json({ error: 'rate' }, 429, h);
 
   const b = await readJson(req);
   const email = cleanEmail(b.email);
@@ -261,23 +277,29 @@ async function login(req, env, h) {
   const password = cleanPassword(b.password);
   const ipKey = 'lk:ip:' + clientIp(req);
   const emailKey = 'lk:em:' + await sha256(email);
-  if (await tooMany(env, ipKey, LIMITS.ip)) return json({ error: 'ip_locked' }, 429, h);
-  if (email && await tooMany(env, emailKey, LIMITS.email)) return json({ error: 'locked' }, 429, h);
+  // the attempt is counted before the password is checked, so guesses sent at the same moment cannot all get in
+  if (await take(env, ipKey, LIMITS.ip) == null) return json({ error: 'ip_locked' }, 429, h);
+  const tries = email ? await take(env, emailKey, LIMITS.email) : 0;
+  if (tries == null) {
+    await uncount(env, ipKey).run();   // a refused attempt is not counted against the network
+    return json({ error: 'locked' }, 429, h);
+  }
 
   const user = email ? await env.DB.prepare('SELECT id, email, role, status, pw_hash FROM users WHERE email = ?').bind(email).first() : null;
   const ok = await verifyPassword(password, user ? user.pw_hash : DUMMY_HASH);
   if (!user || !ok) {
     // The same answer whether the email exists or not, so nobody can probe which emails have accounts.
-    const [, left] = await Promise.all([bump(env, ipKey, LIMITS.ip), email ? bump(env, emailKey, LIMITS.email) : LIMITS.email[0]]);
-    return json({ error: 'login', left }, 401, h);
+    return json({ error: 'login', left: LIMITS.email[0] - tries }, 401, h);
   }
+  // the right password was no failure: the network gets its attempt back, and this email's count starts over
+  await env.DB.batch([uncount(env, ipKey), env.DB.prepare('DELETE FROM rate_counters WHERE k = ?').bind(emailKey)]);
   if (user.status !== 'active') return json({ error: 'disabled' }, 403, h);
 
-  await env.KV.delete(emailKey).catch(() => {});
   const t = now();
   await env.DB.batch([
     env.DB.prepare('UPDATE users SET last_login_at = ? WHERE id = ?').bind(t, user.id),
     env.DB.prepare('DELETE FROM sessions WHERE expires_at < ?').bind(t),   // tidy up old devices
+    env.DB.prepare('DELETE FROM rate_counters WHERE expires_at <= ?').bind(t),   // and counters that ran out
   ]);
   const token = await newSession(env, req, user.id, b.remember !== false);
   return json({ token, user: publicUser(user) }, 200, h);
@@ -299,8 +321,7 @@ async function resetCheck(url, env, h) {
 
 async function resetPassword(req, env, h) {
   const ipKey = 'rl:rs:' + clientIp(req);
-  if (await tooMany(env, ipKey, LIMITS.reset)) return json({ error: 'rate' }, 429, h);
-  await bump(env, ipKey, LIMITS.reset);
+  if (await take(env, ipKey, LIMITS.reset) == null) return json({ error: 'rate' }, 429, h);
   const b = await readJson(req);
   const row = await findReset(env, String(b.token || ''));
   if (!row || row.status !== 'active') return json({ error: 'reset_invalid' }, 404, h);
@@ -314,8 +335,8 @@ async function resetPassword(req, env, h) {
   await env.DB.batch([
     env.DB.prepare('UPDATE users SET pw_hash = ?, last_login_at = ? WHERE id = ?').bind(await hashPassword(password), t, row.user_id),
     env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(row.user_id),   // sign out every old device
+    env.DB.prepare('DELETE FROM rate_counters WHERE k = ?').bind('lk:em:' + await sha256(row.email)),   // and lift a lock
   ]);
-  await env.KV.delete('lk:em:' + await sha256(row.email)).catch(() => {});
   const token = await newSession(env, req, row.user_id, true);
   const user = await env.DB.prepare('SELECT email, role FROM users WHERE id = ?').bind(row.user_id).first();
   return json({ token, user: publicUser(user) }, 200, h);
@@ -332,10 +353,13 @@ async function me(env, s, h) {
 
 async function checkOwnPassword(env, req, s, password, h) {
   const emailKey = 'lk:em:' + await sha256(s.email);
-  if (await tooMany(env, emailKey, LIMITS.email)) return json({ error: 'locked' }, 429, h);
+  // counted before the check, as at sign-in, and given back when the password is right
+  if (await take(env, emailKey, LIMITS.email) == null) return json({ error: 'locked' }, 429, h);
   const row = await env.DB.prepare('SELECT pw_hash FROM users WHERE id = ?').bind(s.id).first();
-  if (await verifyPassword(password, row.pw_hash)) return null;
-  await bump(env, emailKey, LIMITS.email);
+  if (await verifyPassword(password, row.pw_hash)) {
+    await uncount(env, emailKey).run();
+    return null;
+  }
   return json({ error: 'pw_wrong' }, 403, h);
 }
 
@@ -478,21 +502,44 @@ async function usedToday(env, uid) {
   const r = await env.DB.prepare('SELECT calls FROM usage WHERE user_id = ? AND day = ?').bind(uid, utcDay()).first();
   return r ? r.calls : 0;
 }
-// null when the call may go ahead, otherwise the refusal to send back
-async function budgetCheck(env, s, h, cost = 1) {
+// null when the call may go ahead, otherwise the refusal to send back. cost: the calls this request may make, which
+// must all fit under an invited account's cap. take: how many of them come off the cap now, in one statement before
+// the fetch (as hotels.js does), so requests sent at the same moment cannot all pass; the first one by default, and
+// any later ones (an alert's return leg, which it may skip) are counted by spend() as they happen. s.held keeps what
+// was taken, so spend() does not count it again and giveBack() can return what no call used.
+async function budgetCheck(env, s, h, cost = 1, take = Math.min(cost, 1)) {
   if (s.role === 'owner') return null;
-  const lim = limitOf(s), used = await usedToday(env, s.id);
-  if (used + cost > lim) return json({ error: 'user_quota', used, limit: lim }, 429, h);
+  const lim = limitOf(s), day = utcDay();
+  if (cost > lim) return json({ error: 'user_quota', used: lim, limit: lim }, 429, h);
   const q = await env.DB.prepare('SELECT remaining, at FROM quota WHERE id = 1').first();
-  const midnight = Math.floor(Date.parse(utcDay() + 'T00:00:00Z') / 1000);
+  const midnight = Math.floor(Date.parse(day + 'T00:00:00Z') / 1000);
+  // a 即時核對 poll (cost 0) is held here too: it may carry IDs seats.aero has not queued, which it then charges
   if (q && q.at >= midnight && q.remaining - cost < OWNER_RESERVE) return json({ error: 'reserve' }, 429, h);
+  const took = await env.DB.prepare('INSERT INTO usage (user_id, day, calls) VALUES (?1, ?2, ?3) ' +
+    'ON CONFLICT(user_id, day) DO UPDATE SET calls = calls + ?3 WHERE calls + ?4 <= ?5 RETURNING calls').bind(s.id, day, take, cost, lim).first();
+  if (!took) return json({ error: 'user_quota', used: lim, limit: lim }, 429, h);   // the page reads only limit
+  s.held = (s.held || 0) + take;
+  s.heldDay = day;
   return null;
 }
-// count n real calls (negative for a refund) against the account; runs after the response is sent
+// count n real calls (negative for a refund) against the account; runs after the response is sent. What budgetCheck
+// took for this request is counted already, so only the rest is written; MAX(0, ...) on the insert too, so a refund
+// that is the account's first write of a new UTC day does not start that day below 0
 function spend(env, ctx, s, n) {
+  const pre = Math.min(s.held || 0, Math.max(n, 0));
+  if (pre) s.held -= pre;
+  n -= pre;
   if (!n) return;
-  ctx.waitUntil(env.DB.prepare('INSERT INTO usage (user_id, day, calls) VALUES (?, ?, ?) ON CONFLICT(user_id, day) DO UPDATE SET calls = MAX(0, calls + excluded.calls)')
+  ctx.waitUntil(env.DB.prepare('INSERT INTO usage (user_id, day, calls) VALUES (?1, ?2, MAX(0, ?3)) ON CONFLICT(user_id, day) DO UPDATE SET calls = MAX(0, calls + ?3)')
     .bind(s.id, utcDay(), n).run().catch(e => console.error('usage', e)));
+}
+// the calls budgetCheck took that no seats.aero call used (the fetch failed, or seats.aero did not charge them): back
+// to the account, on the day they were taken
+function giveBack(env, ctx, s) {
+  if (!s.held) return;
+  ctx.waitUntil(env.DB.prepare('UPDATE usage SET calls = MAX(0, calls - ?) WHERE user_id = ? AND day = ?').bind(s.held, s.id, s.heldDay)
+    .run().catch(e => console.error('usage', e)));
+  s.held = 0;
 }
 
 // headers for the page: CORS, no caching, and seats.aero's rate-limit numbers; also keeps the key's latest
@@ -515,9 +562,16 @@ function passOn(r, env, h, ctx) {
 async function relay(path, env, h, ctx, s) {
   const stop = await budgetCheck(env, s, h);
   if (stop) return stop;
-  const r = await fetch(UPSTREAM + path, {
-    headers: { 'Partner-Authorization': env.SEATS_KEY, accept: 'application/json', 'User-Agent': 'award-search (personal use)' },
-  });
+  let r;
+  try {
+    r = await fetch(UPSTREAM + path, {
+      headers: { 'Partner-Authorization': env.SEATS_KEY, accept: 'application/json', 'User-Agent': 'award-search (personal use)' },
+    });
+  } catch (e) {   // seats.aero not reached: no call to count, and the page reads a 502 as seats.aero having trouble
+    console.error('seats.aero', e && e.message);
+    giveBack(env, ctx, s);
+    return json({ error: 'upstream' }, 502, h);
+  }
   spend(env, ctx, s, 1);
   return new Response(r.body, { status: r.status, headers: passOn(r, env, h, ctx) });
 }
@@ -529,17 +583,28 @@ async function refresh(req, env, h, ctx, s) {
   const b = await readJson(req);
   const ids = [...new Set(Array.isArray(b.ids) ? b.ids : [])];
   if (!ids.length || ids.length > 3 || !ids.every(x => typeof x === 'string' && /^[A-Za-z0-9]{10,40}$/.test(x))) return json({ error: 'param' }, 400, h);
-  const stop = await budgetCheck(env, s, h, b.poll ? 0 : ids.length);   // a poll queues nothing new
+  // every ID's call is taken first, a poll's too, since a poll may carry IDs seats.aero has not queued yet (a poll
+  // costs nothing, so it only needs the account not to be over its cap, and the key not under the owner's reserve);
+  // what seats.aero did not charge goes back after its answer
+  const stop = await budgetCheck(env, s, h, b.poll ? 0 : ids.length, ids.length);
   if (stop) return stop;
-  const r = await fetch(UPSTREAM + '/refresh', {
-    method: 'POST',
-    headers: { 'Partner-Authorization': env.SEATS_KEY, accept: 'application/json', 'content-type': 'application/json', 'User-Agent': 'award-search (personal use)' },
-    body: JSON.stringify({ availability_ids: ids }),
-  });
-  const text = await r.text();
+  let r, text;
+  try {
+    r = await fetch(UPSTREAM + '/refresh', {
+      method: 'POST',
+      headers: { 'Partner-Authorization': env.SEATS_KEY, accept: 'application/json', 'content-type': 'application/json', 'User-Agent': 'award-search (personal use)' },
+      body: JSON.stringify({ availability_ids: ids }),
+    });
+    text = await r.text();
+  } catch (e) {
+    console.error('seats.aero refresh', e && e.message);
+    giveBack(env, ctx, s);
+    return json({ error: 'upstream' }, 502, h);
+  }
   let d = null;
   try { d = JSON.parse(text); } catch {}
   if (d && Number.isFinite(d.queued)) spend(env, ctx, s, d.queued - (d.refunded || 0));
+  giveBack(env, ctx, s);
   return new Response(text, { status: r.status, headers: passOn(r, env, h, ctx) });
 }
 
@@ -554,8 +619,9 @@ function search(url, env, h, ctx, s) {
 }
 
 /* ---------- saved searches (收藏) ---------- */
-// A saved search is the search form as JSON, plus "seen": the lowest miles per leg, cabin, date and program from
-// the last look, so the page can mark awards that are new or cheaper since then. Private to each account.
+// A saved search is the search form as JSON, plus "seen": the lowest miles per leg, cabin, date and program (plus
+// the airport pair on a leg with more than one airport on a side) from the last look, so the page can mark awards
+// that are new or cheaper since then. Private to each account.
 const SAVED_MAX = 20;
 const SEEN_MAX_BYTES = 400000;   // a 3-month round trip is about 100 KB
 const AIRPORTS = /^[A-Z]{3}(,[A-Z]{3}){0,19}$/, DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -633,9 +699,11 @@ async function saved(req, env, s, p, m, h) {
 /* ---------- email alerts (提醒) ---------- */
 // Gino 2026-10-14: an alert is a fixed search (route, dates, cabin, programs) with a miles ceiling. About every
 // 3 hours the Worker re-runs it and emails the account when an award at or under the ceiling is new, or cheaper
-// than what was last emailed; the first email lists what is there already. The cron runs every 10 minutes and
-// checks only the most overdue alert, so one run parses one seats.aero reply (the free plan allows 10 ms CPU a
-// run). A check is one seats.aero call, counted against the account like a search, so an invited account's
+// than what was last emailed; the first email lists what is there already. Each run of the alert cron checks
+// only the most overdue alert, so one run parses one seats.aero reply (the free plan allows 10 ms CPU a run), and
+// the 3 hours hold for as many active alerts site-wide as the cron runs in 3 hours (18 at every 10 minutes, 36 at
+// every 5; see wrangler.toml); past that each alert waits longer.
+// A check is one seats.aero call, counted against the account like a search, so an invited account's
 // alerts stop at its daily cap or the owner's reserve. Mail goes out through Cloudflare Email Routing, which
 // delivers only to addresses that clicked Cloudflare's verification email: an account verifies its sign-in email
 // once (/me/mail), and its alerts are checked only after that.
@@ -685,6 +753,10 @@ const daysBetween = (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.pa
 const escHtml = v => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const routeText = a => a.o.split(',').join('/') + (a.rs ? ' ⇄ ' : ' → ') + a.d.split(',').join('/');
 
+// Alert days are UTC days, as the daily budgets are: a last day before the UTC date is refused here, a check never
+// searches a day before it, and runAlerts ends an alert once its last day is over in UTC (17:00 PDT, 16:00 PST in Seattle).
+// A round trip's return must be a day after its outbound, so here its last return day must come after both the UTC
+// date and the first outbound day, and runAlerts ends it once that day has begun in UTC
 function cleanAlert(b) {
   const today = utcDay();
   const o = String(b.o || '').toUpperCase(), d = String(b.d || '').toUpperCase();
@@ -701,15 +773,15 @@ function cleanAlert(b) {
   // 來回: a return range, starting no earlier than the outbound one; max_miles is then the total of both directions
   let rs = null, re = null;
   if (b.rs != null || b.re != null) {
-    if (!DAY.test(b.rs) || !DAY.test(b.re) || b.re < b.rs || b.re < today || b.rs < b.s || daysBetween(b.rs, b.re) > ALERT_DAYS_MAX || daysBetween(today, b.rs) > 400) return null;
+    if (!DAY.test(b.rs) || !DAY.test(b.re) || b.re < b.rs || b.re <= today || b.re <= b.s || b.rs < b.s || daysBetween(b.rs, b.re) > ALERT_DAYS_MAX || daysBetween(today, b.rs) > 400) return null;
     rs = b.rs; re = b.re;
   } else if (b.max_miles > 2000000) return null;
   return { o, d, s: b.s, e: b.e, rs, re, cabin: b.cabin, sources, max_miles: b.max_miles, direct: b.direct ? 1 : 0, seats,
-    label: String(b.label || '').trim().slice(0, 40) || null, lang: b.lang === 'en' ? 'en' : 'zh' };
+    mixed: b.mixed ? 1 : 0, dyn: b.dyn ? 1 : 0, label: String(b.label || '').trim().slice(0, 40) || null, lang: b.lang === 'en' ? 'en' : 'zh' };
 }
 const alertOut = a => ({
   id: a.id, o: a.o, d: a.d, s: a.s, e: a.e, rs: a.rs || null, re: a.re || null, cabin: a.cabin, sources: a.sources ? a.sources.split(',') : null, max_miles: a.max_miles,
-  direct: !!a.direct, seats: a.seats, label: a.label, lang: a.lang, status: a.status, created_at: a.created_at,
+  direct: !!a.direct, mixed: !!a.mixed, dyn: !!a.dyn, seats: a.seats, label: a.label, lang: a.lang, status: a.status, created_at: a.created_at,
   checked_at: a.checked_at, check_note: a.check_note, found: a.found, sent_at: a.sent_at, sent_count: a.sent_count,
 });
 
@@ -812,7 +884,9 @@ async function sendRtMail(env, a, fresh, sent) {
   const L = MAIL_WORDS[a.lang] || MAIL_WORDS.zh, cab = L.cabin[a.cabin], route = routeText(a);
   const site = env.SITE_URL || 'https://award.ginochang.com/';
   const day = x => L.day(+x.date.slice(5, 7) + '/' + +x.date.slice(8, 10), L.wd[new Date(x.date + 'T00:00:00Z').getUTCDay()]);
-  const side = (w, x) => w + ' ' + day(x) + ' ' + (PROGRAM_NAME[x.src] || x.src) + ' ' + L.miles(fmtN(x.miles)) + (taxText(x) ? ' + ' + taxText(x) : '') + (x.k in sent ? ' (' + L.was(fmtN(sent[x.k])) + ')' : '');
+  // "was" only on a side that got cheaper: the other side of a fresh pair is often one an earlier email listed already
+  const dropped = x => x.k in sent && x.miles < sent[x.k];
+  const side = (w, x) => w + ' ' + day(x) + ' ' + (PROGRAM_NAME[x.src] || x.src) + ' ' + L.miles(fmtN(x.miles)) + (taxText(x) ? ' + ' + taxText(x) : '') + (dropped(x) ? ' (' + L.was(fmtN(sent[x.k])) + ')' : '');
   const shown = fresh.slice(0, 15);
   const intro = L.rtIntro(a.label || route, cab, fmtN(a.max_miles), fresh.length);
   const more = fresh.length > shown.length ? L.moreRt(fresh.length - shown.length) : '';
@@ -822,7 +896,7 @@ async function sendRtMail(env, a, fresh, sent) {
   const ink = '#3E3A39', soft = '#6B6461';
   const cell = 'padding:8px 4px 0;border-top:1px dashed ' + ink + ';vertical-align:top';
   const line = (w, x) => '<div style="color:' + soft + ';font-size:13px;padding:1px 0"><b style="color:' + ink + '">' + escHtml(w) + '</b> ' + escHtml(day(x)) + ' · ' + escHtml(PROGRAM_NAME[x.src] || x.src) + ' · ' +
-    escHtml(L.miles(fmtN(x.miles))) + (taxText(x) ? ' + ' + escHtml(taxText(x)) : '') + (x.k in sent ? ' · <b style="color:#A33A2A;white-space:nowrap">' + escHtml(L.was(fmtN(sent[x.k]))) + '</b>' : '') + '</div>';
+    escHtml(L.miles(fmtN(x.miles))) + (taxText(x) ? ' + ' + escHtml(taxText(x)) : '') + (dropped(x) ? ' · <b style="color:#A33A2A;white-space:nowrap">' + escHtml(L.was(fmtN(sent[x.k]))) + '</b>' : '') + '</div>';
   const html = '<div style="background:#FFFCF6;padding:16px;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,\'PingFang TC\',\'Noto Sans TC\',sans-serif;color:' + ink + '">' +
     '<div style="max-width:560px;margin:0 auto;background:#FFFFFF;border:3px solid ' + ink + ';border-radius:18px;padding:18px 18px 14px">' +
     '<div style="font-size:20px;font-weight:bold;margin:0 0 6px">✈️ ' + escHtml(route) + ' ' + escHtml(cab) + '</div>' +
@@ -848,17 +922,29 @@ async function checkAlert(env, ctx, a, send) {
   const stop = await budgetCheck(env, s, {}, a.rs ? 2 : 1);
   if (stop) return stopAt((await stop.json()).error);
   // one direction: cheapest first, so a reply cut at 1,000 rows (a wide alert: 92 days, several airports) keeps the
-  // awards that matter; each search is 1 call charged to the account
+  // awards that matter, and only nonstop rows for a nonstop alert (alertHits still checks the cabin's own flag);
+  // each search is 1 call charged to the account
   const leg = async (o, d, s1, e1) => {
     const qs = new URLSearchParams({ origin_airport: o, destination_airport: d, start_date: s1, end_date: e1, cabins: CABIN_API[a.cabin], take: '1000', order_by: 'lowest_mileage' });
     if (a.sources) qs.set('sources', a.sources);
-    const r = await fetch(UPSTREAM + '/search?' + qs, {
-      headers: { 'Partner-Authorization': env.SEATS_KEY, accept: 'application/json', 'User-Agent': 'award-search (personal use)' },
-    });
+    if (a.direct) qs.set('only_direct_flights', 'true');
+    if (a.mixed) qs.set('min_cabin_pct', '50');      // 包含混艙, as on the search it came from: default 100 hides mixed-cabin itineraries
+    if (a.dyn) qs.set('include_filtered', 'true');    // 包含動態高價位子: seats.aero hides expensive dynamic awards unless asked
+    let r;
+    try {
+      r = await fetch(UPSTREAM + '/search?' + qs, {
+        headers: { 'Partner-Authorization': env.SEATS_KEY, accept: 'application/json', 'User-Agent': 'award-search (personal use)' },
+      });
+    } catch (e) {   // seats.aero not reached: no call to count, so the one budgetCheck took goes back, as in relay
+      console.error('alert seats.aero', e && e.message);
+      giveBack(env, ctx, s);
+      return { err: 'upstream' };
+    }
     spend(env, ctx, s, 1);
     passOn(r, env, {}, ctx);   // keeps the key's remaining count, as a search does
     if (!r.ok) return { err: 'upstream_' + r.status };
-    const body = await r.json();
+    let body;
+    try { body = await r.json(); } catch { return { err: 'upstream_body' }; }   // a reply cut off or not JSON (the call counts)
     return { hits: alertHits(body.data || [], { ...a, e: e1 }, s1), more: !!body.hasMore };
   };
   if (a.rs) return checkRoundTrip(env, ctx, a, send, leg, stopAt, t, today, from);
@@ -890,8 +976,12 @@ function rtPairs(outHits, backHits, max) {
 }
 async function checkRoundTrip(env, ctx, a, send, leg, stopAt, t, today, from) {
   const rfrom = a.rs > today ? a.rs : today;
-  const [L1, L2] = [await leg(a.o, a.d, from, a.e), await leg(a.d, a.o, rfrom, a.re)];
-  if (L1.err || L2.err) return stopAt(L1.err || L2.err);
+  const L1 = await leg(a.o, a.d, from, a.e);
+  if (L1.err) return stopAt(L1.err);
+  // a pair needs an outbound award before the last return day: without one the return search cannot change the
+  // answer, so it is not made (nor charged); this also skips a return range that is already over
+  const L2 = L1.hits.some(x => x.date < a.re) ? await leg(a.d, a.o, rfrom, a.re) : { hits: [], more: false };
+  if (L2.err) return stopAt(L2.err);
   const pairs = rtPairs(L1.hits, L2.hits, a.max_miles);
   const sent = a.sent ? JSON.parse(a.sent) : {};
   const isNew = x => !(x.k in sent) || x.miles < sent[x.k];
@@ -910,17 +1000,25 @@ async function checkRoundTrip(env, ctx, a, send, leg, stopAt, t, today, from) {
   return { id: a.id, rt: true, found: pairs.length, fresh: fresh.length, mailed, pairs: pairs.slice(0, 20).map(p => ({ out: brief(p.x), back: brief(p.y), total: p.total })) };
 }
 
-// the cron's work: end alerts whose dates have passed, then check the most overdue one(s)
+// the cron's work: end alerts whose dates have passed, then check the most overdue one(s). A round trip ends once
+// its last return day has come: the return must be a day after an outbound of today or later, so no pair is left.
+// An alert is due a minute before its 3 hours are up, so a run that starts a little late still picks it on time,
+// and a cron every 2 or 5 minutes does not pick it a run early (5 minutes before would, at every 5 minutes).
 async function runAlerts(env, ctx) {
   const t = now();
-  await env.DB.prepare("UPDATE alerts SET status = 'ended' WHERE status != 'ended' AND e < ?").bind(utcDay()).run();
+  await env.DB.prepare("UPDATE alerts SET status = 'ended' WHERE status != 'ended' AND (e < ?1 OR (re IS NOT NULL AND re <= ?1))").bind(utcDay()).run();
   const due = await env.DB.prepare(
     'SELECT a.*, u.email, u.role, u.daily_limit FROM alerts a JOIN users u ON u.id = a.user_id ' +
     "WHERE a.status = 'active' AND (a.checked_at IS NULL OR a.checked_at <= ?) AND u.status = 'active' " +
     "AND u.mail_verified_at IS NOT NULL AND (u.alerts_ok = 1 OR u.role = 'owner') " +
-    'ORDER BY a.checked_at IS NOT NULL, a.checked_at LIMIT ?').bind(t - ALERT_EVERY + 300, ALERTS_PER_RUN).all();
+    'ORDER BY a.checked_at IS NOT NULL, a.checked_at LIMIT ?').bind(t - ALERT_EVERY + 60, ALERTS_PER_RUN).all();
   const out = [];
-  for (const a of due.results) out.push(await checkAlert(env, ctx, a, true));
+  for (const a of due.results) {
+    // claimed before any seats.aero call: a check that throws or is cut off (CPU, memory) is then at the back of the
+    // queue, showing 'error', instead of first again on every run; a check that finishes writes both fields over
+    await env.DB.prepare("UPDATE alerts SET checked_at = ?, check_note = 'error' WHERE id = ?").bind(t, a.id).run();
+    try { out.push(await checkAlert(env, ctx, a, true)); } catch (e) { console.error('alert', a.id, e && e.stack || e); out.push({ id: a.id, note: 'error' }); }
+  }
   return out;
 }
 
@@ -938,8 +1036,8 @@ async function alerts(req, env, ctx, s, p, m, h) {
     if (!a) return json({ error: 'param' }, 400, h);
     const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM alerts WHERE user_id = ? AND status != 'ended'").bind(s.id).first();
     if (n.n >= ALERTS_MAX) return json({ error: 'too_many', max: ALERTS_MAX }, 400, h);
-    const ins = await env.DB.prepare('INSERT INTO alerts (user_id, o, d, s, e, rs, re, cabin, sources, max_miles, direct, seats, label, lang, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .bind(s.id, a.o, a.d, a.s, a.e, a.rs, a.re, a.cabin, a.sources, a.max_miles, a.direct, a.seats, a.label, a.lang, now()).run();
+    const ins = await env.DB.prepare('INSERT INTO alerts (user_id, o, d, s, e, rs, re, cabin, sources, max_miles, direct, mixed, dyn, seats, label, lang, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .bind(s.id, a.o, a.d, a.s, a.e, a.rs, a.re, a.cabin, a.sources, a.max_miles, a.direct, a.mixed, a.dyn, a.seats, a.label, a.lang, now()).run();
     return json({ id: ins.meta.last_row_id }, 201, h);
   }
   if ((mm = /^\/me\/alerts\/(\d{1,12})$/.exec(p)) && m === 'PUT') {
@@ -966,7 +1064,8 @@ async function alerts(req, env, ctx, s, p, m, h) {
     // 立即檢查: the cron's check, now; it emails only once the address is verified; at most every 2 minutes
     const a = await env.DB.prepare('SELECT * FROM alerts WHERE id = ? AND user_id = ?').bind(+mm[1], s.id).first();
     if (!a) return json({ error: 'not_found' }, 404, h);
-    if (a.status === 'ended') return json({ error: 'ended' }, 400, h);
+    // also when its dates are over but the cron has not ended it yet (the same test as runAlerts)
+    if (a.status === 'ended' || a.e < utcDay() || (a.re && a.re <= utcDay())) return json({ error: 'ended' }, 400, h);
     if (a.checked_at && now() - a.checked_at < 120) return json({ error: 'too_soon' }, 429, h);
     return json(await checkAlert(env, ctx, { ...a, email: u.email, role: s.role, daily_limit: s.daily_limit }, !!u.mail_verified_at), 200, h);
   }
@@ -1057,7 +1156,7 @@ async function quota(env, s, h) {
 const lib = {
   UPSTREAM, OWNER_RESERVE, USER_DAILY, LIMITS, AIRPORTS, DAY, CABIN_API, PROGRAM_NAME, NO_TAX,
   json, readJson, readBig, now, utcDay, daysBetween, num, fmtN, escHtml, routeText, randomToken, sha256, b64url, unb64url,
-  tooMany, bump, budgetCheck, spend, passOn, usedToday, limitOf, sendMail, mailInfo,
+  tooMany, bump, budgetCheck, spend, giveBack, passOn, usedToday, limitOf, sendMail, mailInfo,
   seatsHeaders: env => ({ 'Partner-Authorization': env.SEATS_KEY, accept: 'application/json', 'User-Agent': 'award-search (personal use)' }),
 };
 // the first feature route that matches, or null; auth 'public' routes are tried before the session check
@@ -1124,8 +1223,8 @@ export default {
         await env.DB.prepare('DELETE FROM sessions WHERE id = ? AND user_id = ?').bind(mm[1], s.id).run();
         return json({ ok: true }, 200, h);
       }
-      if (p === '/search' && m === 'GET') return search(url, env, h, ctx, s);
-      if ((mm = /^\/trips\/([A-Za-z0-9]{10,40})$/.exec(p)) && m === 'GET') return relay('/trips/' + mm[1], env, h, ctx, s);
+      if (p === '/search' && m === 'GET') return await search(url, env, h, ctx, s);
+      if ((mm = /^\/trips\/([A-Za-z0-9]{10,40})$/.exec(p)) && m === 'GET') return await relay('/trips/' + mm[1], env, h, ctx, s);
       if (p === '/quota' && m === 'GET') return await quota(env, s, h);
       if (p === '/refresh' && m === 'POST') return await refresh(req, env, h, ctx, s);
       if (p.startsWith('/me/saved')) { const r = await saved(req, env, s, p, m, h); if (r) return r; }
@@ -1133,7 +1232,10 @@ export default {
       if (p === '/me/mail' && m === 'GET') return await mailCheck(env, s, h);
       if (p === '/me/mail' && m === 'POST') return await mailVerify(env, s, h);
       const fr = await featureRoute('session', req, env, ctx, s, url, h);
-      if (fr) return fr;
+      if (fr) {
+        giveBack(env, ctx, s);   // a call a module took and never made (its fetch failed) goes back to the account
+        return fr;
+      }
       if (p === '/admin/hourly/run' && m === 'POST' && s.role === 'owner') return json({ ran: await runHourly(env, ctx, now()) }, 200, h);   // staging has no cron
       if (p.startsWith('/admin/')) {
         if (s.role !== 'owner') return json({ error: 'forbidden' }, 403, h);
@@ -1145,8 +1247,9 @@ export default {
       return json({ error: 'server' }, 500, h);
     }
   },
-  // the cron triggers (wrangler.toml): every 10 minutes the most overdue alert gets its check; at :05 every hour
-  // the feature modules' hourly work (digests, release-date reminders, clean-up)
+  // the cron triggers (wrangler.toml): on each run of the alert cron the most overdue alert gets its check (any
+  // cron but the hourly one, so a faster alert cron needs no change here); at :05 every hour the feature modules'
+  // hourly work (digests, release-date reminders, clean-up)
   async scheduled(event, env, ctx) {
     if (event.cron === '5 * * * *') ctx.waitUntil(runHourly(env, ctx, Math.floor(event.scheduledTime / 1000)));
     else ctx.waitUntil(runAlerts(env, ctx).catch(e => console.error('alerts', e && e.stack || e)));

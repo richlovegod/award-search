@@ -7,8 +7,10 @@
 //   first and then drops its row (DELETE /me/push). The account's devices are listed, this one marked 這台 (a row's
 //   id is the SHA-256 of its endpoint, which this page can compute from its own subscription).
 // - Push follows sign-in: the Worker ties each subscription to the sign-in that registered it, so 登出, 登出其他所有
-//   裝置, a password change or an expired sign-in stops that device's pushes. After each sign-in, a subscription
-//   this browser already holds is registered again (no prompt), so pushes resume and follow whoever is signed in.
+//   裝置, a password change or an expired sign-in stops that device's pushes. A 登出 the Worker could not be told
+//   about (offline, a 5xx) ends this browser's subscription on the device instead (onSignOut), so after the next
+//   sign-in there 開啟推播 is needed once. After each sign-in, a subscription this browser already holds is
+//   registered again (no prompt), so pushes resume and follow whoever is signed in.
 (() => {
   'use strict';
   const MARK = 'award-push';            // { id, tok }: the subscription this browser last registered, and for which sign-in
@@ -72,6 +74,14 @@
   // a tapped notification: the service worker brought this window forward; go to the alert it names
   function onMessage(e) {
     const d = e.data;
+    // the service worker asks which account this window is signed in to, so a tapped alert opens in that account's
+    // window: the tag the Worker sends with the push, '' when signed out, null while not known yet
+    if (d && d.type === 'push-who' && e.ports && e.ports[0]) {
+      const port = e.ports[0];
+      if (ME) sha(ME.email).then(x => port.postMessage({ acct: x.slice(0, 16) }), () => port.postMessage({ acct: null }));
+      else port.postMessage({ acct: getToken() ? null : '' });
+      return;
+    }
     if (!d || d.type !== 'push-open' || typeof d.url !== 'string') return;
     let u;
     try { u = new URL(d.url, location.href); } catch { return; }
@@ -179,7 +189,7 @@
         '<div class="acts"><button type="button" class="btn ghost" data-push-del="' + esc(d.id) + '" aria-label="' + esc(t('移除 {0}（{1} 開啟）', name, fmtDay(d.created_at))) + '"' + dis() + '>' + t('移除') + '</button></div></div>';
     }).join('');
     return '<div class="push-devs"><p class="lbl">' + t('收推播的裝置（{0}/{1}）', P.devices.length, P.max) + '</p>' + (rows || para('note0', t(ERRS.push_none))) +
-      para('note0 push-follow', t('推播跟著登入走：裝置登出或登入過期就停，在那台再登入就會自動恢復。')) + '</div>';
+      para('note0 push-follow', t('推播跟著登入走：裝置登出或登入過期就停，在那台再登入就會自動恢復；沒有網路時登出的話，要再按一次「開啟推播」。')) + '</div>';
   }
   // a part of the card, replaced only when it changed (so a refresh that read the same list keeps the buttons)
   function put(el, html) { if (el && el.pushHtml !== html) { el.pushHtml = html; el.innerHTML = html; } }
@@ -418,7 +428,7 @@
       '上次失敗：{0}': 'Last failure: {0}',
       '移除': 'Remove',
       '移除 {0}（{1} 開啟）': 'Remove {0} (on since {1})',
-      '推播跟著登入走：裝置登出或登入過期就停，在那台再登入就會自動恢復。': 'Push follows sign-in: it stops on a device that signs out or whose sign-in expires, and comes back when you sign in there again.',
+      '推播跟著登入走：裝置登出或登入過期就停，在那台再登入就會自動恢復；沒有網路時登出的話，要再按一次「開啟推播」。': 'Push follows sign-in: it stops on a device that signs out or whose sign-in expires, and comes back when you sign in there again. If you signed out while offline, tap Turn on push once more.',
       '還沒有裝置開啟推播。': 'No device has push turned on yet.',
       '最多 {0} 台裝置。先移除一台，再開啟推播。': 'Up to {0} devices. Remove one, then turn on push.',
       '這台裝置給的推播資料不對。關閉後再開啟一次試試。': 'This device\'s push details were not accepted. Turn push off, then on again.',
@@ -454,7 +464,20 @@
       // another account (or the same one, signed in again) on this tab: its device list is read afresh, and this
       // browser's subscription is registered for the new sign-in
       Object.assign(P, { devices: null, at: 0, listErr: null, msg: null });
+      tokTag().then(x => { P.tok = x; }, () => {});   // which sign-in this tab is on (onSignOut compares it with MARK)
       setTimeout(() => { sync().catch(() => {}); }, 1500);
+    },
+    // a sign-out the Worker could not be told about (offline, a 5xx) leaves that sign-in live there until it expires,
+    // still pushing to this device: when the subscription is registered for it (MARK; another tab's sign-in may have
+    // taken it over since), it ends on the device instead, as 關閉 does. This works offline, the Worker drops the dead
+    // endpoint at its next push, and after the next sign-in 開啟推播 turns push on again (no prompt).
+    onSignOut({ ended }) {
+      const mark = load(MARK, null);
+      if (ended || !mark || !P.tok || mark.tok !== P.tok) return;
+      acted++;   // a look still running must not put the old subscription back
+      getSub().then(sub => sub && sub.unsubscribe()).catch(() => {});
+      P.sub = null; P.subId = null;
+      localStorage.removeItem(MARK);
     },
   });
 })();

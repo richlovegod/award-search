@@ -6,8 +6,9 @@
 //                users.daily_limit is the account's seats.aero calls only
 //   rooms_quota  rooms.aero's remaining count, from the X-RateLimit-* headers of the latest call (one row)
 // Invited accounts also stop when rooms.aero has ROOMS_RESERVE calls or fewer left today, keeping the rest for the owner.
-// Unlike the flights budget, an invited account's call is taken from its cap in one statement before the fetch (and
-// given back when rooms.aero does not count it), so searches running at the same moment cannot pass the cap.
+// Like the flights budget (budgetCheck in ../index.js), an invited account's call is taken from its cap in one
+// statement before the fetch (and given back when rooms.aero does not count it), so searches running at the same moment
+// cannot pass the cap.
 //
 // A search reply goes back as rooms.aero sent it, unparsed (a 500-hotel reply is about 700 KB, too much to parse in
 // the free plan's CPU time), with rooms.aero's rate-limit headers renamed X-Rooms-RateLimit-*, so the page's flight

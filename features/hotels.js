@@ -253,9 +253,10 @@ function setSiteQuota(remaining, limit, at) {
 async function fetchHotels(q) {
   const qs = new URLSearchParams({ location: q.loc, start_date: q.s, end_date: q.e, nights: String(q.nights), take: String(TAKE) });
   if (q.src.length) qs.set('source', q.src.join(','));   // no max_points: the page applies the ceiling itself
+  const sent = getToken();
   let r;
   try {
-    r = await fetch(RELAY + '/hotels/search?' + qs, { headers: { Authorization: 'Bearer ' + getToken() } });
+    r = await fetch(RELAY + '/hotels/search?' + qs, { headers: { Authorization: 'Bearer ' + sent } });
   } catch {
     throw new ApiError('network', t('連不上伺服器，請檢查網路。'));
   }
@@ -270,7 +271,7 @@ async function fetchHotels(q) {
     if (body && Array.isArray(body.data)) return body;
     throw new ApiError('bad', t('rooms.aero 回傳的資料看不懂，等一下再試。'));
   }
-  if (code === 'auth') { logout(t(ERR.auth), false); throw new ApiError('auth', t(ERR.auth)); }
+  if (code === 'auth') { if (sent && sent === getToken()) logout(t(ERR.auth), false); throw new ApiError('auth', t(ERR.auth)); }   // (as in call())
   if (code === 'rooms_quota' && Number.isFinite(body.used)) HS.me = Object.assign({}, HS.me, { used: body.used, limit: body.limit, at: Date.now() });
   const err = new ApiError(code || 'http', errText(code, body || {}, r.status, q));
   err.info = { code, body: body || {}, status: r.status, q };   // to word it again in another language

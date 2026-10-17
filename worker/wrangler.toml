@@ -10,15 +10,16 @@ SITE_URL = "https://award.ginochang.com/"
 CF_ACCOUNT = "3d209c3949176c3d440c5428d97f4d27"
 MAIL_FROM = "alerts@ginochang.com"
 
-# email alerts: every 10 minutes the most overdue alert is checked, so each alert about every 3 hours
+# email alerts: every 5 minutes the most overdue alert is checked (one per run, so CPU per run is unchanged), so each
+# alert about every 3 hours while 36 or fewer are active site-wide; at most 288 checks a day (2 calls for a round trip)
 [triggers]
-crons = ["*/10 * * * *", "5 * * * *"]   # alerts; the feature modules' hourly work
+crons = ["*/5 * * * *", "5 * * * *"]   # alerts; the feature modules' hourly work
 
 # alert emails, through Cloudflare Email Routing (only to verified destination addresses)
 [[send_email]]
 name = "ALERT_MAIL"
 
-# lockout and rate-limit counters (short-lived, so KV is enough)
+# the explore module's 6-hour destinations cache (lockout and rate-limit counters are in D1 since migration 0015)
 [[kv_namespaces]]
 binding = "KV"
 id = "efb441e0d06e469ca43501919ed80851"
