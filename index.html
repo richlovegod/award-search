@@ -461,6 +461,10 @@ details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13p
 .sortbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:8px 0 4px;font-size:14px}
 .sortbar .chip{padding:0 10px;font-size:14px}
 .sortbar .chip[aria-pressed=true]{background:var(--water)}
+.mvf{flex-basis:100%;display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;margin-top:2px}
+.mvf label{font-size:14px}
+.mvf input{width:88px;min-height:40px;border:var(--line);border-radius:12px;padding:4px 10px;font:inherit;font-size:16px;background:var(--paper)}
+.mvf small{flex-basis:100%;font-size:12px;color:var(--ink2)}
 .dayf{background:var(--coral)!important}
 
 /* list of offers */
@@ -501,6 +505,7 @@ details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13p
 .saverow .btn{font-size:13px;padding:1px 12px}
 .saverow .btn[aria-pressed=true]{background:var(--yellow)}
 .tx{margin-left:auto;white-space:nowrap;font-size:13px;font-variant-numeric:tabular-nums}
+.eqv{flex-basis:100%;text-align:right;font-size:13px;font-variant-numeric:tabular-nums;color:var(--ink)}
 .tx .fx{font-size:11px;color:var(--ink2);margin-left:4px}
 .o3{font-size:12px;color:var(--ink2);margin-top:4px}
 .o3 .ca{flex:1;min-width:0}
@@ -521,6 +526,7 @@ details.progs summary #prog-sum{margin-left:auto;color:var(--ink2);font-size:13p
 .sg{margin:4px 0}
 .sg1{font-size:14px;font-variant-numeric:tabular-nums}
 .sg1 b{margin-right:8px}
+.sg1 .sgd{margin-left:8px;font-size:12px;color:var(--ink2);white-space:nowrap}
 .sg2{display:flex;flex-wrap:wrap;gap:0 10px;font-size:12px;color:var(--ink2)}
 .lay{display:inline-block;font-size:12px;border:2px solid var(--ink);border-radius:999px;padding:0 8px;background:var(--coral-t);margin:6px 0}
 .book{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
@@ -786,6 +792,11 @@ html[lang=en] .brand{font-size:18px}
 let LANG = localStorage.getItem('award-lang') === 'en' ? 'en' : 'zh';
 const LOC = () => (LANG === 'en' ? 'en-US' : 'zh-TW');
 const EN = {
+  "最少等值現金": "Lowest cash value",
+  "每哩估值": "Value per mile",
+  "等值現金 = 里程 × 每哩估值 + 稅金": "Cash value = miles × value per mile + taxes",
+  "每哩估值請填 {0} 到 {1} 之間的數字，例如 0.012": "Enter a value per mile from {0} to {1}, for example 0.012",
+  "等值約 {0}": "Worth about {0}",
   "主選單": "Main",
   "機票": "Flights",
   "探索": "Explore",
@@ -1643,7 +1654,8 @@ const S = {
   prefs: Object.assign({ cabin: 'J', off: [], direct: false, carriers: '', sort: 'date',
     pax: 1, wd: [], dep: [], arr: [], maxStops: 9, maxHours: 0, noVia: [], maxMiles: 0, myBanks: [],
     aircraft: [], maxTax: 0, maxTaxCur: 'USD',   // 機型 families (or 'wide'); 稅金上限 as typed, in its currency
-    disp: 'USD' }, load('award-prefs', {})),   // disp: the currency money is shown in (USD or TWD)
+    disp: 'USD', mileValue: 0.012 }, load('award-prefs', {})),   // disp: the currency money is shown in (USD or TWD);
+    // mileValue: what one mile is worth to you in US$, for the 最少等值現金 sort
   search: null, legs: null, leg: 0,   // the whole search (one or two legs) and which leg is on screen
   saved: [], seen: null, seenAt: 0,   // 收藏, and what the matching one held at the last look
   verified: {},                       // 即時核對 results by availability ID + cabin, for this search
@@ -1787,6 +1799,11 @@ const toUSD = (minor, cur) => { const rate = !cur || cur === 'USD' ? 1 : FX && F
 // Money in the currency picked under 金額 (US$ or NT$), converted with the same daily rates; a converted amount
 // keeps the original in small print. Without a rate the original is shown as it is.
 const DISP = () => (S.prefs.disp === 'TWD' ? 'TWD' : 'USD');
+// 最少等值現金: an award as cash, miles at the value per mile typed under the sort bar (US$) plus its taxes in US$
+// (taxes in a currency without a rate yet count as 0 until the rates load)
+const MV_MIN = 0.001, MV_MAX = 0.1;
+const mileValue = () => { const v = +S.prefs.mileValue; return v >= MV_MIN && v <= MV_MAX ? v : 0.012; };
+const cashUSD = o => o.miles * mileValue() + (o.taxes ? toUSD(o.taxes, o.cur) || 0 : 0);
 // minor units of cur in another currency (major units), or null without a rate
 const inCur = (minor, cur, to) => { const c = cur || 'USD'; if (c === to) return minor / 100; const usd = toUSD(minor, c), rate = to === 'USD' ? 1 : FX && FX.rates[to]; return usd == null || !rate ? null : usd * rate; };
 function inDisp(minor, cur) {
@@ -3914,10 +3931,21 @@ $('#cal').addEventListener('click', e => {
   }
 });
 function renderSortbar() {
-  const opts = [['date', t('依日期')], ['miles', t('最少里程')], ['dur', t('最短時間')], ['tax', t('最低稅金')], ['seats', t('最多座位')]];
+  const opts = [['date', t('依日期')], ['miles', t('最少里程')], ['dur', t('最短時間')], ['tax', t('最低稅金')], ['cash', t('最少等值現金')], ['seats', t('最多座位')]];
   $('#sortbar').innerHTML = t('排序') + opts.map(([k, x]) => '<button type="button" class="chip" data-sort="' + k + '" aria-pressed="' + (S.prefs.sort === k) + '">' + x + '</button>').join('') +
-    (S.day ? '<button type="button" class="chip dayf" data-clear="1">' + t('只看 {0}', md(S.day)) + '　✕</button>' : '') + dispSeg();
+    (S.day ? '<button type="button" class="chip dayf" data-clear="1">' + t('只看 {0}', md(S.day)) + '　✕</button>' : '') + dispSeg() +
+    (S.prefs.sort === 'cash' ? '<div class="mvf"><label for="mv">' + t('每哩估值') + ' US$</label><input id="mv" inputmode="decimal" autocomplete="off" enterkeyhint="done" value="' + mileValue() + '">' +
+      '<small>' + t('等值現金 = 里程 × 每哩估值 + 稅金') + '</small></div>' : '');
 }
+// a new value per mile: applied when the field is left or Done is tapped (each keystroke would redraw the field)
+$('#sortbar').addEventListener('change', e => {
+  if (e.target.id !== 'mv') return;
+  const v = parseFloat(String(e.target.value).replace(/[^\d.]/g, ''));
+  if (!(v >= MV_MIN && v <= MV_MAX)) { toast(t('每哩估值請填 {0} 到 {1} 之間的數字，例如 0.012', MV_MIN, MV_MAX)); e.target.value = mileValue(); return; }
+  S.prefs.mileValue = Math.round(v * 1e5) / 1e5;
+  savePrefs();
+  render();
+});
 $('#sortbar').addEventListener('click', e => {
   const b = e.target.closest('.chip');
   if (!b) return;
@@ -3950,7 +3978,8 @@ function cardHtml(o, showDate) {
     '<button type="button" class="ohead" aria-expanded="false">' +
       '<span class="o1"><span class="pn">' + esc(p.name) + '</span><span class="pz">' + esc(p.zh) + '</span>' + logo(p.code) + '<span class="al" style="--c:var(--' + p.al + ')">' + al.short + '</span><span class="mi">' + fmtMiles(o.miles) + '<small>' + t('哩') + '</small></span></span>' +
       '<span class="o2">' + (showDate ? '<span class="od">' + mdw(o.date) + '</span>' : '') + '<span class="rt">' + esc(o.from) + ' → ' + esc(o.to) + '</span>' + tag + since +
-        (o.seats ? '<span>' + (o.seats === 1 ? t('剩 1 位') : t('剩 {0} 位', o.seats)) + '</span>' : '') + '<span class="tx">' + tax + '</span></span>' + when +
+        (o.seats ? '<span>' + (o.seats === 1 ? t('剩 1 位') : t('剩 {0} 位', o.seats)) + '</span>' : '') + '<span class="tx">' + tax + '</span>' +
+        (S.prefs.sort === 'cash' ? '<span class="eqv">' + t('等值約 {0}', money(inCur(Math.round(cashUSD(o) * 100), 'USD', DISP()) ?? cashUSD(o), inCur(100, 'USD', DISP()) == null ? 'USD' : DISP())) + '</span>' : '') + '</span>' + when +
       '<span class="o3"><span class="ca">' + (who ? t('實際搭乘：{0}', who) : '') + '</span><span class="age">' + ago(o.updated) + '</span>' +
         '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></span>' +
       '<span class="o5">' + transferLineHtml(o.src) + '</span>' +
@@ -3963,6 +3992,7 @@ function renderList(offers, counts) {
   else if (sort === 'seats') list.sort((a, b) => (b.seats || 0) - (a.seats || 0) || a.miles - b.miles);
   // unknown duration or taxes go last
   else if (sort === 'dur') list.sort((a, b) => ((a.trip && a.trip.mins) || 1e9) - ((b.trip && b.trip.mins) || 1e9) || a.miles - b.miles);
+  else if (sort === 'cash') list.sort((a, b) => cashUSD(a) - cashUSD(b) || a.miles - b.miles);
   else if (sort === 'tax') {
     const usd = o => (o.taxes ? toUSD(o.taxes, o.cur) : null) ?? 1e12;   // 0 means the program gave no taxes
     list.sort((a, b) => usd(a) - usd(b) || a.miles - b.miles);
@@ -4204,7 +4234,7 @@ function tripHtml(trip) {
       if (i) h += '<div class="lay">' + t('在 {0} 轉機 {1}', esc(s.OriginAirport), dur(minsBetween(segs[i - 1].ArrivesAt, s.DepartsAt))) + '</div>';
       const plusSeg = dayDiff(s.DepartsAt, s.ArrivesAt);
       h += '<div class="sg"><div class="sg1"><b>' + esc(s.FlightNumber || '') + '</b>' + esc(s.OriginAirport) + ' ' + hm(s.DepartsAt) + ' → ' + esc(s.DestinationAirport) + ' ' + hm(s.ArrivesAt) +
-        dayTag(plusSeg) + '</div>' + (extra(s) ? '<div class="sg2">' + extra(s) + '</div>' : '') + '</div>';
+        dayTag(plusSeg) + (num(s.Duration) ? '<span class="sgd">' + dur(num(s.Duration)) + '</span>' : '') + '</div>' + (extra(s) ? '<div class="sg2">' + extra(s) + '</div>' : '') + '</div>';
     });
     h += '</div>';
   }
